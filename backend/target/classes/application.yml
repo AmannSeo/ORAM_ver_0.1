@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oram_db
+    username: ${DB_USERNAME:oram_user}
+    password: ${DB_PASSWORD:oram_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  sql:
+    init:
+      mode: never
+
+# JWT Configuration
+oram:
+  jwt:
+    secret: ${JWT_SECRET:oram-super-secret-key-must-be-at-least-256-bits-long-for-hs256}
+    expiration-ms: 86400000   # 24 hours
+
+  # AES-256 encryption key for OAuth tokens (32 bytes = 256 bits, Base64 encoded)
+  encryption:
+    secret-key: ${ENCRYPTION_KEY:dGhpcy1pcy1hLTMyLWJ5dGUta2V5LWZvci1hZXMyNTY=}
+
+  # OAuth 2.0 Configuration
+  oauth:
+    slack:
+      client-id: ${SLACK_CLIENT_ID:your-slack-client-id}
+      client-secret: ${SLACK_CLIENT_SECRET:your-slack-client-secret}
+      redirect-uri: ${SLACK_REDIRECT_URI:http://localhost:8080/api/saas-connections/oauth/callback/SLACK}
+      scopes: users:read,users:read.email,admin.users:read
+
+    github:
+      client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
+      client-secret: ${GITHUB_CLIENT_SECRET:your-github-client-secret}
+      redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8080/api/saas-connections/oauth/callback/GITHUB}
+      scopes: read:org,admin:org,user:email
+
+    notion:
+      client-id: ${NOTION_CLIENT_ID:your-notion-client-id}
+      client-secret: ${NOTION_CLIENT_SECRET:your-notion-client-secret}
+      redirect-uri: ${NOTION_REDIRECT_URI:http://localhost:8080/api/saas-connections/oauth/callback/NOTION}
+
+# CORS
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    com.oram: DEBUG
+    org.springframework.security: INFO
