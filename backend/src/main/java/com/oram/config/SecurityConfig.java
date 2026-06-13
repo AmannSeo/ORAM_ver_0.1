@@ -38,6 +38,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                // CSRF is disabled intentionally: this API uses stateless JWT authentication
+                // (no session cookies), so CSRF attacks are not applicable. The API is
+                // further protected by CORS restrictions to localhost:3000 only.
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()

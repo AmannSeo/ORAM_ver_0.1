@@ -349,7 +349,7 @@ frontend/
 
 ### Prerequisites
 
-- Java 21 (JDK)
+- Java 17 (JDK)
 - Maven 3.9+
 - Node.js 20+
 - Docker & Docker Compose
