@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: oram-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oram_db
+    username: oram_user
+    password: oram_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # OAuth2 Client configuration (fill in real credentials)
+  security:
+    oauth2:
+      client:
+        registration:
+          slack:
+            client-id: ${SLACK_CLIENT_ID:your-slack-client-id}
+            client-secret: ${SLACK_CLIENT_SECRET:your-slack-client-secret}
+            scope: users:read,users:read.email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/api/oauth2/callback/slack"
+          github:
+            client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:your-github-client-secret}
+            scope: read:org,admin:org
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/api/oauth2/callback/github"
+          notion:
+            client-id: ${NOTION_CLIENT_ID:your-notion-client-id}
+            client-secret: ${NOTION_CLIENT_SECRET:your-notion-client-secret}
+            scope: read_user
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/api/oauth2/callback/notion"
+
+oram:
+  jwt:
+    secret: ${JWT_SECRET:b2FybS1zdXBlci1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1wcm9qZWN0LW9yYW0=}
+    expiration-ms: 86400000  # 24 hours
+
+logging:
+  level:
+    com.oram: DEBUG
+    org.springframework.security: WARN
