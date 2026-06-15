@@ -3,14 +3,14 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/oram_db
-    username: ${DB_USERNAME:oram_user}
-    password: ${DB_PASSWORD:oram_pass}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/oram_db}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:oram_user}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:oram_pass}}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}
     show-sql: false
     properties:
       hibernate:
