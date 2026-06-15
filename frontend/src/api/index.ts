@@ -27,6 +27,20 @@ export const employeeApi = {
   resign: (id: string) =>
     api.put<{ message: string; offboardingResultId: string }>(`/employees/${id}/resign`).then((r) => r.data),
   delete: (id: string) => api.delete(`/employees/${id}`),
+  csvImport: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{
+      importedCount: number;
+      skippedCount: number;
+      errorCount: number;
+      imported: string[];
+      skipped: string[];
+      errors: string[];
+    }>('/employees/csv-import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
 };
 
 export const saasApi = {

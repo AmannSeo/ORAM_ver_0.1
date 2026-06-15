@@ -6,10 +6,14 @@ import com.oram.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -65,5 +69,24 @@ public class EmployeeController {
     public ResponseEntity<Void> deleteEmployee(@PathVariable UUID id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * CSV 파일로 직원 일괄 가져오기
+     * 형식: employee_id,name,email,department,status(선택)
+     * 기존 HR 시스템 데이터를 CSV로 내보낸 후 업로드하면 됩니다.
+     */
+    @PostMapping(value = "/csv-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmployeeDto.CsvImportResult> csvImport(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            String csvContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            return ResponseEntity.ok(employeeService.importFromCsv(csvContent));
+        } catch (IOException e) {
+            throw new RuntimeException("파일 읽기 오류: " + e.getMessage(), e);
+        }
     }
 }

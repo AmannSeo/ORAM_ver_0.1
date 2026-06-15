@@ -46,6 +46,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/saas-connections/oauth/callback/**").permitAll()
+                .requestMatchers("/api/hr/webhook/**").permitAll()   // 웹훅: 자체 시크릿으로 인증
                 .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )

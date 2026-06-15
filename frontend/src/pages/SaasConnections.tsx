@@ -2,7 +2,7 @@
 import {
   Box, Typography, Grid, Card, CardContent, CardActions, Button,
   Chip, LinearProgress, Alert, Dialog, DialogTitle, DialogContent,
-  DialogActions, Divider, Tooltip, Paper, List, ListItem, ListItemText,
+  DialogActions, Divider, Tooltip, Paper,
   Stepper, Step, StepLabel, StepContent,
 } from '@mui/material';
 import {
@@ -136,15 +136,39 @@ export default function SaasConnections() {
       <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'info.50', borderColor: 'info.200' }}>
         <Box display="flex" alignItems="flex-start" gap={1}>
           <InfoIcon color="info" sx={{ mt: 0.3 }} />
-          <Box>
-            <Typography variant="subtitle2" fontWeight="bold" color="info.dark">SaaS 연결이란?</Typography>
+          <Box width="100%">
+            <Typography variant="subtitle2" fontWeight="bold" color="info.dark">연결이란? — OAuth 위임 인증</Typography>
             <Typography variant="body2" color="text.secondary" mt={0.5}>
-              ORAM이 Slack, GitHub, Notion에 접근하려면 먼저 연결이 필요합니다.
-              연결된 플랫폼에서만 직원의 권한을 탐지하고 해제할 수 있습니다.
+              "연결"은 단순한 로그인이 아닙니다.{' '}
+              <strong>ORAM이 각 SaaS의 관리자 API를 대신 호출할 수 있도록 권한을 위임</strong>받는 과정입니다.
             </Typography>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
-              <strong>실제 연결</strong>: OAuth 앱 등록 후 client-id/secret 설정 필요 &nbsp;|&nbsp;
-              <strong>데모 연결</strong>: OAuth 없이 Mock 데이터로 즉시 테스트 가능
+            {/* 흐름 표시 */}
+            <Box display="flex" alignItems="center" gap={1} mt={1.5} flexWrap="wrap">
+              {[
+                { step: '1', label: '관리자가 OAuth 로그인', color: 'primary' },
+                { step: '→', label: '', color: 'default' },
+                { step: '2', label: 'ORAM이 액세스 토큰 수신', color: 'primary' },
+                { step: '→', label: '', color: 'default' },
+                { step: '3', label: '오프보딩 시 토큰으로 API 호출', color: 'primary' },
+                { step: '→', label: '', color: 'default' },
+                { step: '4', label: '사용자 권한 탐지/해제', color: 'success' },
+              ].map((item, i) =>
+                item.label ? (
+                  <Chip key={i} label={`${item.step} ${item.label}`} size="small"
+                    color={item.color as 'primary' | 'success' | 'default'} variant="outlined" />
+                ) : (
+                  <Typography key={i} variant="body2" color="text.secondary">{item.step}</Typography>
+                )
+              )}
+            </Box>
+            <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+              💡 연결 후 ORAM은 각 SaaS에 로그인하지 않아도 API를 통해 직원 권한을 탐지·해제할 수 있습니다.
+              토큰은 AES-256 암호화로 안전하게 저장됩니다.
+            </Typography>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="caption" color="text.secondary">
+              <strong>실제 연결</strong>: SaaS에서 OAuth App 등록 후 사용 &nbsp;|&nbsp;
+              <strong>데모 연결</strong>: OAuth 없이 Mock 토큰으로 즉시 테스트 (PoC 시연용)
             </Typography>
           </Box>
         </Box>
@@ -232,6 +256,65 @@ export default function SaasConnections() {
           <br />→ <strong>직원 관리</strong> 페이지에서 직원을 선택하고 <strong>"오프보딩"</strong> 버튼을 클릭하세요.
         </Alert>
       )}
+
+      {/* 각 SaaS Connector 구조 안내 */}
+      <Box mt={4}>
+        <Typography variant="h6" fontWeight="bold" gutterBottom>
+          🔍 각 SaaS Connector 구조 & 권한 방식
+        </Typography>
+        <Typography variant="body2" color="text.secondary" mb={2}>
+          각 SaaS는 연결 방식과 권한 모델이 다릅니다. ORAM Connector는 각 플랫폼에 맞게 구성되어 있습니다.
+        </Typography>
+        <Grid container spacing={2}>
+          {[
+            {
+              saas: 'Slack', emoji: '💬', color: '#4A154B',
+              authMethod: 'OAuth 2.0 (Bot Token + User Token)',
+              apiType: 'Slack Web API (REST)',
+              whatItDetects: ['워크스페이스 멤버십', '관리자(Admin) 권한', '워크스페이스 소유자(Owner)'],
+              howRevoke: 'users.setInactive API 호출 → 계정 비활성화',
+              limitation: 'Slack API는 실제 "삭제"가 아닌 "비활성화"만 지원. 유료 플랜의 관리자 토큰 필요.',
+            },
+            {
+              saas: 'GitHub', emoji: '🐙', color: '#181717',
+              authMethod: 'OAuth 2.0 (Personal Access Token 또는 OAuth App)',
+              apiType: 'GitHub REST API v3',
+              whatItDetects: ['Organization 멤버십', 'Owner 권한', 'Repository 접근', 'PAT 토큰 존재'],
+              howRevoke: 'DELETE /orgs/{org}/members/{username} → Org에서 제거',
+              limitation: 'PAT 토큰 삭제는 사용자 계정 권한 필요. Enterprise 기능 일부는 별도 API.',
+            },
+            {
+              saas: 'Notion', emoji: '📝', color: '#000000',
+              authMethod: 'OAuth 2.0 (Public Integration)',
+              apiType: 'Notion API (REST)',
+              whatItDetects: ['워크스페이스 멤버십', '페이지 접근 권한'],
+              howRevoke: '현재 Notion API는 멤버 강제 제거 API 미지원 → 워크스페이스 관리 UI를 통해 수동 처리 필요',
+              limitation: '⚠️ Notion은 API를 통한 멤버 강제 제거 기능이 제한적. Enterprise 플랜에서만 일부 지원.',
+            },
+          ].map(item => (
+            <Grid item xs={12} md={4} key={item.saas}>
+              <Card variant="outlined" sx={{ height: '100%', borderLeft: `4px solid ${item.color}` }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1} mb={2}>
+                    <Typography fontSize={28}>{item.emoji}</Typography>
+                    <Typography variant="h6" fontWeight="bold">{item.saas}</Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight="bold" display="block">인증 방식</Typography>
+                  <Typography variant="body2" mb={1}>{item.authMethod}</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight="bold" display="block">API 종류</Typography>
+                  <Typography variant="body2" mb={1}>{item.apiType}</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight="bold" display="block">탐지 항목</Typography>
+                  {item.whatItDetects.map(d => <Typography key={d} variant="body2" color="text.secondary">• {d}</Typography>)}
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight="bold" display="block">권한 해제 방식</Typography>
+                  <Typography variant="body2" mb={1}>{item.howRevoke}</Typography>
+                  <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.7rem' }}>{item.limitation}</Alert>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
 
       <Dialog open={Boolean(disconnectDialog)} onClose={() => setDisconnectDialog(null)}>
         <DialogTitle>연결 해제 확인</DialogTitle>
