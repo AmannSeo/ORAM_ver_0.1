@@ -1,0 +1,11 @@
+employee_id,name,email,department,status
+EMP100,김민준,kim.mj@company.com,Engineering,ACTIVE
+EMP101,이서연,lee.sy@company.com,Marketing,ACTIVE
+EMP102,박지호,park.jh@company.com,Sales,ACTIVE
+EMP103,최수빈,choi.sb@company.com,Engineering,ACTIVE
+EMP104,정다은,jung.de@company.com,HR,ACTIVE
+EMP105,강준혁,kang.jh@company.com,DevOps,ACTIVE
+EMP106,윤하늘,yoon.hn@company.com,Product,RESIGNED
+EMP107,임성민,lim.sm@company.com,Engineering,ACTIVE
+EMP108,신지원,shin.jw@company.com,Design,ACTIVE
+EMP109,오민서,oh.ms@company.com,Finance,ACTIVE

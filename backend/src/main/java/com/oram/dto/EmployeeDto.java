@@ -61,4 +61,17 @@ public class EmployeeDto {
         private int page;
         private int size;
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CsvImportResult {
+        private int importedCount;
+        private int skippedCount;
+        private int errorCount;
+        private java.util.List<String> imported;
+        private java.util.List<String> skipped;
+        private java.util.List<String> errors;
+    }
 }

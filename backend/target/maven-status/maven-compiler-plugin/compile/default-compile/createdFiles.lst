@@ -13,6 +13,7 @@ com\oram\dto\OffboardingDto$Summary$SummaryBuilder.class
 com\oram\dto\OffboardingDto$Summary.class
 com\oram\connector\SlackConnector.class
 com\oram\enums\SaasType.class
+com\oram\controller\HrWebhookController$HrWebhookRequest.class
 com\oram\connector\ConnectorRegistry.class
 com\oram\repository\OffboardingResultRepository.class
 com\oram\risk\RiskFeatures.class
@@ -32,6 +33,7 @@ com\oram\dto\OffboardingDto$RevokeResponse.class
 com\oram\dto\EmployeeDto$Response$ResponseBuilder.class
 com\oram\dto\OffboardingDto$EmployeeInfo$EmployeeInfoBuilder.class
 com\oram\dto\OffboardingDto$PermissionInfo.class
+com\oram\dto\EmployeeDto$CsvImportResult$CsvImportResultBuilder.class
 com\oram\dto\SaasConnectionDto$OAuthUrlResponse.class
 com\oram\entity\SaasConnection.class
 com\oram\repository\AuditLogRepository.class
@@ -43,6 +45,7 @@ com\oram\dto\DashboardDto.class
 com\oram\entity\OffboardingResult.class
 com\oram\dto\RiskDto.class
 com\oram\dto\SaasConnectionDto.class
+com\oram\controller\HrWebhookController.class
 com\oram\dto\AuthDto$UserInfo$UserInfoBuilder.class
 com\oram\controller\OffboardingController.class
 com\oram\connector\NotionConnector.class
@@ -63,6 +66,7 @@ com\oram\dto\OffboardingDto$Detail$DetailBuilder.class
 com\oram\repository\UserRepository.class
 com\oram\entity\Employee$EmployeeBuilder.class
 com\oram\entity\PermissionRecord$PermissionRecordBuilder.class
+com\oram\dto\EmployeeDto$CsvImportResult.class
 com\oram\dto\SaasConnectionDto$OAuthUrlResponse$OAuthUrlResponseBuilder.class
 com\oram\dto\RiskDto$ScoreResponse$ScoreResponseBuilder.class
 com\oram\entity\Employee.class

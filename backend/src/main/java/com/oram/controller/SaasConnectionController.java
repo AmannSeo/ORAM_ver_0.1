@@ -3,6 +3,8 @@ package com.oram.controller;
 import com.oram.dto.SaasConnectionDto;
 import com.oram.enums.SaasType;
 import com.oram.service.SaasConnectionService;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,16 +26,47 @@ public class SaasConnectionController {
         return ResponseEntity.ok(saasConnectionService.getAllConnections());
     }
 
+    /**
+     * Token direct connection: connect without registering an OAuth app.
+     *
+     * Slack  : xoxb-... (Bot Token) or xoxp-... (User Token)
+     * GitHub : ghp_... (PAT) or Fine-grained PAT
+     * Notion : secret_... (Internal Integration Token)
+     */
+    @PostMapping("/token-connect/{saasType}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SaasConnectionDto.Response> tokenConnect(
+            @PathVariable SaasType saasType,
+            @RequestBody TokenConnectRequest request) {
+        SaasConnectionDto.Response result = saasConnectionService.tokenConnect(
+                saasType, request.getToken(), request.getWorkspaceName());
+        return ResponseEntity.ok(result);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArg(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
+
+    @PostMapping("/token-connect-error/{saasType}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> tokenConnectValidate(
+            @PathVariable SaasType saasType,
+            @RequestBody TokenConnectRequest request) {
+        try {
+            saasConnectionService.tokenConnect(saasType, request.getToken(), request.getWorkspaceName());
+            return ResponseEntity.ok(Map.of("result", "ok"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/oauth/authorize/{saasType}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SaasConnectionDto.OAuthUrlResponse> getOAuthUrl(@PathVariable SaasType saasType) {
         return ResponseEntity.ok(saasConnectionService.getOAuthUrl(saasType));
     }
 
-    /**
-     * OAuth 콜백 - 프론트엔드에서 redirect 후 이 엔드포인트 호출
-     * 실제 운영에서는 state 파라미터로 CSRF 검증 필요
-     */
     @GetMapping("/oauth/callback/{saasType}")
     public ResponseEntity<Map<String, String>> oauthCallback(
             @PathVariable SaasType saasType,
@@ -53,12 +86,16 @@ public class SaasConnectionController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 데모 연결: OAuth 자격증명 없이 PoC 시연용 연결 생성
-     */
     @PostMapping("/demo-connect/{saasType}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SaasConnectionDto.Response> demoConnect(@PathVariable SaasType saasType) {
         return ResponseEntity.ok(saasConnectionService.demoConnect(saasType));
+    }
+
+    @Data
+    @NoArgsConstructor
+    public static class TokenConnectRequest {
+        private String token;
+        private String workspaceName;
     }
 }
