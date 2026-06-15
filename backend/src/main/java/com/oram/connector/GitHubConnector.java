@@ -151,15 +151,48 @@ public class GitHubConnector implements SaaSConnector {
     @Override
     public boolean validateToken(String accessToken) {
         try {
-            webClient.get()
+            // GitHub는 Bearer 또는 token prefix 모두 지원
+            String authHeader = accessToken.startsWith("ghp_") || accessToken.startsWith("github_pat_")
+                    ? "Bearer " + accessToken
+                    : "token " + accessToken;
+            Map<?, ?> resp = webClient.get()
                     .uri("/user")
-                    .header("Authorization", "token " + accessToken)
+                    .header("Authorization", authHeader)
+                    .header("Accept", "application/vnd.github+json")
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
-            return true;
+            return resp != null && resp.get("login") != null;
         } catch (Exception e) {
+            log.warn("GitHub validateToken failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 토큰으로 사용자/조직 정보를 조회
+     * GitHub PAT: /user API 사용
+     */
+    public String getWorkspaceName(String accessToken) {
+        try {
+            String authHeader = accessToken.startsWith("ghp_") || accessToken.startsWith("github_pat_")
+                    ? "Bearer " + accessToken
+                    : "token " + accessToken;
+            Map<?, ?> resp = webClient.get()
+                    .uri("/user")
+                    .header("Authorization", authHeader)
+                    .header("Accept", "application/vnd.github+json")
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (resp != null && resp.get("login") != null) {
+                return resp.get("name") != null
+                        ? resp.get("name").toString()
+                        : resp.get("login").toString() + " (GitHub)";
+            }
+        } catch (Exception e) {
+            log.warn("GitHub getWorkspaceName failed: {}", e.getMessage());
+        }
+        return "GitHub";
     }
 }

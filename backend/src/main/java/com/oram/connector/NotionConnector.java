@@ -153,16 +153,47 @@ public class NotionConnector implements SaaSConnector {
     @Override
     public boolean validateToken(String accessToken) {
         try {
-            webClient.get()
+            Map<?, ?> resp = webClient.get()
                     .uri("/users/me")
                     .header("Authorization", "Bearer " + accessToken)
                     .header("Notion-Version", NOTION_API_VERSION)
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
-            return true;
+            return resp != null && resp.get("id") != null;
         } catch (Exception e) {
+            log.warn("Notion validateToken failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 토큰으로 워크스페이스 이름 조회
+     * Notion Internal Integration Token: /users/me API 사용
+     */
+    public String getWorkspaceName(String accessToken) {
+        try {
+            // Notion은 bot 정보에서 workspace_name을 가져올 수 있음
+            Map<?, ?> resp = webClient.get()
+                    .uri("/users/me")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Notion-Version", NOTION_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (resp != null) {
+                // bot 타입이면 workspace_name 포함
+                Object bot = resp.get("bot");
+                if (bot instanceof java.util.Map<?,?> botMap) {
+                    Object ws = botMap.get("workspace_name");
+                    if (ws != null) return ws.toString();
+                }
+                Object name = resp.get("name");
+                if (name != null) return name.toString() + " (Notion)";
+            }
+        } catch (Exception e) {
+            log.warn("Notion getWorkspaceName failed: {}", e.getMessage());
+        }
+        return "Notion Workspace";
     }
 }

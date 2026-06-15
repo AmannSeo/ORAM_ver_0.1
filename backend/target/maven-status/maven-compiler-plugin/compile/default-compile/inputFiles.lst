@@ -8,6 +8,7 @@ C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\connector\SlackConnec
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\AuthController.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\DashboardController.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\EmployeeController.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\HrWebhookController.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\OffboardingController.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\RiskAnalysisController.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\controller\SaasConnectionController.java
