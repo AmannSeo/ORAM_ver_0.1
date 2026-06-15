@@ -164,4 +164,28 @@ public class SlackConnector implements SaaSConnector {
             return false;
         }
     }
+
+    /**
+     * 토큰으로 워크스페이스 이름을 자동 조회
+     * Slack Bot Token: auth.test API 사용
+     */
+    public String getWorkspaceName(String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri("/auth.test")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (response != null && Boolean.TRUE.equals(response.get("ok"))) {
+                Object team = response.get("team");
+                if (team instanceof String) return (String) team;
+                Object teamName = response.get("team"); // team name directly in some token types
+                return teamName != null ? teamName.toString() : "Slack Workspace";
+            }
+        } catch (Exception e) {
+            log.warn("Slack getWorkspaceName failed: {}", e.getMessage());
+        }
+        return "Slack Workspace";
+    }
 }

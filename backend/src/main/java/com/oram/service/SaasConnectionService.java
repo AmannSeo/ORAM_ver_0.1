@@ -2,7 +2,10 @@ package com.oram.service;
 
 import com.oram.config.EncryptionConfig;
 import com.oram.connector.ConnectorRegistry;
+import com.oram.connector.GitHubConnector;
+import com.oram.connector.NotionConnector;
 import com.oram.connector.SaaSConnector;
+import com.oram.connector.SlackConnector;
 import com.oram.dto.SaasConnectionDto;
 import com.oram.entity.SaasConnection;
 import com.oram.entity.User;
@@ -96,6 +99,58 @@ public class SaasConnectionService {
     }
 
     /**
+     * 토큰 직접 입력 방식 연결 (OAuth App 등록 없이 사용 가능)
+     *
+     * Slack  : Bot Token (xoxb-...) 또는 User Token (xoxp-...)
+     * GitHub : Personal Access Token (ghp_...) 또는 Fine-grained PAT
+     * Notion : Internal Integration Token (secret_...)
+     *
+     * 입력된 토큰을 실제 SaaS API로 검증한 후 저장합니다.
+     */
+    @Transactional
+    public SaasConnectionDto.Response tokenConnect(SaasType saasType, String rawToken, String workspaceName) {
+        // 1. 실제 API 검증 (토큰이 살아있는지, 권한이 있는지)
+        SaaSConnector connector = connectorRegistry.getConnector(saasType)
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported SaaS: " + saasType));
+
+        boolean valid = connector.validateToken(rawToken);
+        if (!valid) {
+            throw new IllegalArgumentException(
+                saasType.name() + " 토큰 인증 실패. 토큰이 유효한지, 필요한 권한(scope)이 있는지 확인하세요."
+            );
+        }
+
+        // 워크스페이스 이름 자동 조회 (사용자가 직접 입력하지 않은 경우)
+        String resolvedWorkspaceName = workspaceName != null && !workspaceName.isBlank()
+                ? workspaceName
+                : autoDetectWorkspaceName(saasType, connector, rawToken);
+
+        // 2. 저장 (AES-256 암호화)
+        SaasConnection connection = connectionRepository.findBySaasType(saasType)
+                .orElse(SaasConnection.builder().saasType(saasType).build());
+
+        connection.setAccessTokenEncrypted(tokenEncryptor.encrypt(rawToken));
+        connection.setWorkspaceId(saasType.name().toLowerCase() + "-token-connect");
+        connection.setWorkspaceName(resolvedWorkspaceName);
+        connection.setConnected(true);
+        connection.setConnectedAt(LocalDateTime.now());
+        getCurrentUser().ifPresent(connection::setConnectedBy);
+        connectionRepository.save(connection);
+
+        auditService.log(null, "TOKEN_CONNECT", "SAAS_CONNECTION", saasType.name(),
+                "Token-based connection: " + saasType + " / " + connection.getWorkspaceName());
+        log.info("Token-based SaaS connection established: {}", saasType);
+
+        return SaasConnectionDto.Response.builder()
+                .id(connection.getId())
+                .saasType(connection.getSaasType())
+                .workspaceName(connection.getWorkspaceName())
+                .isConnected(true)
+                .connectedAt(connection.getConnectedAt())
+                .build();
+    }
+
+    /**
      * OAuth 자격증명 없이 데모 연결을 생성합니다 (PoC 시연용)
      */
     @Transactional
@@ -152,6 +207,22 @@ public class SaasConnectionService {
             return userRepository.findByEmail(email);
         } catch (Exception e) {
             return Optional.empty();
+        }
+    }
+
+    /**
+     * SaaS별 워크스페이스 이름 자동 탐지
+     */
+    private String autoDetectWorkspaceName(SaasType saasType, SaaSConnector connector, String token) {
+        try {
+            return switch (saasType) {
+                case SLACK  -> ((SlackConnector) connector).getWorkspaceName(token);
+                case GITHUB -> ((GitHubConnector) connector).getWorkspaceName(token);
+                case NOTION -> ((NotionConnector) connector).getWorkspaceName(token);
+            };
+        } catch (Exception e) {
+            log.warn("Failed to detect workspace name for {}: {}", saasType, e.getMessage());
+            return saasType.name() + " Workspace";
         }
     }
 }

@@ -47,6 +47,8 @@ export const saasApi = {
   getAll: () => api.get<SaasConnection[]>('/saas-connections').then((r) => r.data),
   getOAuthUrl: (saasType: SaasType) =>
     api.get<{ authorizationUrl: string }>(`/saas-connections/oauth/authorize/${saasType}`).then((r) => r.data),
+  tokenConnect: (saasType: SaasType, token: string, workspaceName?: string) =>
+    api.post<SaasConnection>(`/saas-connections/token-connect/${saasType}`, { token, workspaceName }).then((r) => r.data),
   demoConnect: (saasType: SaasType) =>
     api.post<SaasConnection>(`/saas-connections/demo-connect/${saasType}`).then((r) => r.data),
   disconnect: (saasType: SaasType) => api.delete(`/saas-connections/${saasType}`),
