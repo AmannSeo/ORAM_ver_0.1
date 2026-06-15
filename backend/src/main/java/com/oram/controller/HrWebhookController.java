@@ -134,11 +134,7 @@ public class HrWebhookController {
      * GET /api/hr/webhook/ping
      */
     @GetMapping("/webhook/ping")
-    public ResponseEntity<Map<String, String>> ping(
-            @RequestHeader(value = "X-ORAM-Webhook-Secret", required = false) String secret) {
-        if (!WEBHOOK_SECRET.equals(secret)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
-        }
+    public ResponseEntity<Map<String, String>> ping() {
         return ResponseEntity.ok(Map.of(
             "status", "OK",
             "message", "ORAM HR Webhook is ready",
