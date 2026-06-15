@@ -5,6 +5,7 @@ import com.oram.entity.Employee;
 import com.oram.enums.EmployeeStatus;
 import com.oram.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -12,8 +13,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.BufferedReader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
@@ -93,6 +99,83 @@ public class EmployeeService {
     public void deleteEmployee(UUID id) {
         Employee employee = findById(id);
         employeeRepository.delete(employee);
+    }
+
+    /**
+     * CSV 일괄 가져오기
+     * 형식: employee_id,name,email,department,status(선택)
+     * 첫 줄 헤더 자동 스킵
+     */
+    @Transactional
+    public EmployeeDto.CsvImportResult importFromCsv(String csvContent) {
+        List<String> success = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int lineNum = 0;
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(csvContent))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lineNum++;
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                // 헤더 행 스킵
+                if (lineNum == 1 && (line.toLowerCase().contains("employee_id") || line.toLowerCase().contains("name"))) {
+                    continue;
+                }
+
+                String[] cols = line.split(",");
+                if (cols.length < 4) {
+                    errors.add("줄 " + lineNum + ": 컬럼 부족 (필요: employee_id,name,email,department)");
+                    continue;
+                }
+
+                String employeeId = cols[0].trim();
+                String name       = cols[1].trim();
+                String email      = cols[2].trim();
+                String department = cols[3].trim();
+                String statusStr  = cols.length > 4 ? cols[4].trim() : "ACTIVE";
+
+                if (employeeId.isEmpty() || email.isEmpty()) {
+                    errors.add("줄 " + lineNum + ": 사번 또는 이메일 누락");
+                    continue;
+                }
+
+                if (employeeRepository.existsByEmail(email) || employeeRepository.existsByEmployeeId(employeeId)) {
+                    skipped.add(email + " (이미 존재)");
+                    continue;
+                }
+
+                EmployeeStatus status;
+                try {
+                    status = EmployeeStatus.valueOf(statusStr.toUpperCase());
+                } catch (Exception e) {
+                    status = EmployeeStatus.ACTIVE;
+                }
+
+                Employee employee = Employee.builder()
+                        .employeeId(employeeId)
+                        .name(name)
+                        .email(email)
+                        .department(department)
+                        .status(status)
+                        .build();
+                employeeRepository.save(employee);
+                success.add(email);
+                log.info("CSV import: {} ({})", email, employeeId);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("CSV 파싱 오류: " + e.getMessage(), e);
+        }
+
+        return EmployeeDto.CsvImportResult.builder()
+                .importedCount(success.size())
+                .skippedCount(skipped.size())
+                .errorCount(errors.size())
+                .imported(success)
+                .skipped(skipped)
+                .errors(errors)
+                .build();
     }
 
     private Employee findById(UUID id) {
