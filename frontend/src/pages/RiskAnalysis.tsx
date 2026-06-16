@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
   Psychology as AIIcon, HelpOutline as HelpIcon,
-  DeleteSweep as RevokeIcon, Visibility as ViewIcon,
+  DeleteSweep as RevokeIcon,
   Warning as WarnIcon, CheckCircle as OkIcon,
 } from '@mui/icons-material';
 import { riskApi, offboardingApi } from '../api';
@@ -54,8 +54,9 @@ function RiskPersonList() {
   useEffect(() => {
     offboardingApi.getAll()
       .then(data => {
+        const pending = data.filter(r => !r.revokedAll);
         // 리스크 점수 높은 순 정렬
-        const sorted = [...data].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
+        const sorted = [...pending].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
         setResults(sorted);
       })
       .finally(() => setLoading(false));
@@ -71,8 +72,8 @@ function RiskPersonList() {
     return (
       <Box textAlign="center" py={8} color="text.disabled">
         <OkIcon sx={{ fontSize: 64, mb: 2 }} />
-        <Typography variant="h6">오프보딩된 직원이 없습니다</Typography>
-        <Typography variant="body2">직원 관리 페이지에서 퇴사 처리를 진행하면 이 목록에 표시됩니다.</Typography>
+        <Typography variant="h6">처리할 리스크 항목이 없습니다</Typography>
+        <Typography variant="body2">권한 해제가 완료된 직원은 이 목록에서 제외됩니다.</Typography>
       </Box>
     );
   }
@@ -145,22 +146,18 @@ function RiskPersonList() {
                   </Box>
                 </TableCell>
                 <TableCell>
-                  {r.revokedAll ? (
-                    <Chip icon={<OkIcon />} label="해제 완료" color="success" size="small" />
-                  ) : (
-                    <Chip label="미해제" color={r.riskLevel === 'CRITICAL' ? 'error' : 'warning'} size="small" variant="outlined" />
-                  )}
+                  <Chip label="미해제" color={r.riskLevel === 'CRITICAL' ? 'error' : 'warning'} size="small" variant="outlined" />
                 </TableCell>
                 <TableCell align="center">
                   <Tooltip title="오프보딩 상세 → 권한 해제">
                     <Button
-                      variant={r.revokedAll ? 'outlined' : 'contained'}
+                      variant="contained"
                       color={r.riskLevel === 'CRITICAL' ? 'error' : 'primary'}
                       size="small"
-                      startIcon={r.revokedAll ? <ViewIcon /> : <RevokeIcon />}
+                      startIcon={<RevokeIcon />}
                       onClick={() => navigate(`/offboarding/${r.id}`)}
                     >
-                      {r.revokedAll ? '상세 보기' : '권한 해제'}
+                      권한 해제
                     </Button>
                   </Tooltip>
                 </TableCell>
@@ -173,7 +170,7 @@ function RiskPersonList() {
       <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'grey.50' }}>
         <Typography variant="caption" color="text.secondary">
           💡 <strong>이 목록은 오프보딩 페이지와 동일한 데이터입니다.</strong>
-          리스크 점수 높은 순으로 정렬되어 어떤 직원을 먼저 처리해야 하는지 쉽게 파악할 수 있습니다.
+          권한 해제가 완료된 직원은 제외되며, 리스크 점수 높은 순으로 정렬되어 어떤 직원을 먼저 처리해야 하는지 쉽게 파악할 수 있습니다.
           "권한 해제" 버튼을 클릭하면 해당 직원의 오프보딩 상세 페이지로 이동합니다.
         </Typography>
       </Paper>
