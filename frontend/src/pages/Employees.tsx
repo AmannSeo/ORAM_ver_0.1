@@ -66,6 +66,12 @@ export default function Employees() {
   };
   useEffect(load, [page, filterStatus]);
 
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
+
   const handleResign = async () => {
     if (!resignDialog) return;
     try {
