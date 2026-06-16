@@ -93,14 +93,6 @@ export default function Login() {
             </Box>
           </form>
 
-          <Box mt={3} p={2} bgcolor="grey.100" borderRadius={1}>
-            <Typography variant="caption" color="text.secondary">
-              <strong>Demo Accounts:</strong><br />
-              admin@oram.local / Admin1234!<br />
-              security@oram.local / Security1234!<br />
-              auditor@oram.local / Auditor1234!
-            </Typography>
-          </Box>
         </CardContent>
       </Card>
     </Box>
