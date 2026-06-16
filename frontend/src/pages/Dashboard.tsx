@@ -117,44 +117,88 @@ function ChartCard({ title, subtitle, children, height = 280 }: ChartCardProps) 
   );
 }
 
-interface ActivityLogProps {
-  logs: Array<{
-    severity: 'error' | 'warning' | 'info' | 'success';
-    title: string;
-    description: string;
-  }>;
+type ActivitySeverity = 'error' | 'warning' | 'info' | 'success';
+
+interface ActivityLogItem {
+  severity: ActivitySeverity;
+  title: string;
+  status: string;
+  meta: string;
+  description: string;
+  icon: React.ReactNode;
 }
 
-function ActivityLog({ logs }: ActivityLogProps) {
+const LOG_STYLE: Record<ActivitySeverity, { color: 'error' | 'warning' | 'info' | 'success'; bg: string }> = {
+  error: { color: 'error', bg: '#ffebee' },
+  warning: { color: 'warning', bg: '#fff3e0' },
+  info: { color: 'info', bg: '#e3f2fd' },
+  success: { color: 'success', bg: '#e8f5e9' },
+};
+
+function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
   return (
-    <Card elevation={2} sx={{ height: '100%' }}>
-      <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+    <Card
+      elevation={2}
+      sx={{
+        height: '100%',
+        minHeight: { lg: 760 },
+        position: { lg: 'sticky' },
+        top: { lg: 24 },
+      }}
+    >
+      <CardContent sx={{ p: 2.5 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
           <Box display="flex" alignItems="center" gap={1}>
             <HistoryIcon color="primary" />
-            <Typography variant="h6" fontWeight={700}>
-              운영 로그
+            <Typography variant="h6" fontWeight={800}>
+              Activity Log
             </Typography>
           </Box>
-          <Chip label={`${logs.length}건`} size="small" color="primary" variant="outlined" />
+          <Chip label={`${logs.length} items`} size="small" color="primary" variant="outlined" />
         </Box>
-        <Typography variant="body2" color="text.secondary" mb={2}>
-          현재 대시보드 지표를 기준으로 확인할 작업입니다.
+
+        <Typography variant="body2" color="text.secondary" mb={1.5}>
+          운영 상태와 확인할 작업을 시간순 로그처럼 정리했습니다.
         </Typography>
-        <Stack spacing={1.5}>
-          {logs.map((log, index) => (
-            <Box key={`${log.title}-${index}`}>
-              {index > 0 && <Divider sx={{ mb: 1.5 }} />}
-              <Alert severity={log.severity} variant="outlined" sx={{ alignItems: 'center' }}>
-                <Typography variant="body2" fontWeight={700}>
-                  {log.title}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {log.description}
-                </Typography>
-              </Alert>
-            </Box>
-          ))}
+
+        <Stack divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />} spacing={0}>
+          {logs.map((log) => {
+            const style = LOG_STYLE[log.severity];
+            return (
+              <Box key={log.title} display="flex" gap={1.5} py={1.75}>
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 1.5,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                    bgcolor: style.bg,
+                    color: `${style.color}.main`,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  {log.icon}
+                </Box>
+                <Box minWidth={0} flex={1}>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+                    <Typography variant="body2" fontWeight={800} noWrap>
+                      {log.title}
+                    </Typography>
+                    <Chip label={log.status} size="small" color={style.color} variant="outlined" />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
+                    {log.meta}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" mt={0.75}>
+                    {log.description}
+                  </Typography>
+                </Box>
+              </Box>
+            );
+          })}
         </Stack>
       </CardContent>
     </Card>
@@ -209,40 +253,58 @@ export default function Dashboard() {
     { name: '연결 SaaS', value: stats.connectedSaasCount, fill: '#0288d1' },
   ];
 
-  const activityLogs = [
-    ...(stats.criticalRiskCount > 0
-      ? [{
-          severity: 'error' as const,
-          title: `최고 위험 계정 ${stats.criticalRiskCount}건 발견`,
+  const activityLogs: ActivityLogItem[] = [
+    stats.criticalRiskCount > 0
+      ? {
+          severity: 'error',
+          title: 'Critical accounts',
+          status: `${stats.criticalRiskCount} risk`,
+          meta: 'Risk analysis',
           description: '오프보딩 결과에서 접근 권한 해제 여부를 우선 확인하세요.',
-        }]
-      : [{
-          severity: 'success' as const,
-          title: '최고 위험 계정 없음',
+          icon: <WarningIcon fontSize="small" />,
+        }
+      : {
+          severity: 'success',
+          title: 'Critical accounts',
+          status: 'Clear',
+          meta: 'Risk analysis',
           description: '현재 CRITICAL 위험 계정은 감지되지 않았습니다.',
-        }]),
-    ...(stats.pendingOffboardings > 0
-      ? [{
-          severity: 'warning' as const,
-          title: `진행 중 오프보딩 ${stats.pendingOffboardings}건`,
+          icon: <CheckIcon fontSize="small" />,
+        },
+    stats.pendingOffboardings > 0
+      ? {
+          severity: 'warning',
+          title: 'Offboarding queue',
+          status: `${stats.pendingOffboardings} active`,
+          meta: 'Workflow status',
           description: '오프보딩 관리 페이지에서 처리 상태를 확인하세요.',
-        }]
-      : [{
-          severity: 'success' as const,
-          title: '진행 중 오프보딩 없음',
+          icon: <PendingIcon fontSize="small" />,
+        }
+      : {
+          severity: 'success',
+          title: 'Offboarding queue',
+          status: 'Idle',
+          meta: 'Workflow status',
           description: '대기 중이거나 처리 중인 오프보딩 작업이 없습니다.',
-        }]),
-    ...(stats.connectedSaasCount < 3
-      ? [{
-          severity: 'info' as const,
-          title: `SaaS ${3 - stats.connectedSaasCount}개 미연결`,
-          description: '연결 관리에서 Slack, GitHub, Notion 연동 상태를 확인하세요.',
-        }]
-      : [{
-          severity: 'success' as const,
-          title: '모든 SaaS 연결 완료',
+          icon: <CheckIcon fontSize="small" />,
+        },
+    stats.connectedSaasCount < 3
+      ? {
+          severity: 'info',
+          title: 'SaaS connections',
+          status: `${3 - stats.connectedSaasCount} left`,
+          meta: 'Slack · GitHub · Notion',
+          description: '연결 관리에서 각 SaaS 연동 상태를 확인하세요.',
+          icon: <CloudIcon fontSize="small" />,
+        }
+      : {
+          severity: 'success',
+          title: 'SaaS connections',
+          status: 'Complete',
+          meta: 'Slack · GitHub · Notion',
           description: '지원 플랫폼 3개가 모두 연결된 상태입니다.',
-        }]),
+          icon: <CloudIcon fontSize="small" />,
+        },
   ];
 
   return (
@@ -263,172 +325,178 @@ export default function Dashboard() {
         />
       </Box>
 
-      <Grid container spacing={2.25}>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="전체 직원"
-            value={stats.totalEmployees}
-            icon={<PeopleIcon />}
-            color="primary.main"
-            onClick={() => navigate('/employees')}
-            hint="전체 직원 목록"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="재직 중"
-            value={stats.activeEmployees}
-            icon={<CheckIcon />}
-            color="success.main"
-            subtitle={`${activeRate}% active`}
-            onClick={() => navigate('/employees?status=ACTIVE')}
-            hint="재직 중 직원 목록"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="퇴사자"
-            value={stats.resignedEmployees}
-            icon={<ResignedIcon />}
-            color="text.secondary"
-            subtitle={`${resignedRate}% resigned`}
-            onClick={() => navigate('/employees?status=RESIGNED')}
-            hint="퇴사자 목록"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="연결 SaaS"
-            value={stats.connectedSaasCount}
-            icon={<CloudIcon />}
-            color="info.main"
-            subtitle={`${saasRate}% connected`}
-            onClick={() => navigate('/saas-connections')}
-            hint="SaaS 연결 관리"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="최고 위험"
-            value={stats.criticalRiskCount}
-            icon={<WarningIcon />}
-            color="error.main"
-            subtitle="즉시 확인"
-            onClick={() => navigate('/offboarding')}
-            hint="CRITICAL 위험 확인"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
-          <StatCard
-            title="진행 중"
-            value={stats.pendingOffboardings}
-            icon={<PendingIcon />}
-            color="warning.main"
-            subtitle="오프보딩"
-            onClick={() => navigate('/offboarding')}
-            hint="오프보딩 목록"
-          />
-        </Grid>
-      </Grid>
+      <Grid container spacing={3} alignItems="stretch">
+        <Grid item xs={12} lg={9}>
+          <Stack spacing={3}>
+            <Grid container spacing={2.25}>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="전체 직원"
+                  value={stats.totalEmployees}
+                  icon={<PeopleIcon />}
+                  color="primary.main"
+                  onClick={() => navigate('/employees')}
+                  hint="전체 직원 목록"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="재직 중"
+                  value={stats.activeEmployees}
+                  icon={<CheckIcon />}
+                  color="success.main"
+                  subtitle={`${activeRate}% active`}
+                  onClick={() => navigate('/employees?status=ACTIVE')}
+                  hint="재직 중 직원 목록"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="퇴사자"
+                  value={stats.resignedEmployees}
+                  icon={<ResignedIcon />}
+                  color="text.secondary"
+                  subtitle={`${resignedRate}% resigned`}
+                  onClick={() => navigate('/employees?status=RESIGNED')}
+                  hint="퇴사자 목록"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="연결 SaaS"
+                  value={stats.connectedSaasCount}
+                  icon={<CloudIcon />}
+                  color="info.main"
+                  subtitle={`${saasRate}% connected`}
+                  onClick={() => navigate('/saas-connections')}
+                  hint="SaaS 연결 관리"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="최고 위험"
+                  value={stats.criticalRiskCount}
+                  icon={<WarningIcon />}
+                  color="error.main"
+                  subtitle="즉시 확인"
+                  onClick={() => navigate('/offboarding')}
+                  hint="CRITICAL 위험 확인"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} xl={4}>
+                <StatCard
+                  title="진행 중"
+                  value={stats.pendingOffboardings}
+                  icon={<PendingIcon />}
+                  color="warning.main"
+                  subtitle="오프보딩"
+                  onClick={() => navigate('/offboarding')}
+                  hint="오프보딩 목록"
+                />
+              </Grid>
+            </Grid>
 
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid item xs={12} lg={4}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
+                  {employeeStatusData.length > 0 ? (
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie
+                          data={employeeStatusData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={58}
+                          outerRadius={92}
+                          paddingAngle={4}
+                          label
+                        >
+                          {employeeStatusData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box height="100%" display="flex" alignItems="center" justifyContent="center">
+                      <Typography color="text.secondary">직원 데이터가 없습니다</Typography>
+                    </Box>
+                  )}
+                </ChartCard>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <ChartCard title="SaaS 연결 현황" subtitle={`${stats.connectedSaasCount}/3개 플랫폼 연결`}>
+                  <ResponsiveContainer>
+                    <RadialBarChart
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="62%"
+                      outerRadius="92%"
+                      barSize={18}
+                      data={saasConnectionData}
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      <RadialBar dataKey="value" background cornerRadius={10} />
+                      <ChartTooltip />
+                      <Legend />
+                      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" fontSize={32} fontWeight={700} fill="#263238">
+                        {saasRate}%
+                      </text>
+                      <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#607d8b">
+                        연결률
+                      </text>
+                    </RadialBarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              </Grid>
+
+              <Grid item xs={12} md={5}>
+                <ChartCard title="조치 필요 항목" subtitle={`${openActionCount}개 항목 확인 필요`}>
+                  <ResponsiveContainer>
+                    <BarChart data={actionData} margin={{ top: 16, right: 12, left: -20, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" />
+                      <YAxis allowDecimals={false} />
+                      <ChartTooltip />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                        {actionData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              </Grid>
+
+              <Grid item xs={12} md={7}>
+                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다" height={280}>
+                  <ResponsiveContainer>
+                    <BarChart data={overviewData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" />
+                      <YAxis allowDecimals={false} />
+                      <ChartTooltip />
+                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                        {overviewData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              </Grid>
+            </Grid>
+          </Stack>
+        </Grid>
+
+        <Grid item xs={12} lg={3}>
           <ActivityLog logs={activityLogs} />
-        </Grid>
-
-        <Grid item xs={12} md={6} lg={4}>
-          <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
-            {employeeStatusData.length > 0 ? (
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={employeeStatusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={58}
-                    outerRadius={92}
-                    paddingAngle={4}
-                    label
-                  >
-                    {employeeStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box height="100%" display="flex" alignItems="center" justifyContent="center">
-                <Typography color="text.secondary">직원 데이터가 없습니다</Typography>
-              </Box>
-            )}
-          </ChartCard>
-        </Grid>
-
-        <Grid item xs={12} md={6} lg={4}>
-          <ChartCard title="SaaS 연결 현황" subtitle={`${stats.connectedSaasCount}/3개 플랫폼 연결`}>
-            <ResponsiveContainer>
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="62%"
-                outerRadius="92%"
-                barSize={18}
-                data={saasConnectionData}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <RadialBar dataKey="value" background cornerRadius={10} />
-                <ChartTooltip />
-                <Legend />
-                <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" fontSize={32} fontWeight={700} fill="#263238">
-                  {saasRate}%
-                </text>
-                <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#607d8b">
-                  연결률
-                </text>
-              </RadialBarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-
-        <Grid item xs={12} md={5}>
-          <ChartCard title="조치 필요 항목" subtitle={`${openActionCount}개 항목 확인 필요`}>
-            <ResponsiveContainer>
-              <BarChart data={actionData} margin={{ top: 16, right: 12, left: -20, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <ChartTooltip />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {actionData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-
-        <Grid item xs={12} md={7}>
-          <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다">
-            <ResponsiveContainer>
-              <BarChart data={overviewData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <ChartTooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {overviewData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
         </Grid>
       </Grid>
     </Box>

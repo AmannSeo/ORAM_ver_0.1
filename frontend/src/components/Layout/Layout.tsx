@@ -58,9 +58,16 @@ export default function Layout() {
               onClick={() => { navigate(item.path); setMobileOpen(false); }}
               sx={{
                 '&.Mui-selected': {
-                  bgcolor: 'primary.light',
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': { color: 'primary.main' },
+                  bgcolor: 'primary.main',
+                  color: 'common.white',
+                  '& .MuiListItemIcon-root': { color: 'common.white' },
+                  '& .MuiListItemText-primary': { color: 'common.white', fontWeight: 700 },
+                },
+                '&.Mui-selected:hover': {
+                  bgcolor: 'primary.dark',
+                  color: 'common.white',
+                  '& .MuiListItemIcon-root': { color: 'common.white' },
+                  '& .MuiListItemText-primary': { color: 'common.white' },
                 },
               }}
             >
