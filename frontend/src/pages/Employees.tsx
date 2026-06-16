@@ -11,7 +11,7 @@ import {
 import {
   PersonOff as ResignIcon, Add as AddIcon,
   Search as SearchIcon, Upload as UploadIcon, Download as DownloadIcon,
-  ExpandMore as ExpandIcon,
+  ExpandMore as ExpandIcon, Delete as DeleteIcon, DeleteSweep as DeleteAllIcon,
 } from '@mui/icons-material';
 import { employeeApi } from '../api';
 import type { Employee } from '../types';
@@ -25,12 +25,15 @@ export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
+  const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
   const [newEmployee, setNewEmployee] = useState({ employeeId: '', name: '', email: '', department: '' });
   const [csvDialog, setCsvDialog] = useState(false);
@@ -69,6 +72,30 @@ export default function Employees() {
     } catch { setError('직원 등록에 실패했습니다'); }
   };
 
+  const handleDeleteEmployee = async () => {
+    if (!deleteDialog) return;
+    try {
+      await employeeApi.delete(deleteDialog.id);
+      setDeleteDialog(null);
+      setSuccessMessage('직원이 삭제되었습니다');
+      load();
+    } catch {
+      setError('직원 삭제에 실패했습니다');
+    }
+  };
+
+  const handleDeleteAllEmployees = async () => {
+    try {
+      const result = await employeeApi.deleteAll();
+      setDeleteAllDialog(false);
+      setPage(0);
+      setSuccessMessage(`${result.deletedCount}명의 직원이 삭제되었습니다`);
+      load();
+    } catch {
+      setError('전체 직원 삭제에 실패했습니다');
+    }
+  };
+
   const handleCsvUpload = async (file: File) => {
     setCsvUploading(true);
     try {
@@ -79,12 +106,12 @@ export default function Employees() {
     finally { setCsvUploading(false); }
   };
 
-  const downloadSampleCsv = () => {
-    const csv = `employee_id,name,email,department,status\nEMP100,홍길동,hong@company.com,Engineering,ACTIVE\nEMP101,김철수,kim@company.com,Marketing,RESIGNED`;
+  const downloadCsvTemplate = () => {
+    const csv = `employee_id,name,email,department,status\nEMP001,Name,user1@example.com,Department,ACTIVE\nEMP002,Name,user2@example.com,Department,RESIGNED`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'sample-employees.csv'; a.click();
+    a.href = url; a.download = 'employees-template.csv'; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -94,6 +121,15 @@ export default function Employees() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4" fontWeight="bold">직원 관리 & HR 연동</Typography>
         <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteAllIcon />}
+            onClick={() => setDeleteAllDialog(true)}
+            disabled={totalElements === 0}
+          >
+            전체 삭제
+          </Button>
           <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => { setCsvResult(null); setCsvDialog(true); }}>
             CSV 가져오기
           </Button>
@@ -112,6 +148,7 @@ export default function Employees() {
       {tab === 0 && (
         <Box>
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+          {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>}
 
           {/* 필터 */}
           <Box display="flex" gap={2} mb={2}>
@@ -140,12 +177,13 @@ export default function Employees() {
                     <TableCell><strong>부서</strong></TableCell>
                     <TableCell><strong>상태</strong></TableCell>
                     <TableCell align="center"><strong>오프보딩</strong></TableCell>
+                    <TableCell align="center"><strong>삭제</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {employees.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                         직원이 없습니다. "직원 등록" 또는 "CSV 가져오기"로 추가하세요.
                       </TableCell>
                     </TableRow>
@@ -173,6 +211,19 @@ export default function Employees() {
                         ) : (
                           <Typography variant="body2" color="text.disabled">-</Typography>
                         )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="직원 삭제">
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="text"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => setDeleteDialog(emp)}
+                          >
+                            삭제
+                          </Button>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -305,6 +356,39 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
         </DialogActions>
       </Dialog>
 
+      {/* 삭제 확인 */}
+      <Dialog open={Boolean(deleteDialog)} onClose={() => setDeleteDialog(null)}>
+        <DialogTitle>직원 삭제</DialogTitle>
+        <DialogContent>
+          <Typography>
+            <strong>{deleteDialog?.name}</strong> ({deleteDialog?.email}) 직원을 삭제하시겠습니까?
+            <br />삭제한 직원 정보는 목록과 통계에서 제거됩니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(null)}>취소</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteEmployee}>삭제</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 전체 삭제 확인 */}
+      <Dialog open={deleteAllDialog} onClose={() => setDeleteAllDialog(false)}>
+        <DialogTitle>전체 직원 삭제</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            현재 등록된 모든 직원 정보가 삭제됩니다.
+          </Alert>
+          <Typography>
+            현재 필터 조건과 관계없이 등록된 모든 직원을 삭제하시겠습니까?
+            <br />삭제 후에는 직원 목록과 대시보드 통계에서도 제거됩니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteAllDialog(false)}>취소</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteAllEmployees}>전체 삭제</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* 직원 등록 */}
       <Dialog open={addDialog} onClose={() => setAddDialog(false)} maxWidth="xs" fullWidth>
         <DialogTitle>직원 등록</DialogTitle>
@@ -335,11 +419,11 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
               <Box p={2} bgcolor="grey.100" borderRadius={1} mb={2}>
                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>CSV 형식</Typography>
                 <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>employee_id,name,email,department,status</Typography>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>EMP001,홍길동,hong@company.com,Engineering,ACTIVE</Typography>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>EMP001,Name,user1@example.com,Department,ACTIVE</Typography>
                 <Typography variant="caption" color="text.disabled" display="block" mt={0.5}>* status 생략 시 ACTIVE 처리</Typography>
               </Box>
-              <Button size="small" startIcon={<DownloadIcon />} variant="outlined" onClick={downloadSampleCsv} sx={{ mb: 2 }}>
-                샘플 CSV 다운로드
+              <Button size="small" startIcon={<DownloadIcon />} variant="outlined" onClick={downloadCsvTemplate} sx={{ mb: 2 }}>
+                CSV 템플릿 다운로드
               </Button>
               <input type="file" accept=".csv,text/csv" ref={fileInputRef} style={{ display: 'none' }}
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleCsvUpload(f); e.target.value = ''; }} />

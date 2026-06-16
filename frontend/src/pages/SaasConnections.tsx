@@ -3,14 +3,14 @@ import {
   Box, Typography, Grid, Card, CardContent, CardActions, Button,
   Chip, LinearProgress, Alert, Dialog, DialogTitle, DialogContent,
   DialogActions, Divider, TextField, Paper, InputAdornment,
-  IconButton, Collapse,
+  IconButton, Collapse, Stack,
 } from '@mui/material';
 import {
   CheckCircle as ConnectedIcon, Cancel as NotConnectedIcon,
   LinkOff as LinkOffIcon, Science as DemoIcon,
   Visibility as ShowIcon, VisibilityOff as HideIcon,
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
-  Link as ConnectIcon,
+  Link as ConnectIcon, OpenInNew as OpenIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import type { SaasConnection, SaasType } from '../types';
@@ -19,22 +19,31 @@ import type { SaasConnection, SaasType } from '../types';
 const SAAS_INFO: Record<SaasType, {
   label: string; color: string; emoji: string;
   tokenLabel: string; tokenPlaceholder: string; tokenPrefix: string;
-  steps: string[]; docsUrl: string;
+  steps: string[]; docsUrl: string; appUrl: string;
+  quickLinks: { label: string; url: string }[];
   detectItems: string[]; revokeNote: string;
 }> = {
   SLACK: {
     label: 'Slack', color: '#4A154B', emoji: '💬',
-    tokenLabel: 'Bot Token (xoxb-...)',
-    tokenPlaceholder: 'Slack bot token',
-    tokenPrefix: 'xoxb-',
+    tokenLabel: 'Slack Token (xoxb- 또는 xoxp-...)',
+    tokenPlaceholder: 'xoxb- 또는 xoxp- 로 시작하는 Slack token',
+    tokenPrefix: 'xoxb- 또는 xoxp-',
     steps: [
-      'https://api.slack.com/apps 접속 → "Create New App" → "From scratch"',
-      '"OAuth & Permissions" → Bot Token Scopes에 추가:\n  users:read, users:read.email, admin.users:write',
-      '"Install to Workspace" 클릭 → 관리자 계정으로 승인',
-      '"OAuth Tokens" 섹션에서 "Bot User OAuth Token" (xoxb-...) 복사',
+      'Slack API Apps 페이지 접속 → 앱 선택 또는 "Create New App"',
+      '"OAuth & Permissions" 메뉴로 이동',
+      'Bot Token Scopes: users:read, users:read.email 추가',
+      'User Token Scopes: admin.users:write 추가\n  ※ admin.users:write는 Bot Token Scopes가 아니라 User Token Scopes에 있습니다.',
+      '"Install to Workspace" 또는 "Reinstall to Workspace" 클릭 → 관리자 계정으로 승인',
+      '"OAuth Tokens" 섹션에서 Bot User OAuth Token(xoxb-) 또는 User OAuth Token(xoxp-) 복사',
       '복사한 토큰을 아래에 붙여넣기',
     ],
     docsUrl: 'https://api.slack.com/authentication/basics',
+    appUrl: 'https://api.slack.com/apps',
+    quickLinks: [
+      { label: 'Slack Apps', url: 'https://api.slack.com/apps' },
+      { label: 'OAuth 문서', url: 'https://api.slack.com/authentication/oauth-v2' },
+      { label: 'admin.users API', url: 'https://api.slack.com/methods/admin.users.remove' },
+    ],
     detectItems: ['워크스페이스 멤버', '관리자(Admin)', '소유자(Owner)'],
     revokeNote: '계정 비활성화 (Slack Business+ 이상 필요)',
   },
@@ -51,6 +60,12 @@ const SAAS_INFO: Record<SaasType, {
       '복사한 토큰을 아래에 붙여넣기',
     ],
     docsUrl: 'https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens',
+    appUrl: 'https://github.com/settings/tokens',
+    quickLinks: [
+      { label: '토큰 만들기', url: 'https://github.com/settings/tokens' },
+      { label: 'GitHub 토큰 문서', url: 'https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens' },
+      { label: '조직 설정', url: 'https://github.com/settings/organizations' },
+    ],
     detectItems: ['Organization 멤버십', 'Owner 권한', '저장소 접근', 'PAT 존재 여부'],
     revokeNote: 'Organization에서 멤버 제거',
   },
@@ -67,6 +82,12 @@ const SAAS_INFO: Record<SaasType, {
       '복사한 토큰을 아래에 붙여넣기',
     ],
     docsUrl: 'https://developers.notion.com/docs/create-a-notion-integration',
+    appUrl: 'https://www.notion.so/my-integrations',
+    quickLinks: [
+      { label: 'Notion Integrations', url: 'https://www.notion.so/my-integrations' },
+      { label: 'Integration 문서', url: 'https://developers.notion.com/docs/create-a-notion-integration' },
+      { label: 'Notion API 참조', url: 'https://developers.notion.com/reference/intro' },
+    ],
     detectItems: ['워크스페이스 멤버', '페이지 접근 권한'],
     revokeNote: '⚠️ Notion API 제한으로 자동 제거 불가 — 수동 처리 필요',
   },
@@ -195,6 +216,21 @@ export default function SaasConnections() {
                     {meta.revokeNote}
                   </Typography>
 
+                  <Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}>
+                    {meta.quickLinks.slice(0, 2).map(link => (
+                      <Button
+                        key={link.url}
+                        size="small"
+                        variant="text"
+                        endIcon={<OpenIcon fontSize="small" />}
+                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
+                        sx={{ px: 0.5, minWidth: 'auto' }}
+                      >
+                        {link.label}
+                      </Button>
+                    ))}
+                  </Stack>
+
                   {conn.isConnected && (
                     <Box mt={1.5} p={1} bgcolor="success.50" borderRadius={1}>
                       <Typography variant="body2" color="success.dark">
@@ -270,10 +306,28 @@ export default function SaasConnections() {
                       </Typography>
                     </Box>
                   ))}
-                  <Button size="small" variant="text" sx={{ mt: 1 }}
-                    onClick={() => window.open(info.docsUrl, '_blank')}>
-                    공식 문서 보기 →
-                  </Button>
+                  <Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      endIcon={<OpenIcon fontSize="small" />}
+                      onClick={() => window.open(info.appUrl, '_blank', 'noopener,noreferrer')}
+                      sx={{ bgcolor: info.color, '&:hover': { bgcolor: info.color, opacity: 0.85 } }}
+                    >
+                      설정 페이지 열기
+                    </Button>
+                    {info.quickLinks.map(link => (
+                      <Button
+                        key={link.url}
+                        size="small"
+                        variant="outlined"
+                        endIcon={<OpenIcon fontSize="small" />}
+                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
+                      >
+                        {link.label}
+                      </Button>
+                    ))}
+                  </Stack>
                 </Box>
               </Collapse>
 

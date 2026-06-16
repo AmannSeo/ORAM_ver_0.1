@@ -16,13 +16,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.BufferedReader;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final EmployeeRepository employeeRepository;
     private final OffboardingService offboardingService;
@@ -91,7 +98,6 @@ public class EmployeeService {
         employee.setStatus(EmployeeStatus.RESIGNED);
         employeeRepository.save(employee);
 
-        // 오프보딩 워크플로우 트리거
         return offboardingService.triggerOffboarding(employee);
     }
 
@@ -101,16 +107,21 @@ public class EmployeeService {
         employeeRepository.delete(employee);
     }
 
-    /**
-     * CSV 일괄 가져오기
-     * 형식: employee_id,name,email,department,status(선택)
-     * 첫 줄 헤더 자동 스킵
-     */
+    @Transactional
+    public long deleteAllEmployees() {
+        long count = employeeRepository.count();
+        employeeRepository.deleteAll();
+        return count;
+    }
+
     @Transactional
     public EmployeeDto.CsvImportResult importFromCsv(String csvContent) {
         List<String> success = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+        Set<String> seenEmails = new HashSet<>();
+        Set<String> seenEmployeeIds = new HashSet<>();
+        Map<String, Integer> headerMap = null;
         int lineNum = 0;
 
         try (BufferedReader reader = new BufferedReader(new StringReader(csvContent))) {
@@ -119,38 +130,46 @@ public class EmployeeService {
                 lineNum++;
                 line = line.trim();
                 if (line.isEmpty()) continue;
-                // 헤더 행 스킵
-                if (lineNum == 1 && (line.toLowerCase().contains("employee_id") || line.toLowerCase().contains("name"))) {
+
+                List<String> cols = parseCsvLine(line);
+                if (lineNum == 1 && looksLikeHeader(cols)) {
+                    headerMap = buildHeaderMap(cols);
                     continue;
                 }
 
-                String[] cols = line.split(",");
-                if (cols.length < 4) {
-                    errors.add("줄 " + lineNum + ": 컬럼 부족 (필요: employee_id,name,email,department)");
+                if (cols.size() < 3) {
+                    errors.add("Line " + lineNum + ": not enough columns");
                     continue;
                 }
 
-                String employeeId = cols[0].trim();
-                String name       = cols[1].trim();
-                String email      = cols[2].trim();
-                String department = cols[3].trim();
-                String statusStr  = cols.length > 4 ? cols[4].trim() : "ACTIVE";
+                String employeeId = getColumn(cols, headerMap, "employeeId", 0);
+                String name = getColumn(cols, headerMap, "name", 1);
+                String email = getColumn(cols, headerMap, "email", 2).toLowerCase();
+                String department = getColumn(cols, headerMap, "department", 3);
+                String statusStr = getColumn(cols, headerMap, "status", 4);
 
-                if (employeeId.isEmpty() || email.isEmpty()) {
-                    errors.add("줄 " + lineNum + ": 사번 또는 이메일 누락");
+                if (name.isEmpty() || email.isEmpty() || department.isEmpty()) {
+                    errors.add("Line " + lineNum + ": name, email, and department are required");
                     continue;
                 }
+                if (!EMAIL_PATTERN.matcher(email).matches()) {
+                    errors.add("Line " + lineNum + ": invalid email - " + email);
+                    continue;
+                }
+                if (employeeId.isEmpty()) {
+                    employeeId = generateEmployeeId(email, lineNum);
+                }
+
+                if (seenEmails.contains(email) || seenEmployeeIds.contains(employeeId)) {
+                    skipped.add(email + " (duplicate in CSV)");
+                    continue;
+                }
+                seenEmails.add(email);
+                seenEmployeeIds.add(employeeId);
 
                 if (employeeRepository.existsByEmail(email) || employeeRepository.existsByEmployeeId(employeeId)) {
-                    skipped.add(email + " (이미 존재)");
+                    skipped.add(email + " (already exists)");
                     continue;
-                }
-
-                EmployeeStatus status;
-                try {
-                    status = EmployeeStatus.valueOf(statusStr.toUpperCase());
-                } catch (Exception e) {
-                    status = EmployeeStatus.ACTIVE;
                 }
 
                 Employee employee = Employee.builder()
@@ -158,14 +177,14 @@ public class EmployeeService {
                         .name(name)
                         .email(email)
                         .department(department)
-                        .status(status)
+                        .status(parseStatus(statusStr))
                         .build();
                 employeeRepository.save(employee);
                 success.add(email);
                 log.info("CSV import: {} ({})", email, employeeId);
             }
         } catch (Exception e) {
-            throw new RuntimeException("CSV 파싱 오류: " + e.getMessage(), e);
+            throw new RuntimeException("CSV parsing error: " + e.getMessage(), e);
         }
 
         return EmployeeDto.CsvImportResult.builder()
@@ -176,6 +195,107 @@ public class EmployeeService {
                 .skipped(skipped)
                 .errors(errors)
                 .build();
+    }
+
+    private List<String> parseCsvLine(String line) {
+        List<String> cols = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    current.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (ch == ',' && !inQuotes) {
+                cols.add(cleanCsvValue(current.toString()));
+                current.setLength(0);
+            } else {
+                current.append(ch);
+            }
+        }
+        cols.add(cleanCsvValue(current.toString()));
+        return cols;
+    }
+
+    private String cleanCsvValue(String value) {
+        return value == null ? "" : value.replace("\uFEFF", "").trim();
+    }
+
+    private boolean looksLikeHeader(List<String> cols) {
+        return cols.stream()
+                .map(this::normalizeHeader)
+                .anyMatch(header -> header.equals("employeeid")
+                        || header.equals("name")
+                        || header.equals("email")
+                        || header.equals("department")
+                        || header.equals("status")
+                        || header.equals("사번")
+                        || header.equals("이름")
+                        || header.equals("이메일")
+                        || header.equals("부서")
+                        || header.equals("상태"));
+    }
+
+    private Map<String, Integer> buildHeaderMap(List<String> cols) {
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i < cols.size(); i++) {
+            String header = normalizeHeader(cols.get(i));
+            if (header.equals("employeeid") || header.equals("사번") || header.equals("직원번호") || header.equals("직원id")) {
+                map.put("employeeId", i);
+            } else if (header.equals("name") || header.equals("이름") || header.equals("성명")) {
+                map.put("name", i);
+            } else if (header.equals("email") || header.equals("이메일") || header.equals("메일")) {
+                map.put("email", i);
+            } else if (header.equals("department") || header.equals("부서") || header.equals("팀") || header.equals("소속")) {
+                map.put("department", i);
+            } else if (header.equals("status") || header.equals("상태") || header.equals("재직상태")) {
+                map.put("status", i);
+            }
+        }
+        return map;
+    }
+
+    private String normalizeHeader(String value) {
+        return cleanCsvValue(value).toLowerCase()
+                .replace("_", "")
+                .replace("-", "")
+                .replace(" ", "");
+    }
+
+    private String getColumn(List<String> cols, Map<String, Integer> headerMap, String key, int fallbackIndex) {
+        int index = headerMap != null && headerMap.containsKey(key) ? headerMap.get(key) : fallbackIndex;
+        return index >= 0 && index < cols.size() ? cleanCsvValue(cols.get(index)) : "";
+    }
+
+    private EmployeeStatus parseStatus(String statusStr) {
+        String normalized = cleanCsvValue(statusStr).toUpperCase();
+        if (normalized.isEmpty()) {
+            return EmployeeStatus.ACTIVE;
+        }
+        if (normalized.equals("재직") || normalized.equals("재직중") || normalized.equals("활성")) {
+            return EmployeeStatus.ACTIVE;
+        }
+        if (normalized.equals("퇴사") || normalized.equals("퇴사자") || normalized.equals("비활성")) {
+            return EmployeeStatus.RESIGNED;
+        }
+        try {
+            return EmployeeStatus.valueOf(normalized);
+        } catch (Exception e) {
+            return EmployeeStatus.ACTIVE;
+        }
+    }
+
+    private String generateEmployeeId(String email, int lineNum) {
+        String localPart = email.split("@")[0].replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        if (localPart.isEmpty()) {
+            localPart = "CSV";
+        }
+        return "CSV-" + localPart + "-" + lineNum;
     }
 
     private Employee findById(UUID id) {

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -71,6 +72,16 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> deleteAllEmployees() {
+        long deletedCount = employeeService.deleteAllEmployees();
+        return ResponseEntity.ok(Map.of(
+                "message", "All employees deleted.",
+                "deletedCount", deletedCount
+        ));
+    }
+
     /**
      * CSV 파일로 직원 일괄 가져오기
      * 형식: employee_id,name,email,department,status(선택)
@@ -83,7 +94,11 @@ public class EmployeeController {
             return ResponseEntity.badRequest().build();
         }
         try {
-            String csvContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            byte[] bytes = file.getBytes();
+            String csvContent = new String(bytes, StandardCharsets.UTF_8);
+            if (csvContent.contains("\uFFFD")) {
+                csvContent = new String(bytes, Charset.forName("MS949"));
+            }
             return ResponseEntity.ok(employeeService.importFromCsv(csvContent));
         } catch (IOException e) {
             throw new RuntimeException("파일 읽기 오류: " + e.getMessage(), e);
