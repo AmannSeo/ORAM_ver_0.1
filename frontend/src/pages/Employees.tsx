@@ -2,16 +2,16 @@
 import {
   Box, Typography, Button, LinearProgress, Alert, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, IconButton, Tooltip, TextField, Select, MenuItem,
+  Paper, Tooltip, TextField, Select, MenuItem,
   FormControl, InputLabel, Dialog, DialogTitle, DialogContent,
   DialogActions, TablePagination, Chip, List, ListItem, ListItemText,
   Divider, CircularProgress, Grid, Card, CardContent,
   Accordion, AccordionSummary, AccordionDetails,
 } from '@mui/material';
 import {
-  PersonOff as ResignIcon, Visibility as ViewIcon, Add as AddIcon,
+  PersonOff as ResignIcon, Add as AddIcon,
   Search as SearchIcon, Upload as UploadIcon, Download as DownloadIcon,
-  Info as InfoIcon, ExpandMore as ExpandIcon,
+  ExpandMore as ExpandIcon,
 } from '@mui/icons-material';
 import { employeeApi } from '../api';
 import type { Employee } from '../types';
@@ -139,7 +139,7 @@ export default function Employees() {
                     <TableCell><strong>이메일</strong></TableCell>
                     <TableCell><strong>부서</strong></TableCell>
                     <TableCell><strong>상태</strong></TableCell>
-                    <TableCell align="center"><strong>작업</strong></TableCell>
+                    <TableCell align="center"><strong>오프보딩</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -158,17 +158,20 @@ export default function Employees() {
                       <TableCell>{emp.department}</TableCell>
                       <TableCell><StatusChip status={emp.status} /></TableCell>
                       <TableCell align="center">
-                        <Tooltip title="상세 보기">
-                          <IconButton size="small" color="primary" onClick={() => navigate(`/employees/${emp.id}`)}>
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
-                        {emp.status === 'ACTIVE' && (
-                          <Tooltip title="오프보딩 시작">
-                            <IconButton size="small" color="error" onClick={() => setResignDialog(emp)}>
-                              <ResignIcon />
-                            </IconButton>
+                        {emp.status === 'ACTIVE' ? (
+                          <Tooltip title="권한 회수">
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              startIcon={<ResignIcon />}
+                              onClick={() => setResignDialog(emp)}
+                            >
+                              권한 회수
+                            </Button>
                           </Tooltip>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled">-</Typography>
                         )}
                       </TableCell>
                     </TableRow>

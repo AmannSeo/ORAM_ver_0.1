@@ -8,7 +8,7 @@ interface Props {
 export default function StatusChip({ status }: Props) {
   return (
     <Chip
-      label={status === 'ACTIVE' ? 'Active' : 'Resigned'}
+      label={status === 'ACTIVE' ? '활성' : '비활성'}
       color={status === 'ACTIVE' ? 'success' : 'default'}
       size="small"
     />
