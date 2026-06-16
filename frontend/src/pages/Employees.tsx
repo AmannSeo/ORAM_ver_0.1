@@ -135,9 +135,17 @@ export default function Employees() {
       load();
     } catch (err: any) {
       if (err?.response?.status === 403) {
-        setError('전체 삭제 권한이 없습니다. Admin 계정으로 다시 로그인해 주세요.');
+        const serverEmail = err?.response?.data?.email;
+        const serverRole = err?.response?.data?.role;
+        setError(
+          serverEmail
+            ? `전체 삭제 권한이 없습니다. 서버는 현재 계정을 ${serverEmail} / ${serverRole}로 인식하고 있습니다. Admin 계정으로 다시 로그인해 주세요.`
+            : '전체 삭제 권한이 없습니다. Admin 계정으로 다시 로그인해 주세요.'
+        );
       } else if (err?.response?.status === 404) {
         setError('서버에 전체 삭제 기능이 아직 반영되지 않았습니다. 백엔드 배포를 확인해 주세요.');
+      } else if (err?.response?.status === 405) {
+        setError('서버와 프론트의 전체 삭제 API 방식이 다릅니다. 백엔드/프론트 배포 상태를 확인해 주세요.');
       } else {
         setError(err?.response?.data?.error || '전체 직원 삭제에 실패했습니다');
       }

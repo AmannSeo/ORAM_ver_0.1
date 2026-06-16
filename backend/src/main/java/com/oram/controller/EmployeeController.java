@@ -1,7 +1,9 @@
 package com.oram.controller;
 
 import com.oram.dto.EmployeeDto;
+import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
+import com.oram.repository.UserRepository;
 import com.oram.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
@@ -72,9 +76,19 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> deleteAllEmployees() {
+    @PostMapping("/delete-all")
+    public ResponseEntity<Map<String, Object>> deleteAllEmployees(Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+
+        if (user == null || user.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Only ADMIN can delete all employees.",
+                    "email", email != null ? email : "anonymous",
+                    "role", user != null ? user.getRole().name() : "unknown"
+            ));
+        }
+
         long deletedCount = employeeService.deleteAllEmployees();
         return ResponseEntity.ok(Map.of(
                 "message", "All employees deleted.",

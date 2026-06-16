@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, AppBar, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, IconButton, Avatar,
-  Divider, Tooltip, Menu, MenuItem,
+  Divider, Tooltip, Menu, MenuItem, Chip,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -29,10 +29,27 @@ const NAV_ITEMS = [
   { label: '도움말 & 가이드', path: '/help', icon: <HelpIcon /> },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: '관리자',
+  SECURITY_MANAGER: '보안 담당자',
+  AUDITOR: '감사자',
+};
+
+const formatLoginAt = (loginAt?: string | null) => {
+  if (!loginAt) return '-';
+  return new Date(loginAt).toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, loginAt, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -115,10 +132,41 @@ export default function Layout() {
               </Avatar>
             </IconButton>
           </Tooltip>
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-            <MenuItem disabled>
-              <Typography variant="body2">{user?.email}</Typography>
-            </MenuItem>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+            PaperProps={{ sx: { width: 280 } }}
+          >
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
+                <Avatar sx={{ width: 40, height: 40, bgcolor: 'secondary.main' }}>
+                  {user?.name?.charAt(0)}
+                </Avatar>
+                <Box minWidth={0}>
+                  <Typography variant="subtitle2" fontWeight={700} noWrap>
+                    {user?.name || '-'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap display="block">
+                    {user?.email || '-'}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography variant="caption" color="text.secondary">권한</Typography>
+                <Chip
+                  label={ROLE_LABELS[user?.role || ''] || user?.role || '-'}
+                  size="small"
+                  color={user?.role === 'ADMIN' ? 'primary' : 'default'}
+                />
+              </Box>
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography variant="caption" color="text.secondary" flexShrink={0}>로그인 시간</Typography>
+                <Typography variant="caption" textAlign="right">
+                  {formatLoginAt(loginAt)}
+                </Typography>
+              </Box>
+            </Box>
             <Divider />
             <MenuItem onClick={handleLogout}>
               <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
