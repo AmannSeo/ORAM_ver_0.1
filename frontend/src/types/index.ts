@@ -57,6 +57,7 @@ export interface CreateEmployeeRequest {
   name: string;
   email: string;
   department: string;
+  status?: EmployeeStatus;
 }
 
 // SaaS Connection

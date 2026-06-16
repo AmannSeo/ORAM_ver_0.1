@@ -4,6 +4,8 @@ import com.oram.dto.EmployeeDto;
 import com.oram.entity.Employee;
 import com.oram.enums.EmployeeStatus;
 import com.oram.repository.EmployeeRepository;
+import com.oram.repository.OffboardingResultRepository;
+import com.oram.repository.PermissionRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +34,8 @@ public class EmployeeService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final EmployeeRepository employeeRepository;
+    private final OffboardingResultRepository offboardingResultRepository;
+    private final PermissionRecordRepository permissionRecordRepository;
     private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
@@ -75,7 +79,7 @@ public class EmployeeService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .department(request.getDepartment())
-                .status(EmployeeStatus.ACTIVE)
+                .status(request.getStatus() != null ? request.getStatus() : EmployeeStatus.ACTIVE)
                 .build();
         return toResponse(employeeRepository.save(employee));
     }
@@ -110,7 +114,9 @@ public class EmployeeService {
     @Transactional
     public long deleteAllEmployees() {
         long count = employeeRepository.count();
-        employeeRepository.deleteAll();
+        permissionRecordRepository.deleteAllInBatch();
+        offboardingResultRepository.deleteAllInBatch();
+        employeeRepository.deleteAllInBatch();
         return count;
     }
 
