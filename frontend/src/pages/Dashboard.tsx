@@ -309,18 +309,18 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Box mb={3}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          대시보드
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
-        </Typography>
-      </Box>
-
       <Grid container spacing={3} alignItems="stretch">
         <Grid item xs={12} lg={9}>
           <Stack spacing={3}>
+            <Box>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>
+                대시보드
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
+              </Typography>
+            </Box>
+
             <Grid container spacing={2.25}>
               <Grid item xs={12} sm={6} xl={4}>
                 <StatCard

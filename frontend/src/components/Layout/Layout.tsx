@@ -147,8 +147,17 @@ export default function Layout() {
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
-        <Toolbar />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          px: 3,
+          pt: 2,
+          pb: 3,
+          mt: { xs: '56px', sm: '64px' },
+          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
+        }}
+      >
         <Outlet />
       </Box>
     </Box>
