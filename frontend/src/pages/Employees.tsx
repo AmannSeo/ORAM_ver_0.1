@@ -135,7 +135,9 @@ export default function Employees() {
       load();
     } catch (err: any) {
       if (err?.response?.status === 403) {
-        setError('전체 삭제는 Admin 계정으로만 가능합니다');
+        setError('전체 삭제 권한이 없습니다. Admin 계정으로 다시 로그인해 주세요.');
+      } else if (err?.response?.status === 404) {
+        setError('서버에 전체 삭제 기능이 아직 반영되지 않았습니다. 백엔드 배포를 확인해 주세요.');
       } else {
         setError(err?.response?.data?.error || '전체 직원 삭제에 실패했습니다');
       }

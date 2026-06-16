@@ -72,7 +72,7 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping
+    @DeleteMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteAllEmployees() {
         long deletedCount = employeeService.deleteAllEmployees();
