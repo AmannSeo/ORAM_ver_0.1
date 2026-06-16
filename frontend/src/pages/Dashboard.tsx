@@ -102,7 +102,7 @@ function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint 
     height: '100%',
     bgcolor: bgColor,
     border: '1px solid rgba(255, 255, 255, 0.72)',
-    borderRadius: 2,
+    borderRadius: 3,
     cursor: onClick ? 'pointer' : 'default',
     minHeight: 178,
     boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
@@ -141,8 +141,15 @@ interface ChartCardProps {
 
 function ChartCard({ title, subtitle, children, height = 270 }: ChartCardProps) {
   return (
-    <Card elevation={1} sx={{ height: '100%' }}>
-      <CardContent>
+    <Card
+      elevation={1}
+      sx={{
+        height: '100%',
+        borderRadius: 3,
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
+      }}
+    >
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Typography variant="h6" fontWeight={700}>
           {title}
         </Typography>
@@ -350,10 +357,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <Box>
-      <Grid container spacing={4} alignItems="stretch">
+    <Box sx={{ pb: 4 }}>
+      <Grid container columnSpacing={{ xs: 3, lg: 5 }} rowSpacing={4} alignItems="stretch">
         <Grid item xs={12} lg={9}>
-          <Stack spacing={2.5}>
+          <Stack spacing={3}>
             <Box>
               <Typography variant="h4" fontWeight="bold" gutterBottom>
                 대시보드
@@ -363,7 +370,11 @@ export default function Dashboard() {
               </Typography>
             </Box>
 
-            <Grid container spacing={2.25}>
+            <Grid
+              container
+              spacing={3}
+              sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
+            >
               <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="전체 직원"
@@ -437,7 +448,11 @@ export default function Dashboard() {
               </Grid>
             </Grid>
 
-            <Grid container spacing={3}>
+            <Grid
+              container
+              spacing={2.5}
+              sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
+            >
               <Grid item xs={12} md={6}>
                 <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
                   {employeeStatusData.length > 0 ? (
