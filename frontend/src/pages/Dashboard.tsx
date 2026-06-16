@@ -80,14 +80,14 @@ function StatCard({ title, value, icon, color, subtitle, onClick, hint }: StatCa
   if (onClick) {
     return (
       <Tooltip title={hint || '목록 보기'} placement="top">
-        <Card elevation={2} sx={cardSx}>
+        <Card elevation={1} sx={cardSx}>
           <CardActionArea onClick={onClick}>{inner}</CardActionArea>
         </Card>
       </Tooltip>
     );
   }
 
-  return <Card elevation={2} sx={cardSx}>{inner}</Card>;
+  return <Card elevation={1} sx={cardSx}>{inner}</Card>;
 }
 
 interface ChartCardProps {
@@ -97,9 +97,9 @@ interface ChartCardProps {
   height?: number;
 }
 
-function ChartCard({ title, subtitle, children, height = 280 }: ChartCardProps) {
+function ChartCard({ title, subtitle, children, height = 270 }: ChartCardProps) {
   return (
-    <Card elevation={2} sx={{ height: '100%' }}>
+    <Card elevation={1} sx={{ height: '100%' }}>
       <CardContent>
         <Typography variant="h6" fontWeight={700}>
           {title}
@@ -137,71 +137,71 @@ const LOG_STYLE: Record<ActivitySeverity, { color: 'error' | 'warning' | 'info' 
 
 function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
   return (
-    <Card
-      elevation={2}
+    <Box
       sx={{
         height: '100%',
-        minHeight: { lg: 760 },
+        minHeight: { lg: 'calc(100vh - 128px)' },
+        bgcolor: '#fafafa',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 2,
         position: { lg: 'sticky' },
-        top: { lg: 24 },
+        top: { lg: 88 },
       }}
     >
-      <CardContent sx={{ p: 2.5 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <HistoryIcon color="primary" />
-            <Typography variant="h6" fontWeight={800}>
-              Activity Log
-            </Typography>
-          </Box>
-          <Chip label={`${logs.length} items`} size="small" color="primary" variant="outlined" />
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <HistoryIcon color="primary" />
+          <Typography variant="h6" fontWeight={800}>
+            Activity Log
+          </Typography>
         </Box>
-
-        <Typography variant="body2" color="text.secondary" mb={1.5}>
-          운영 상태와 확인할 작업을 시간순 로그처럼 정리했습니다.
+        <Typography variant="caption" color="text.secondary">
+          Today
         </Typography>
+      </Box>
 
-        <Stack divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />} spacing={0}>
-          {logs.map((log) => {
-            const style = LOG_STYLE[log.severity];
-            return (
-              <Box key={log.title} display="flex" gap={1.5} py={1.75}>
-                <Box
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 1.5,
-                    display: 'grid',
-                    placeItems: 'center',
-                    flexShrink: 0,
-                    bgcolor: style.bg,
-                    color: `${style.color}.main`,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  {log.icon}
-                </Box>
-                <Box minWidth={0} flex={1}>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
-                    <Typography variant="body2" fontWeight={800} noWrap>
-                      {log.title}
-                    </Typography>
-                    <Chip label={log.status} size="small" color={style.color} variant="outlined" />
-                  </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
-                    {log.meta}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" mt={0.75}>
-                    {log.description}
-                  </Typography>
-                </Box>
+      <Stack divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />} spacing={0}>
+        {logs.map((log) => {
+          const style = LOG_STYLE[log.severity];
+          return (
+            <Box key={log.title} display="flex" gap={1.5} py={1.75}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 1.5,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  bgcolor: style.bg,
+                  color: `${style.color}.main`,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {log.icon}
               </Box>
-            );
-          })}
-        </Stack>
-      </CardContent>
-    </Card>
+              <Box minWidth={0} flex={1}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+                  <Typography variant="body2" fontWeight={800} noWrap>
+                    {log.title}
+                  </Typography>
+                  <Chip label={log.status} size="small" color={style.color} variant="outlined" />
+                </Box>
+                <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
+                  {log.meta}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mt={0.75}>
+                  {log.description}
+                </Typography>
+              </Box>
+            </Box>
+          );
+        })}
+      </Stack>
+    </Box>
   );
 }
 
@@ -309,20 +309,13 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Box display="flex" alignItems="flex-end" justifyContent="space-between" gap={2} mb={3}>
-        <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            대시보드
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
-          </Typography>
-        </Box>
-        <Chip
-          label={openActionCount > 0 ? `${openActionCount}개 조치 필요` : '정상 운영'}
-          color={openActionCount > 0 ? 'warning' : 'success'}
-          variant="filled"
-        />
+      <Box mb={3}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          대시보드
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
+        </Typography>
       </Box>
 
       <Grid container spacing={3} alignItems="stretch">
@@ -475,7 +468,7 @@ export default function Dashboard() {
               </Grid>
 
               <Grid item xs={12} md={7}>
-                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다" height={280}>
+                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다">
                   <ResponsiveContainer>
                     <BarChart data={overviewData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
