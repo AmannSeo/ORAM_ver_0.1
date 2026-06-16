@@ -11,10 +11,11 @@ import {
 import {
   PersonOff as ResignIcon, Add as AddIcon,
   Search as SearchIcon, Upload as UploadIcon, Download as DownloadIcon,
-  ExpandMore as ExpandIcon,
+  ExpandMore as ExpandIcon, Delete as DeleteIcon, DeleteSweep as DeleteAllIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { employeeApi } from '../api';
-import type { Employee } from '../types';
+import type { Employee, EmployeeStatus } from '../types';
 import StatusChip from '../components/common/StatusChip';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -25,14 +26,29 @@ export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
+  const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
-  const [newEmployee, setNewEmployee] = useState({ employeeId: '', name: '', email: '', department: '' });
+  const [editDialog, setEditDialog] = useState<Employee | null>(null);
+  const [newEmployee, setNewEmployee] = useState({
+    employeeId: '',
+    name: '',
+    email: '',
+    department: '',
+    status: 'ACTIVE' as EmployeeStatus,
+  });
+  const [editEmployee, setEditEmployee] = useState({
+    name: '',
+    department: '',
+    status: 'ACTIVE' as EmployeeStatus,
+  });
   const [csvDialog, setCsvDialog] = useState(false);
   const [csvResult, setCsvResult] = useState<{
     importedCount: number; skippedCount: number; errorCount: number;
@@ -50,6 +66,12 @@ export default function Employees() {
   };
   useEffect(load, [page, filterStatus]);
 
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
+
   const handleResign = async () => {
     if (!resignDialog) return;
     try {
@@ -64,9 +86,76 @@ export default function Employees() {
     try {
       await employeeApi.create(newEmployee);
       setAddDialog(false);
-      setNewEmployee({ employeeId: '', name: '', email: '', department: '' });
+      setNewEmployee({ employeeId: '', name: '', email: '', department: '', status: 'ACTIVE' });
       load();
     } catch { setError('직원 등록에 실패했습니다'); }
+  };
+
+  const openEditDialog = (employee: Employee) => {
+    setEditDialog(employee);
+    setEditEmployee({
+      name: employee.name,
+      department: employee.department,
+      status: employee.status,
+    });
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editDialog) return;
+    try {
+      await employeeApi.update(editDialog.id, editEmployee);
+      setEditDialog(null);
+      setSuccessMessage('직원 정보가 수정되었습니다');
+      load();
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('직원 수정은 Admin 계정으로만 가능합니다');
+      } else {
+        setError(err?.response?.data?.error || '직원 수정에 실패했습니다');
+      }
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!deleteDialog) return;
+    try {
+      await employeeApi.delete(deleteDialog.id);
+      setDeleteDialog(null);
+      setSuccessMessage('직원이 삭제되었습니다');
+      load();
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('직원 삭제는 Admin 계정으로만 가능합니다');
+      } else {
+        setError(err?.response?.data?.error || '직원 삭제에 실패했습니다');
+      }
+    }
+  };
+
+  const handleDeleteAllEmployees = async () => {
+    try {
+      const result = await employeeApi.deleteAll();
+      setDeleteAllDialog(false);
+      setPage(0);
+      setSuccessMessage(`${result.deletedCount}명의 직원이 삭제되었습니다`);
+      load();
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        const serverEmail = err?.response?.data?.email;
+        const serverRole = err?.response?.data?.role;
+        setError(
+          serverEmail
+            ? `전체 삭제 권한이 없습니다. 서버는 현재 계정을 ${serverEmail} / ${serverRole}로 인식하고 있습니다. Admin 계정으로 다시 로그인해 주세요.`
+            : '전체 삭제 권한이 없습니다. Admin 계정으로 다시 로그인해 주세요.'
+        );
+      } else if (err?.response?.status === 404) {
+        setError('서버에 전체 삭제 기능이 아직 반영되지 않았습니다. 백엔드 배포를 확인해 주세요.');
+      } else if (err?.response?.status === 405) {
+        setError('서버와 프론트의 전체 삭제 API 방식이 다릅니다. 백엔드/프론트 배포 상태를 확인해 주세요.');
+      } else {
+        setError(err?.response?.data?.error || '전체 직원 삭제에 실패했습니다');
+      }
+    }
   };
 
   const handleCsvUpload = async (file: File) => {
@@ -79,12 +168,12 @@ export default function Employees() {
     finally { setCsvUploading(false); }
   };
 
-  const downloadSampleCsv = () => {
-    const csv = `employee_id,name,email,department,status\nEMP100,홍길동,hong@company.com,Engineering,ACTIVE\nEMP101,김철수,kim@company.com,Marketing,RESIGNED`;
+  const downloadCsvTemplate = () => {
+    const csv = `employee_id,name,email,department,status\nEMP001,Name,user1@example.com,Department,ACTIVE\nEMP002,Name,user2@example.com,Department,RESIGNED`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'sample-employees.csv'; a.click();
+    a.href = url; a.download = 'employees-template.csv'; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -94,6 +183,15 @@ export default function Employees() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4" fontWeight="bold">직원 관리 & HR 연동</Typography>
         <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteAllIcon />}
+            onClick={() => setDeleteAllDialog(true)}
+            disabled={totalElements === 0}
+          >
+            전체 삭제
+          </Button>
           <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => { setCsvResult(null); setCsvDialog(true); }}>
             CSV 가져오기
           </Button>
@@ -112,6 +210,7 @@ export default function Employees() {
       {tab === 0 && (
         <Box>
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+          {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>}
 
           {/* 필터 */}
           <Box display="flex" gap={2} mb={2}>
@@ -139,13 +238,15 @@ export default function Employees() {
                     <TableCell><strong>이메일</strong></TableCell>
                     <TableCell><strong>부서</strong></TableCell>
                     <TableCell><strong>상태</strong></TableCell>
+                    <TableCell align="center"><strong>수정</strong></TableCell>
                     <TableCell align="center"><strong>오프보딩</strong></TableCell>
+                    <TableCell align="center"><strong>삭제</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {employees.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                         직원이 없습니다. "직원 등록" 또는 "CSV 가져오기"로 추가하세요.
                       </TableCell>
                     </TableRow>
@@ -157,6 +258,18 @@ export default function Employees() {
                       <TableCell>{emp.email}</TableCell>
                       <TableCell>{emp.department}</TableCell>
                       <TableCell><StatusChip status={emp.status} /></TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="직원 정보 수정">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={() => openEditDialog(emp)}
+                          >
+                            수정
+                          </Button>
+                        </Tooltip>
+                      </TableCell>
                       <TableCell align="center">
                         {emp.status === 'ACTIVE' ? (
                           <Tooltip title="권한 회수">
@@ -173,6 +286,19 @@ export default function Employees() {
                         ) : (
                           <Typography variant="body2" color="text.disabled">-</Typography>
                         )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="직원 삭제">
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="text"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => setDeleteDialog(emp)}
+                          >
+                            삭제
+                          </Button>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -305,6 +431,39 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
         </DialogActions>
       </Dialog>
 
+      {/* 삭제 확인 */}
+      <Dialog open={Boolean(deleteDialog)} onClose={() => setDeleteDialog(null)}>
+        <DialogTitle>직원 삭제</DialogTitle>
+        <DialogContent>
+          <Typography>
+            <strong>{deleteDialog?.name}</strong> ({deleteDialog?.email}) 직원을 삭제하시겠습니까?
+            <br />삭제한 직원 정보는 목록과 통계에서 제거됩니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(null)}>취소</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteEmployee}>삭제</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 전체 삭제 확인 */}
+      <Dialog open={deleteAllDialog} onClose={() => setDeleteAllDialog(false)}>
+        <DialogTitle>전체 직원 삭제</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            현재 등록된 모든 직원 정보가 삭제됩니다.
+          </Alert>
+          <Typography>
+            현재 필터 조건과 관계없이 등록된 모든 직원을 삭제하시겠습니까?
+            <br />삭제 후에는 직원 목록과 대시보드 통계에서도 제거됩니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteAllDialog(false)}>취소</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteAllEmployees}>전체 삭제</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* 직원 등록 */}
       <Dialog open={addDialog} onClose={() => setAddDialog(false)} maxWidth="xs" fullWidth>
         <DialogTitle>직원 등록</DialogTitle>
@@ -314,11 +473,62 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
             <TextField label="이름" value={newEmployee.name} onChange={e => setNewEmployee({ ...newEmployee, name: e.target.value })} size="small" fullWidth />
             <TextField label="이메일" type="email" value={newEmployee.email} onChange={e => setNewEmployee({ ...newEmployee, email: e.target.value })} size="small" fullWidth />
             <TextField label="부서" value={newEmployee.department} onChange={e => setNewEmployee({ ...newEmployee, department: e.target.value })} size="small" fullWidth />
+            <FormControl size="small" fullWidth>
+              <InputLabel>상태</InputLabel>
+              <Select
+                value={newEmployee.status}
+                label="상태"
+                onChange={e => setNewEmployee({ ...newEmployee, status: e.target.value as EmployeeStatus })}
+              >
+                <MenuItem value="ACTIVE">활성</MenuItem>
+                <MenuItem value="RESIGNED">비활성</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddDialog(false)}>취소</Button>
           <Button variant="contained" onClick={handleAddEmployee}>등록</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 직원 수정 */}
+      <Dialog open={Boolean(editDialog)} onClose={() => setEditDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>직원 수정</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <TextField label="사번" value={editDialog?.employeeId || ''} size="small" fullWidth disabled />
+            <TextField label="이메일" value={editDialog?.email || ''} size="small" fullWidth disabled />
+            <TextField
+              label="이름"
+              value={editEmployee.name}
+              onChange={e => setEditEmployee({ ...editEmployee, name: e.target.value })}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="부서"
+              value={editEmployee.department}
+              onChange={e => setEditEmployee({ ...editEmployee, department: e.target.value })}
+              size="small"
+              fullWidth
+            />
+            <FormControl size="small" fullWidth>
+              <InputLabel>상태</InputLabel>
+              <Select
+                value={editEmployee.status}
+                label="상태"
+                onChange={e => setEditEmployee({ ...editEmployee, status: e.target.value as EmployeeStatus })}
+              >
+                <MenuItem value="ACTIVE">활성</MenuItem>
+                <MenuItem value="RESIGNED">비활성</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog(null)}>취소</Button>
+          <Button variant="contained" onClick={handleUpdateEmployee}>저장</Button>
         </DialogActions>
       </Dialog>
 
@@ -335,11 +545,11 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
               <Box p={2} bgcolor="grey.100" borderRadius={1} mb={2}>
                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>CSV 형식</Typography>
                 <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>employee_id,name,email,department,status</Typography>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>EMP001,홍길동,hong@company.com,Engineering,ACTIVE</Typography>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', color: 'text.secondary' }}>EMP001,Name,user1@example.com,Department,ACTIVE</Typography>
                 <Typography variant="caption" color="text.disabled" display="block" mt={0.5}>* status 생략 시 ACTIVE 처리</Typography>
               </Box>
-              <Button size="small" startIcon={<DownloadIcon />} variant="outlined" onClick={downloadSampleCsv} sx={{ mb: 2 }}>
-                샘플 CSV 다운로드
+              <Button size="small" startIcon={<DownloadIcon />} variant="outlined" onClick={downloadCsvTemplate} sx={{ mb: 2 }}>
+                CSV 템플릿 다운로드
               </Button>
               <input type="file" accept=".csv,text/csv" ref={fileInputRef} style={{ display: 'none' }}
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleCsvUpload(f); e.target.value = ''; }} />
@@ -362,11 +572,16 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
           ) : (
             <>
               <Alert severity={csvResult.errorCount === 0 ? 'success' : 'warning'} sx={{ mb: 2 }}>
-                <strong>완료:</strong> 추가 {csvResult.importedCount}명 / 건너뜀 {csvResult.skippedCount}명 / 오류 {csvResult.errorCount}건
+                <strong>CSV 처리 완료</strong>
+                <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
+                  <Chip label={`성공 ${csvResult.importedCount}명`} size="small" color="success" />
+                  <Chip label={`중복/건너뜀 ${csvResult.skippedCount}명`} size="small" variant="outlined" />
+                  <Chip label={`실패 ${csvResult.errorCount}건`} size="small" color={csvResult.errorCount > 0 ? 'error' : 'default'} />
+                </Box>
               </Alert>
               {csvResult.imported.length > 0 && (
                 <Box mb={2}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>✅ 추가된 직원</Typography>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>추가된 직원</Typography>
                   <Box display="flex" flexWrap="wrap" gap={0.5}>
                     {csvResult.imported.map(e => <Chip key={e} label={e} size="small" color="success" />)}
                   </Box>
@@ -374,7 +589,9 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
               )}
               {csvResult.skipped.length > 0 && (
                 <Box mb={2}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>⏭️ 건너뜀 (중복)</Typography>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    중복으로 건너뜀 ({csvResult.skippedCount}명)
+                  </Typography>
                   <Box display="flex" flexWrap="wrap" gap={0.5}>
                     {csvResult.skipped.map(e => <Chip key={e} label={e} size="small" variant="outlined" />)}
                   </Box>
@@ -382,8 +599,18 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
               )}
               {csvResult.errors.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" fontWeight="bold" color="error" gutterBottom>❌ 오류</Typography>
-                  <List dense>{csvResult.errors.map((e, i) => <ListItem key={i} disablePadding><ListItemText primary={<Typography variant="caption" color="error">{e}</Typography>} /></ListItem>)}</List>
+                  <Typography variant="subtitle2" fontWeight="bold" color="error" gutterBottom>
+                    실패한 행과 이유 ({csvResult.errorCount}건)
+                  </Typography>
+                  <List dense sx={{ bgcolor: 'error.50', borderRadius: 1, px: 1 }}>
+                    {csvResult.errors.map((e, i) => (
+                      <ListItem key={i} disablePadding>
+                        <ListItemText
+                          primary={<Typography variant="caption" color="error">{e}</Typography>}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
                 </Box>
               )}
             </>

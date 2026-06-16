@@ -1,7 +1,9 @@
 package com.oram.controller;
 
 import com.oram.dto.EmployeeDto;
+import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
+import com.oram.repository.UserRepository;
 import com.oram.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,10 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +27,7 @@ import java.util.UUID;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
@@ -71,6 +76,26 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/delete-all")
+    public ResponseEntity<Map<String, Object>> deleteAllEmployees(Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+
+        if (user == null || user.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Only ADMIN can delete all employees.",
+                    "email", email != null ? email : "anonymous",
+                    "role", user != null ? user.getRole().name() : "unknown"
+            ));
+        }
+
+        long deletedCount = employeeService.deleteAllEmployees();
+        return ResponseEntity.ok(Map.of(
+                "message", "All employees deleted.",
+                "deletedCount", deletedCount
+        ));
+    }
+
     /**
      * CSV 파일로 직원 일괄 가져오기
      * 형식: employee_id,name,email,department,status(선택)
@@ -83,7 +108,11 @@ public class EmployeeController {
             return ResponseEntity.badRequest().build();
         }
         try {
-            String csvContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            byte[] bytes = file.getBytes();
+            String csvContent = new String(bytes, StandardCharsets.UTF_8);
+            if (csvContent.contains("\uFFFD")) {
+                csvContent = new String(bytes, Charset.forName("MS949"));
+            }
             return ResponseEntity.ok(employeeService.importFromCsv(csvContent));
         } catch (IOException e) {
             throw new RuntimeException("파일 읽기 오류: " + e.getMessage(), e);

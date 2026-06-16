@@ -33,6 +33,7 @@ C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\OramApplication.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\AuditLogRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\EmployeeRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\OffboardingResultRepository.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\PermissionRecordRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\SaasConnectionRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\UserRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\risk\RiskFeatures.java

@@ -31,6 +31,14 @@ public class EmployeeDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateRequest {
+        public CreateRequest(String employeeId, String name, String email, String department) {
+            this.employeeId = employeeId;
+            this.name = name;
+            this.email = email;
+            this.department = department;
+            this.status = EmployeeStatus.ACTIVE;
+        }
+
         @NotBlank
         private String employeeId;
         @NotBlank
@@ -39,6 +47,7 @@ public class EmployeeDto {
         private String email;
         @NotBlank
         private String department;
+        private EmployeeStatus status;
     }
 
     @Data

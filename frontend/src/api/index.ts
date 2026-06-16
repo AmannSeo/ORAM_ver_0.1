@@ -27,6 +27,7 @@ export const employeeApi = {
   resign: (id: string) =>
     api.put<{ message: string; offboardingResultId: string }>(`/employees/${id}/resign`).then((r) => r.data),
   delete: (id: string) => api.delete(`/employees/${id}`),
+  deleteAll: () => api.post<{ message: string; deletedCount: number }>('/employees/delete-all').then((r) => r.data),
   csvImport: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
