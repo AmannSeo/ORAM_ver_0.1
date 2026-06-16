@@ -11,8 +11,8 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@oram.local');
-  const [password, setPassword] = useState('Admin1234!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
