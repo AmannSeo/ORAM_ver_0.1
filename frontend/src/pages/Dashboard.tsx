@@ -10,7 +10,6 @@ import {
   Cloud as CloudIcon,
   Warning as WarningIcon,
   Pending as PendingIcon,
-  ArrowForward as ArrowIcon,
   History as HistoryIcon,
 } from '@mui/icons-material';
 import {
@@ -27,61 +26,104 @@ interface StatCardProps {
   value: number;
   icon: React.ReactNode;
   color: string;
+  bgColor: string;
   subtitle?: string;
   onClick?: () => void;
   hint?: string;
 }
 
-function StatCard({ title, value, icon, color, subtitle, onClick, hint }: StatCardProps) {
+function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint }: StatCardProps) {
   const inner = (
-    <CardContent sx={{ p: 2.25, '&:last-child': { pb: 2.25 } }}>
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
-        <Box minWidth={0}>
-          <Typography variant="caption" color="text.secondary" fontWeight={700}>
+    <CardContent
+      sx={{
+        width: '100%',
+        minHeight: 178,
+        p: 2,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        '&:last-child': { pb: 2 },
+      }}
+    >
+      <Stack alignItems="center" spacing={1.25} textAlign="center" minWidth={0} width="100%">
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            color: '#fff',
+            bgcolor: color,
+            boxShadow: '0 10px 22px rgba(15, 23, 42, 0.14)',
+            '& .MuiSvgIcon-root': { fontSize: 26 },
+          }}
+        >
+          {icon}
+        </Box>
+        <Box minWidth={0} width="100%">
+          <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight={800} color={color} lineHeight={1.15} mt={0.5}>
+          <Typography
+            fontWeight={800}
+            color="text.primary"
+            lineHeight={1.05}
+            mt={0.75}
+            sx={{ fontSize: { xs: 30, lg: 27, xl: 32 } }}
+          >
             {value.toLocaleString()}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography variant="caption" color="text.secondary" noWrap display="block" mt={0.5}>
               {subtitle}
             </Typography>
           )}
         </Box>
-        <Box display="flex" flexDirection="column" alignItems="center" gap={0.5}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 1.5,
-              display: 'grid',
-              placeItems: 'center',
-              color,
-              bgcolor: 'action.hover',
-            }}
-          >
-            {icon}
-          </Box>
-          {onClick && <ArrowIcon fontSize="small" sx={{ color, opacity: 0.45 }} />}
+        <Box
+          sx={{
+            px: 1.5,
+            py: 0.75,
+            borderRadius: 1,
+            bgcolor: '#fff',
+            color: 'text.secondary',
+            fontSize: 12,
+            fontWeight: 700,
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+          }}
+        >
+          보기
         </Box>
-      </Box>
+      </Stack>
     </CardContent>
   );
 
   const cardSx = {
     height: '100%',
-    borderLeft: 4,
-    borderColor: color,
+    bgcolor: bgColor,
+    border: '1px solid rgba(255, 255, 255, 0.72)',
+    borderRadius: 2,
     cursor: onClick ? 'pointer' : 'default',
-    '&:hover': onClick ? { transform: 'translateY(-2px)', transition: 'all 0.2s' } : undefined,
+    minHeight: 178,
+    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
+    overflow: 'hidden',
+    '&:hover': onClick ? { transform: 'translateY(-3px)', transition: 'all 0.2s' } : undefined,
   };
 
   if (onClick) {
     return (
       <Tooltip title={hint || '목록 보기'} placement="top">
         <Card elevation={1} sx={cardSx}>
-          <CardActionArea onClick={onClick}>{inner}</CardActionArea>
+          <CardActionArea
+            onClick={onClick}
+            sx={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'stretch',
+            }}
+          >
+            {inner}
+          </CardActionArea>
         </Card>
       </Tooltip>
     );
@@ -144,8 +186,8 @@ function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
         bgcolor: '#fafafa',
         border: '1px solid',
         borderColor: 'divider',
-        borderRadius: 2,
-        p: 2,
+        borderRadius: 3,
+        p: 3.5,
         position: { lg: 'sticky' },
         top: { lg: 88 },
       }}
@@ -309,9 +351,9 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Grid container spacing={3} alignItems="stretch">
+      <Grid container spacing={4} alignItems="stretch">
         <Grid item xs={12} lg={9}>
-          <Stack spacing={3}>
+          <Stack spacing={2.5}>
             <Box>
               <Typography variant="h4" fontWeight="bold" gutterBottom>
                 대시보드
@@ -322,66 +364,72 @@ export default function Dashboard() {
             </Box>
 
             <Grid container spacing={2.25}>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="전체 직원"
                   value={stats.totalEmployees}
                   icon={<PeopleIcon />}
-                  color="primary.main"
+                  color="#4d63e6"
+                  bgColor="#f0f3ff"
                   onClick={() => navigate('/employees')}
                   hint="전체 직원 목록"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="재직 중"
                   value={stats.activeEmployees}
                   icon={<CheckIcon />}
-                  color="success.main"
+                  color="#4b9b4f"
+                  bgColor="#eef8ef"
                   subtitle={`${activeRate}% active`}
                   onClick={() => navigate('/employees?status=ACTIVE')}
                   hint="재직 중 직원 목록"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="퇴사자"
                   value={stats.resignedEmployees}
                   icon={<ResignedIcon />}
-                  color="text.secondary"
+                  color="#6b7280"
+                  bgColor="#f4f5f7"
                   subtitle={`${resignedRate}% resigned`}
                   onClick={() => navigate('/employees?status=RESIGNED')}
                   hint="퇴사자 목록"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="연결 SaaS"
                   value={stats.connectedSaasCount}
                   icon={<CloudIcon />}
-                  color="info.main"
+                  color="#3f8cd6"
+                  bgColor="#edf7ff"
                   subtitle={`${saasRate}% connected`}
                   onClick={() => navigate('/saas-connections')}
                   hint="SaaS 연결 관리"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="최고 위험"
                   value={stats.criticalRiskCount}
                   icon={<WarningIcon />}
-                  color="error.main"
+                  color="#d34a4a"
+                  bgColor="#fff0f0"
                   subtitle="즉시 확인"
                   onClick={() => navigate('/offboarding')}
                   hint="CRITICAL 위험 확인"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} xl={4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
                   title="진행 중"
                   value={stats.pendingOffboardings}
                   icon={<PendingIcon />}
-                  color="warning.main"
+                  color="#d9782d"
+                  bgColor="#fff4e8"
                   subtitle="오프보딩"
                   onClick={() => navigate('/offboarding')}
                   hint="오프보딩 목록"
