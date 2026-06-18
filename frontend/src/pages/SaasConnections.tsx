@@ -4,6 +4,7 @@ import {
   Chip, LinearProgress, Alert, Dialog, DialogTitle, DialogContent,
   DialogActions, Divider, TextField, Paper, InputAdornment,
   IconButton, Collapse, Stack,
+  CircularProgress,
 } from '@mui/material';
 import {
   CheckCircle as ConnectedIcon, Cancel as NotConnectedIcon,
@@ -110,6 +111,7 @@ export default function SaasConnections() {
   const [showToken, setShowToken] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [syncingSaas, setSyncingSaas] = useState<SaasType | null>(null);
 
   // 해제 다이얼로그
   const [disconnectDialog, setDisconnectDialog] = useState<SaasType | null>(null);
@@ -168,7 +170,7 @@ export default function SaasConnections() {
   };
 
   const handleSyncUsers = async (saasType: SaasType) => {
-    setConnecting(true);
+    setSyncingSaas(saasType);
     setError(null);
     try {
       const result = await saasApi.syncUsers(saasType);
@@ -179,7 +181,7 @@ export default function SaasConnections() {
       const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';
       setError(msg);
     } finally {
-      setConnecting(false);
+      setSyncingSaas(null);
     }
   };
 
@@ -281,9 +283,14 @@ export default function SaasConnections() {
                 <CardActions sx={{ px: 2, py: 1.5, gap: 1 }}>
                   {conn.isConnected ? (
                     <>
-                      <Button variant="contained" startIcon={<ConnectIcon />} size="small"
-                        onClick={() => handleSyncUsers(conn.saasType)} disabled={connecting}>
-                        동기화
+                      <Button
+                        variant="contained"
+                        startIcon={syncingSaas === conn.saasType ? <CircularProgress size={16} color="inherit" /> : <ConnectIcon />}
+                        size="small"
+                        onClick={() => handleSyncUsers(conn.saasType)}
+                        disabled={syncingSaas === conn.saasType}
+                      >
+                        {syncingSaas === conn.saasType ? '동기화 중...' : '동기화'}
                       </Button>
                       <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
                         onClick={() => setDisconnectDialog(conn.saasType)}>

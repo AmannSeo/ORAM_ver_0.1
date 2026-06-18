@@ -33,6 +33,7 @@ export default function Employees() {
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
+  const [resigningEmployeeId, setResigningEmployeeId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
@@ -74,12 +75,19 @@ export default function Employees() {
 
   const handleResign = async () => {
     if (!resignDialog) return;
+    setResigningEmployeeId(resignDialog.id);
+    setError(null);
     try {
       const result = await employeeApi.resign(resignDialog.id);
       setResignDialog(null);
+      setSuccessMessage('퇴사 처리와 오프보딩 분석이 완료되었습니다. 결과 화면으로 이동합니다.');
       load();
       navigate(`/offboarding/${result.offboardingResultId}`);
-    } catch { setError('퇴사 처리에 실패했습니다'); }
+    } catch {
+      setError('퇴사 처리에 실패했습니다');
+    } finally {
+      setResigningEmployeeId(null);
+    }
   };
 
   const handleAddEmployee = async () => {
@@ -277,10 +285,11 @@ export default function Employees() {
                               size="small"
                               color="error"
                               variant="outlined"
-                              startIcon={<ResignIcon />}
+                              startIcon={resigningEmployeeId === emp.id ? <CircularProgress size={15} color="inherit" /> : <ResignIcon />}
                               onClick={() => setResignDialog(emp)}
+                              disabled={resigningEmployeeId === emp.id}
                             >
-                              권한 회수
+                              {resigningEmployeeId === emp.id ? '처리 중...' : '권한 회수'}
                             </Button>
                           </Tooltip>
                         ) : (
@@ -417,17 +426,35 @@ curl -X POST http://localhost:8080/api/hr/webhook \\
       {/* ═══ 공통 다이얼로그 ═══ */}
 
       {/* 퇴사 확인 */}
-      <Dialog open={Boolean(resignDialog)} onClose={() => setResignDialog(null)}>
+      <Dialog
+        open={Boolean(resignDialog)}
+        onClose={() => {
+          if (!resigningEmployeeId) setResignDialog(null);
+        }}
+      >
         <DialogTitle>오프보딩 확인</DialogTitle>
         <DialogContent>
           <Typography>
             <strong>{resignDialog?.name}</strong> ({resignDialog?.email}) 직원을 퇴사 처리하시겠습니까?
             <br />오프보딩 워크플로우가 자동으로 시작됩니다.
           </Typography>
+          {resigningEmployeeId && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              SaaS 권한을 조회하고 AI 위험도를 계산하는 중입니다. 연결된 SaaS 수에 따라 몇 초 정도 걸릴 수 있습니다.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResignDialog(null)}>취소</Button>
-          <Button variant="contained" color="error" onClick={handleResign}>퇴사 처리</Button>
+          <Button onClick={() => setResignDialog(null)} disabled={Boolean(resigningEmployeeId)}>취소</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleResign}
+            disabled={Boolean(resigningEmployeeId)}
+            startIcon={resigningEmployeeId ? <CircularProgress size={16} color="inherit" /> : <ResignIcon />}
+          >
+            {resigningEmployeeId ? '오프보딩 생성 중...' : '퇴사 처리'}
+          </Button>
         </DialogActions>
       </Dialog>
 
