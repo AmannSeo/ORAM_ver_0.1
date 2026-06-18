@@ -8,6 +8,8 @@ import type {
   SaasType,
   OffboardingSummary,
   OffboardingDetail,
+  RevokePlanResponse,
+  RevokePlanItem,
   RiskScoreRequest,
   RiskScoreResponse,
 } from '../types';
@@ -60,8 +62,10 @@ export const saasApi = {
 export const offboardingApi = {
   getAll: () => api.get<OffboardingSummary[]>('/offboarding').then((r) => r.data),
   getById: (id: string) => api.get<OffboardingDetail>(`/offboarding/${id}`).then((r) => r.data),
+  getRevokePlan: (id: string) =>
+    api.get<RevokePlanResponse>(`/offboarding/${id}/revoke-plan`).then((r) => r.data),
   revokeAll: (id: string) =>
-    api.post<{ message: string; revokedAt: string; revokedSaas: SaasType[] }>(`/offboarding/${id}/revoke-all`).then((r) => r.data),
+    api.post<{ message: string; revokedAt: string; revokedSaas: SaasType[]; items: RevokePlanItem[] }>(`/offboarding/${id}/revoke-all`).then((r) => r.data),
 };
 
 export const riskApi = {

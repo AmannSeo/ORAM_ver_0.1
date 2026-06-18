@@ -83,5 +83,34 @@ public class OffboardingDto {
         private String message;
         private LocalDateTime revokedAt;
         private List<SaasType> revokedSaas;
+        private List<RevokePlanItem> items;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RevokePlanResponse {
+        private UUID resultId;
+        private EmployeeInfo employee;
+        private int readyCount;
+        private int manualCount;
+        private int blockedCount;
+        private List<RevokePlanItem> items;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RevokePlanItem {
+        private SaasType saasType;
+        private String status;
+        private boolean canRevoke;
+        private boolean accountMatched;
+        private int resourceCount;
+        private String action;
+        private String reason;
+        private List<String> resources;
     }
 }

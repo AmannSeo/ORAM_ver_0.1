@@ -105,6 +105,26 @@ export interface OffboardingDetail extends OffboardingSummary {
   completedAt?: string;
 }
 
+export interface RevokePlanItem {
+  saasType: SaasType;
+  status: 'READY' | 'MANUAL' | 'NO_ACCOUNT' | 'REVOKED' | 'FAILED' | string;
+  canRevoke: boolean;
+  accountMatched: boolean;
+  resourceCount: number;
+  action: string;
+  reason: string;
+  resources?: string[];
+}
+
+export interface RevokePlanResponse {
+  resultId: string;
+  employee: OffboardingSummary['employee'];
+  readyCount: number;
+  manualCount: number;
+  blockedCount: number;
+  items: RevokePlanItem[];
+}
+
 // Risk
 export interface RiskScoreRequest {
   isAdmin: boolean;

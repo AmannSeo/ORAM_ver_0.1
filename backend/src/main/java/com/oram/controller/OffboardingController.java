@@ -33,6 +33,12 @@ public class OffboardingController {
         return ResponseEntity.ok(offboardingService.getDetail(resultId));
     }
 
+    @GetMapping("/{resultId}/revoke-plan")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
+    public ResponseEntity<OffboardingDto.RevokePlanResponse> getRevokePlan(@PathVariable UUID resultId) {
+        return ResponseEntity.ok(offboardingService.getRevokePlan(resultId));
+    }
+
     @PostMapping("/{resultId}/revoke-all")
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<OffboardingDto.RevokeResponse> revokeAll(

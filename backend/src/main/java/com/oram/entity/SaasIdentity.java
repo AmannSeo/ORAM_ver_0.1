@@ -63,6 +63,20 @@ public class SaasIdentity {
     @Column(name = "last_synced_at")
     private LocalDateTime lastSyncedAt;
 
+    @Column(name = "access_revoked", nullable = false)
+    @Builder.Default
+    private boolean accessRevoked = false;
+
+    @Column(name = "revoked_at")
+    private LocalDateTime revokedAt;
+
+    @Column(name = "revoke_message", length = 500)
+    private String revokeMessage;
+
+    @Column(name = "has_revoke_permission", nullable = false)
+    @Builder.Default
+    private boolean hasRevokePermission = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface SaasIdentityRepository extends JpaRepository<SaasIdentity, UUID> {
     Optional<SaasIdentity> findBySaasTypeAndExternalUserId(SaasType saasType, String externalUserId);
     List<SaasIdentity> findByEmployeeId(UUID employeeId);
+    List<SaasIdentity> findByEmployeeIdAndSaasType(UUID employeeId, SaasType saasType);
     long countBySaasType(SaasType saasType);
     void deleteByEmployeeId(UUID employeeId);
 }
