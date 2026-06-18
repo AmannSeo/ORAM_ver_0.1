@@ -24,6 +24,7 @@ public class SaasConnectionDto {
         private boolean isConnected;
         private LocalDateTime connectedAt;
         private String connectedBy;
+        private long identityCount;
     }
 
     @Data

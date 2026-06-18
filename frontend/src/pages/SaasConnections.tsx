@@ -264,6 +264,9 @@ export default function SaasConnections() {
                       <Typography variant="body2" color="success.dark">
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        매핑된 계정: {conn.identityCount ?? 0}명
+                      </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
                           연결일: {new Date(conn.connectedAt).toLocaleDateString('ko-KR')}

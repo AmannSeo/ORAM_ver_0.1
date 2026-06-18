@@ -8,11 +8,13 @@ import com.oram.connector.SaaSConnector;
 import com.oram.connector.SlackConnector;
 import com.oram.dto.SaasConnectionDto;
 import com.oram.entity.Employee;
+import com.oram.entity.SaasIdentity;
 import com.oram.entity.SaasConnection;
 import com.oram.entity.User;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
 import com.oram.repository.EmployeeRepository;
+import com.oram.repository.SaasIdentityRepository;
 import com.oram.repository.SaasConnectionRepository;
 import com.oram.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class SaasConnectionService {
     private final ConnectorRegistry connectorRegistry;
     private final EncryptionConfig.TokenEncryptor tokenEncryptor;
     private final EmployeeRepository employeeRepository;
+    private final SaasIdentityRepository saasIdentityRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
 
@@ -52,10 +55,12 @@ public class SaasConnectionService {
                             .isConnected(c.isConnected())
                             .connectedAt(c.getConnectedAt())
                             .connectedBy(c.getConnectedBy() != null ? c.getConnectedBy().getEmail() : null)
+                            .identityCount(saasIdentityRepository.countBySaasType(type))
                             .build()
                     ).orElse(SaasConnectionDto.Response.builder()
                             .saasType(type)
                             .isConnected(false)
+                            .identityCount(saasIdentityRepository.countBySaasType(type))
                             .build());
                 })
                 .toList();
@@ -155,6 +160,7 @@ public class SaasConnectionService {
                 .workspaceName(connection.getWorkspaceName())
                 .isConnected(true)
                 .connectedAt(connection.getConnectedAt())
+                .identityCount(saasIdentityRepository.countBySaasType(saasType))
                 .build();
     }
 
@@ -183,6 +189,7 @@ public class SaasConnectionService {
                 .workspaceName(connection.getWorkspaceName())
                 .isConnected(true)
                 .connectedAt(connection.getConnectedAt())
+                .identityCount(saasIdentityRepository.countBySaasType(saasType))
                 .build();
     }
 
@@ -237,31 +244,42 @@ public class SaasConnectionService {
         try {
             List<SaaSConnector.SyncedUser> users = connector.listUsers(token);
             int created = 0;
+            int mapped = 0;
 
             for (SaaSConnector.SyncedUser user : users) {
                 String email = normalizeEmail(user.email());
-                String employeeId = buildSaasEmployeeId(saasType, user.externalId(), email);
-                if (email == null || employeeId == null) continue;
-                if (employeeRepository.existsByEmail(email) || employeeRepository.existsByEmployeeId(employeeId)) {
-                    continue;
-                }
+                String externalId = normalizeExternalId(saasType, user.externalId(), email);
+                if (externalId == null) continue;
 
-                Employee employee = Employee.builder()
-                        .employeeId(employeeId)
-                        .name(user.name() != null && !user.name().isBlank() ? user.name() : email)
-                        .email(email)
-                        .department(user.department() != null && !user.department().isBlank()
-                                ? user.department()
-                                : saasType.name())
-                        .status(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED)
-                        .build();
-                employeeRepository.save(employee);
-                created++;
+                Employee employee = resolveOrCreateEmployee(saasType, user, email, externalId);
+                SaasIdentity identity = saasIdentityRepository
+                        .findBySaasTypeAndExternalUserId(saasType, externalId)
+                        .orElseGet(() -> {
+                            SaasIdentity newIdentity = SaasIdentity.builder()
+                                    .saasType(saasType)
+                                    .externalUserId(externalId)
+                                    .build();
+                            return newIdentity;
+                        });
+
+                if (identity.getId() == null) created++;
+                if (identity.getEmployee() == null && employee != null) mapped++;
+
+                identity.setEmployee(employee);
+                identity.setExternalEmail(email);
+                identity.setExternalUsername(extractExternalUsername(saasType, externalId, email));
+                identity.setDisplayName(user.name() != null && !user.name().isBlank() ? user.name() : email);
+                identity.setDepartment(user.department() != null && !user.department().isBlank()
+                        ? user.department()
+                        : saasType.name());
+                identity.setStatus(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED);
+                identity.setLastSyncedAt(LocalDateTime.now());
+                saasIdentityRepository.save(identity);
             }
 
-            if (created > 0) {
+            if (created > 0 || mapped > 0) {
                 auditService.log(null, "SYNC_SAAS_USERS", "SAAS_CONNECTION", saasType.name(),
-                        "Synced " + created + " users from " + saasType);
+                        "Synced identities from " + saasType + ": created=" + created + ", mapped=" + mapped);
             }
             return created;
         } catch (Exception e) {
@@ -273,6 +291,47 @@ public class SaasConnectionService {
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) return null;
         return email.trim().toLowerCase();
+    }
+
+    private String normalizeExternalId(SaasType saasType, String externalId, String email) {
+        String source = externalId != null && !externalId.isBlank() ? externalId : email;
+        if (source == null || source.isBlank()) return null;
+        return source.startsWith(saasType.name().toLowerCase() + ":")
+                ? source
+                : saasType.name().toLowerCase() + ":" + source;
+    }
+
+    private Employee resolveOrCreateEmployee(SaasType saasType, SaaSConnector.SyncedUser user, String email, String externalId) {
+        if (email != null) {
+            Optional<Employee> existing = employeeRepository.findByEmail(email);
+            if (existing.isPresent()) return existing.get();
+        }
+
+        String employeeId = buildSaasEmployeeId(saasType, externalId, email);
+        if (employeeId == null) return null;
+
+        Optional<Employee> byEmployeeId = employeeRepository.findByEmployeeId(employeeId);
+        if (byEmployeeId.isPresent()) return byEmployeeId.get();
+
+        String fallbackEmail = email != null ? email : externalId.replaceAll("[^A-Za-z0-9]", "-") + "@saas.local";
+        Employee employee = Employee.builder()
+                .employeeId(employeeId)
+                .name(user.name() != null && !user.name().isBlank() ? user.name() : fallbackEmail)
+                .email(fallbackEmail)
+                .department(user.department() != null && !user.department().isBlank()
+                        ? user.department()
+                        : saasType.name())
+                .status(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED)
+                .build();
+        return employeeRepository.save(employee);
+    }
+
+    private String extractExternalUsername(SaasType saasType, String externalId, String email) {
+        String prefix = saasType.name().toLowerCase() + ":";
+        if (externalId != null && externalId.startsWith(prefix)) {
+            return externalId.substring(prefix.length());
+        }
+        return email;
     }
 
     private String normalizeToken(String token) {

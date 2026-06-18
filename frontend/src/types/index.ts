@@ -68,6 +68,7 @@ export interface SaasConnection {
   isConnected: boolean;
   connectedAt?: string;
   connectedBy?: string;
+  identityCount?: number;
 }
 
 // Offboarding

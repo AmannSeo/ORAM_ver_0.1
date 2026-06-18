@@ -6,6 +6,7 @@ import com.oram.enums.EmployeeStatus;
 import com.oram.repository.EmployeeRepository;
 import com.oram.repository.OffboardingResultRepository;
 import com.oram.repository.PermissionRecordRepository;
+import com.oram.repository.SaasIdentityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final OffboardingResultRepository offboardingResultRepository;
     private final PermissionRecordRepository permissionRecordRepository;
+    private final SaasIdentityRepository saasIdentityRepository;
     private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
@@ -108,6 +110,7 @@ public class EmployeeService {
     @Transactional
     public void deleteEmployee(UUID id) {
         Employee employee = findById(id);
+        saasIdentityRepository.deleteByEmployeeId(employee.getId());
         employeeRepository.delete(employee);
     }
 
@@ -116,6 +119,7 @@ public class EmployeeService {
         long count = employeeRepository.count();
         permissionRecordRepository.deleteAllInBatch();
         offboardingResultRepository.deleteAllInBatch();
+        saasIdentityRepository.deleteAllInBatch();
         employeeRepository.deleteAllInBatch();
         return count;
     }
