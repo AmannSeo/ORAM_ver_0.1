@@ -7,9 +7,12 @@ import com.oram.connector.NotionConnector;
 import com.oram.connector.SaaSConnector;
 import com.oram.connector.SlackConnector;
 import com.oram.dto.SaasConnectionDto;
+import com.oram.entity.Employee;
 import com.oram.entity.SaasConnection;
 import com.oram.entity.User;
+import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
+import com.oram.repository.EmployeeRepository;
 import com.oram.repository.SaasConnectionRepository;
 import com.oram.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,7 @@ public class SaasConnectionService {
     private final SaasConnectionRepository connectionRepository;
     private final ConnectorRegistry connectorRegistry;
     private final EncryptionConfig.TokenEncryptor tokenEncryptor;
+    private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
 
@@ -92,10 +96,12 @@ public class SaasConnectionService {
         // 현재 로그인 사용자 설정
         getCurrentUser().ifPresent(connection::setConnectedBy);
         connectionRepository.save(connection);
+        int syncedUsers = syncUsersFromConnector(saasType, connector, tokenInfo.accessToken());
 
         auditService.log(null, "CONNECT_SAAS", "SAAS_CONNECTION", saasType.name(),
-                "Connected to " + saasType + " workspace: " + tokenInfo.workspaceName());
-        log.info("SaaS connection established: {}, workspace: {}", saasType, tokenInfo.workspaceName());
+                "Connected to " + saasType + " workspace: " + tokenInfo.workspaceName() + ", synced users: " + syncedUsers);
+        log.info("SaaS connection established: {}, workspace: {}, synced users: {}",
+                saasType, tokenInfo.workspaceName(), syncedUsers);
     }
 
     /**
@@ -136,10 +142,11 @@ public class SaasConnectionService {
         connection.setConnectedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(connection::setConnectedBy);
         connectionRepository.save(connection);
+        int syncedUsers = syncUsersFromConnector(saasType, connector, rawToken);
 
         auditService.log(null, "TOKEN_CONNECT", "SAAS_CONNECTION", saasType.name(),
-                "Token-based connection: " + saasType + " / " + connection.getWorkspaceName());
-        log.info("Token-based SaaS connection established: {}", saasType);
+                "Token-based connection: " + saasType + " / " + connection.getWorkspaceName() + ", synced users: " + syncedUsers);
+        log.info("Token-based SaaS connection established: {}, synced users: {}", saasType, syncedUsers);
 
         return SaasConnectionDto.Response.builder()
                 .id(connection.getId())
@@ -213,6 +220,56 @@ public class SaasConnectionService {
     /**
      * SaaS별 워크스페이스 이름 자동 탐지
      */
+    private int syncUsersFromConnector(SaasType saasType, SaaSConnector connector, String token) {
+        try {
+            List<SaaSConnector.SyncedUser> users = connector.listUsers(token);
+            int created = 0;
+
+            for (SaaSConnector.SyncedUser user : users) {
+                String email = normalizeEmail(user.email());
+                String employeeId = buildSaasEmployeeId(saasType, user.externalId(), email);
+                if (email == null || employeeId == null) continue;
+                if (employeeRepository.existsByEmail(email) || employeeRepository.existsByEmployeeId(employeeId)) {
+                    continue;
+                }
+
+                Employee employee = Employee.builder()
+                        .employeeId(employeeId)
+                        .name(user.name() != null && !user.name().isBlank() ? user.name() : email)
+                        .email(email)
+                        .department(user.department() != null && !user.department().isBlank()
+                                ? user.department()
+                                : saasType.name())
+                        .status(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED)
+                        .build();
+                employeeRepository.save(employee);
+                created++;
+            }
+
+            if (created > 0) {
+                auditService.log(null, "SYNC_SAAS_USERS", "SAAS_CONNECTION", saasType.name(),
+                        "Synced " + created + " users from " + saasType);
+            }
+            return created;
+        } catch (Exception e) {
+            log.warn("SaaS user sync failed for {}: {}", saasType, e.getMessage());
+            return 0;
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) return null;
+        return email.trim().toLowerCase();
+    }
+
+    private String buildSaasEmployeeId(SaasType saasType, String externalId, String email) {
+        String source = externalId != null && !externalId.isBlank() ? externalId : email;
+        if (source == null || source.isBlank()) return null;
+        String normalized = source.replaceAll("[^A-Za-z0-9]", "-").replaceAll("-+", "-").toUpperCase();
+        String employeeId = saasType.name() + "-" + normalized;
+        return employeeId.length() <= 50 ? employeeId : employeeId.substring(0, 50);
+    }
+
     private String autoDetectWorkspaceName(SaasType saasType, SaaSConnector connector, String token) {
         try {
             return switch (saasType) {

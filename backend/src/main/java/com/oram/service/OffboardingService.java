@@ -149,12 +149,15 @@ public class OffboardingService {
             }
         }
 
-        result.setRevokedAll(true);
+        boolean revokedAnyAccess = !revokedSaas.isEmpty();
+        result.setRevokedAll(revokedAnyAccess);
         result.setReviewedBy(reviewedBy);
         resultRepository.save(result);
 
         return OffboardingDto.RevokeResponse.builder()
-                .message("All access revoked successfully.")
+                .message(revokedAnyAccess
+                        ? "Access revoked successfully."
+                        : "No access was revoked. Check connector permissions and SaaS account mapping.")
                 .revokedAt(LocalDateTime.now())
                 .revokedSaas(revokedSaas)
                 .build();

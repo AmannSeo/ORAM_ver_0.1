@@ -37,6 +37,10 @@ public interface SaaSConnector {
      */
     List<DiscoveredPermission> getPermissions(String email, String accessToken);
 
+    default List<SyncedUser> listUsers(String accessToken) {
+        return List.of();
+    }
+
     /**
      * 사용자의 모든 접근 권한 해제
      */
@@ -64,6 +68,14 @@ public interface SaaSConnector {
         boolean recentLogin,
         int repoCount,
         int workspaceCount
+    ) {}
+
+    record SyncedUser(
+        String externalId,
+        String name,
+        String email,
+        String department,
+        boolean active
     ) {}
 
     record RevokeResult(

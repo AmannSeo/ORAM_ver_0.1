@@ -47,7 +47,11 @@ export default function OffboardingDetailPage() {
     try {
       const res = await offboardingApi.revokeAll(resultId);
       setRevokeDialog(false);
-      setRevokeSuccess(`Access revoked in: ${res.revokedSaas.join(', ')}`);
+      setRevokeSuccess(
+        res.revokedSaas.length > 0
+          ? `${res.message} (${res.revokedSaas.join(', ')})`
+          : res.message
+      );
       load();
     } catch {
       setError('Failed to revoke access');
