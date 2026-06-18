@@ -172,7 +172,8 @@ export default function SaasConnections() {
     setError(null);
     try {
       const result = await saasApi.syncUsers(saasType);
-      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: 신규 ${result.syncedCount}명`);
+      const warningText = result.warnings?.length ? ` (${result.warnings.join(' / ')})` : '';
+      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: 확인 ${result.totalFound}명, 신규 ${result.syncedCount}명${warningText}`);
       load();
     } catch (err: any) {
       const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';

@@ -88,12 +88,8 @@ public class SaasConnectionController {
 
     @PostMapping("/{saasType}/sync")
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
-    public ResponseEntity<Map<String, Object>> syncUsers(@PathVariable SaasType saasType) {
-        int syncedCount = saasConnectionService.syncConnectedUsers(saasType);
-        return ResponseEntity.ok(Map.of(
-                "message", "SaaS users synced.",
-                "syncedCount", syncedCount
-        ));
+    public ResponseEntity<SaasConnectionDto.SyncUsersResponse> syncUsers(@PathVariable SaasType saasType) {
+        return ResponseEntity.ok(saasConnectionService.syncConnectedUsers(saasType));
     }
 
     @PostMapping("/demo-connect/{saasType}")

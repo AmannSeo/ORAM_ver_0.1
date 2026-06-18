@@ -55,7 +55,7 @@ export const saasApi = {
   demoConnect: (saasType: SaasType) =>
     api.post<SaasConnection>(`/saas-connections/demo-connect/${saasType}`).then((r) => r.data),
   syncUsers: (saasType: SaasType) =>
-    api.post<{ message: string; syncedCount: number }>(`/saas-connections/${saasType}/sync`).then((r) => r.data),
+    api.post<{ message: string; syncedCount: number; totalFound: number; warnings: string[] }>(`/saas-connections/${saasType}/sync`).then((r) => r.data),
   disconnect: (saasType: SaasType) => api.delete(`/saas-connections/${saasType}`),
 };
 

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -101,12 +102,12 @@ public class SaasConnectionService {
         // 현재 로그인 사용자 설정
         getCurrentUser().ifPresent(connection::setConnectedBy);
         connectionRepository.save(connection);
-        int syncedUsers = syncUsersFromConnector(saasType, connector, tokenInfo.accessToken());
+        SaasConnectionDto.SyncUsersResponse syncResult = syncUsersFromConnector(saasType, connector, tokenInfo.accessToken());
 
         auditService.log(null, "CONNECT_SAAS", "SAAS_CONNECTION", saasType.name(),
-                "Connected to " + saasType + " workspace: " + tokenInfo.workspaceName() + ", synced users: " + syncedUsers);
+                "Connected to " + saasType + " workspace: " + tokenInfo.workspaceName() + ", synced users: " + syncResult.getSyncedCount());
         log.info("SaaS connection established: {}, workspace: {}, synced users: {}",
-                saasType, tokenInfo.workspaceName(), syncedUsers);
+                saasType, tokenInfo.workspaceName(), syncResult.getSyncedCount());
     }
 
     /**
@@ -148,11 +149,11 @@ public class SaasConnectionService {
         connection.setConnectedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(connection::setConnectedBy);
         connectionRepository.save(connection);
-        int syncedUsers = syncUsersFromConnector(saasType, connector, token);
+        SaasConnectionDto.SyncUsersResponse syncResult = syncUsersFromConnector(saasType, connector, token);
 
         auditService.log(null, "TOKEN_CONNECT", "SAAS_CONNECTION", saasType.name(),
-                "Token-based connection: " + saasType + " / " + connection.getWorkspaceName() + ", synced users: " + syncedUsers);
-        log.info("Token-based SaaS connection established: {}, synced users: {}", saasType, syncedUsers);
+                "Token-based connection: " + saasType + " / " + connection.getWorkspaceName() + ", synced users: " + syncResult.getSyncedCount());
+        log.info("Token-based SaaS connection established: {}, synced users: {}", saasType, syncResult.getSyncedCount());
 
         return SaasConnectionDto.Response.builder()
                 .id(connection.getId())
@@ -217,7 +218,7 @@ public class SaasConnectionService {
     }
 
     @Transactional
-    public int syncConnectedUsers(SaasType saasType) {
+    public SaasConnectionDto.SyncUsersResponse syncConnectedUsers(SaasType saasType) {
         SaasConnection connection = connectionRepository.findBySaasType(saasType)
                 .filter(SaasConnection::isConnected)
                 .orElseThrow(() -> new IllegalArgumentException("SaaS not connected: " + saasType));
@@ -240,16 +241,20 @@ public class SaasConnectionService {
     /**
      * SaaS별 워크스페이스 이름 자동 탐지
      */
-    private int syncUsersFromConnector(SaasType saasType, SaaSConnector connector, String token) {
+    private SaasConnectionDto.SyncUsersResponse syncUsersFromConnector(SaasType saasType, SaaSConnector connector, String token) {
         try {
             List<SaaSConnector.SyncedUser> users = connector.listUsers(token);
+            List<String> warnings = new ArrayList<>();
             int created = 0;
             int mapped = 0;
 
             for (SaaSConnector.SyncedUser user : users) {
                 String email = normalizeEmail(user.email());
                 String externalId = normalizeExternalId(saasType, user.externalId(), email);
-                if (externalId == null) continue;
+                if (externalId == null) {
+                    warnings.add("Skipped a " + saasType + " account because it had no stable id or email.");
+                    continue;
+                }
 
                 Employee employee = resolveOrCreateEmployee(saasType, user, email, externalId);
                 SaasIdentity identity = saasIdentityRepository
@@ -281,11 +286,40 @@ public class SaasConnectionService {
                 auditService.log(null, "SYNC_SAAS_USERS", "SAAS_CONNECTION", saasType.name(),
                         "Synced identities from " + saasType + ": created=" + created + ", mapped=" + mapped);
             }
-            return created;
+
+            if (users.isEmpty()) {
+                warnings.add(saasType + "에서 동기화할 사용자를 찾지 못했습니다. 토큰 scope 또는 접근 가능한 조직/저장소 권한을 확인하세요.");
+            }
+
+            return SaasConnectionDto.SyncUsersResponse.builder()
+                    .message(buildSyncMessage(saasType, users.size(), created, mapped, warnings))
+                    .syncedCount(created)
+                    .totalFound(users.size())
+                    .warnings(warnings)
+                    .build();
         } catch (Exception e) {
             log.warn("SaaS user sync failed for {}: {}", saasType, e.getMessage());
-            return 0;
+            throw new IllegalArgumentException(buildSyncFailureMessage(saasType, e), e);
         }
+    }
+
+    private String buildSyncMessage(SaasType saasType, int totalFound, int created, int mapped, List<String> warnings) {
+        if (totalFound == 0) {
+            return saasType + " 연결은 되어 있지만 조회된 사용자가 없습니다.";
+        }
+        String message = saasType + " 사용자 " + totalFound + "명을 확인했고 신규 " + created + "명, 매핑 " + mapped + "명을 반영했습니다.";
+        if (!warnings.isEmpty()) {
+            return message + " 일부 항목은 확인이 필요합니다.";
+        }
+        return message;
+    }
+
+    private String buildSyncFailureMessage(SaasType saasType, Exception e) {
+        String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+        if (saasType == SaasType.GITHUB) {
+            return "GitHub 동기화 실패: 토큰 scope(repo, read:org, admin:org) 또는 조직/저장소 접근 권한을 확인하세요. 상세: " + detail;
+        }
+        return saasType + " 동기화 실패: " + detail;
     }
 
     private String normalizeEmail(String email) {

@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public class SaasConnectionDto {
@@ -33,5 +34,16 @@ public class SaasConnectionDto {
     @AllArgsConstructor
     public static class OAuthUrlResponse {
         private String authorizationUrl;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SyncUsersResponse {
+        private String message;
+        private int syncedCount;
+        private int totalFound;
+        private List<String> warnings;
     }
 }
