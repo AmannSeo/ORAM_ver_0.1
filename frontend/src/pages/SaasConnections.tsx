@@ -93,6 +93,11 @@ const SAAS_INFO: Record<SaasType, {
   },
 };
 
+const DEFAULT_CONNECTIONS: SaasConnection[] = (Object.keys(SAAS_INFO) as SaasType[]).map((saasType) => ({
+  saasType,
+  isConnected: false,
+}));
+
 export default function SaasConnections() {
   const [connections, setConnections] = useState<SaasConnection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,13 +134,20 @@ export default function SaasConnections() {
     if (!connectDialog || !token.trim()) return;
     setConnecting(true);
     setError(null);
+    const normalizedToken = token.replace(/\s+/g, '');
     try {
-      await saasApi.tokenConnect(connectDialog, token.trim());
+      await saasApi.tokenConnect(connectDialog, normalizedToken);
       setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 이제 오프보딩 시 권한을 탐지합니다.`);
       setConnectDialog(null);
       load();
     } catch (err: any) {
-      const msg = err?.response?.data?.error || '토큰 연결에 실패했습니다. 토큰이 올바른지 확인하세요.';
+      const status = err?.response?.status;
+      const serverMessage = err?.response?.data?.error;
+      const msg = status === 401
+        ? '로그인 세션이 만료되었습니다. 다시 로그인한 뒤 연결하세요.'
+        : status === 403
+          ? '관리자 또는 보안 담당자 계정만 SaaS를 연결할 수 있습니다. 현재 로그인 계정의 권한을 확인하세요.'
+          : serverMessage || '토큰 연결에 실패했습니다. 토큰 값과 GitHub 권한(scope)을 확인하세요.';
       setError(msg);
     } finally {
       setConnecting(false);
@@ -170,6 +182,7 @@ export default function SaasConnections() {
   if (loading) return <LinearProgress />;
 
   const info = connectDialog ? SAAS_INFO[connectDialog] : null;
+  const visibleConnections = connections.length > 0 ? connections : DEFAULT_CONNECTIONS;
 
   return (
     <Box>
@@ -188,7 +201,7 @@ export default function SaasConnections() {
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
 
       <Grid container spacing={3}>
-        {connections.map((conn) => {
+        {visibleConnections.map((conn) => {
           const meta = SAAS_INFO[conn.saasType];
           return (
             <Grid item xs={12} sm={6} md={4} key={conn.saasType}>

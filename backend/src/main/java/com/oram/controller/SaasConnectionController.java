@@ -34,7 +34,7 @@ public class SaasConnectionController {
      * Notion : secret_... (Internal Integration Token)
      */
     @PostMapping("/token-connect/{saasType}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<SaasConnectionDto.Response> tokenConnect(
             @PathVariable SaasType saasType,
             @RequestBody TokenConnectRequest request) {
@@ -49,7 +49,7 @@ public class SaasConnectionController {
     }
 
     @PostMapping("/token-connect-error/{saasType}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<Map<String, String>> tokenConnectValidate(
             @PathVariable SaasType saasType,
             @RequestBody TokenConnectRequest request) {
@@ -62,7 +62,7 @@ public class SaasConnectionController {
     }
 
     @GetMapping("/oauth/authorize/{saasType}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<SaasConnectionDto.OAuthUrlResponse> getOAuthUrl(@PathVariable SaasType saasType) {
         return ResponseEntity.ok(saasConnectionService.getOAuthUrl(saasType));
     }
@@ -80,14 +80,14 @@ public class SaasConnectionController {
     }
 
     @DeleteMapping("/{saasType}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<Void> disconnect(@PathVariable SaasType saasType) {
         saasConnectionService.disconnect(saasType);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/demo-connect/{saasType}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<SaasConnectionDto.Response> demoConnect(@PathVariable SaasType saasType) {
         return ResponseEntity.ok(saasConnectionService.demoConnect(saasType));
     }

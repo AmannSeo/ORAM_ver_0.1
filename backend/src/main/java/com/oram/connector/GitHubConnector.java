@@ -191,20 +191,11 @@ public class GitHubConnector implements SaaSConnector {
 
     @Override
     public boolean validateToken(String accessToken) {
-        try {
-            Map<?, ?> resp = webClient.get()
-                    .uri("/user")
-                    .header("Authorization", authHeader(accessToken))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-            return resp != null && resp.get("login") != null;
-        } catch (Exception e) {
-            log.warn("GitHub validateToken failed: {}", e.getMessage());
-            return false;
-        }
+        String token = sanitizeToken(accessToken);
+        if (token.isBlank()) return false;
+
+        if (validateTokenWithHeader("Bearer " + token)) return true;
+        return validateTokenWithHeader("token " + token);
     }
 
     public String getWorkspaceName(String accessToken) {
@@ -432,9 +423,35 @@ public class GitHubConnector implements SaaSConnector {
     }
 
     private String authHeader(String accessToken) {
-        return accessToken.startsWith("ghp_") || accessToken.startsWith("github_pat_")
-                ? "Bearer " + accessToken
-                : "token " + accessToken;
+        String token = sanitizeToken(accessToken);
+        return token.startsWith("ghp_") || token.startsWith("github_pat_")
+                ? "Bearer " + token
+                : "token " + token;
+    }
+
+    private boolean validateTokenWithHeader(String authHeader) {
+        try {
+            Map<?, ?> resp = webClient.get()
+                    .uri("/user")
+                    .header("Authorization", authHeader)
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return resp != null && resp.get("login") != null;
+        } catch (Exception e) {
+            log.warn("GitHub validateToken failed with {} auth: {}",
+                    authHeader.startsWith("Bearer ") ? "Bearer" : "token",
+                    e.getMessage());
+            return false;
+        }
+    }
+
+    private String sanitizeToken(String accessToken) {
+        return accessToken == null
+                ? ""
+                : accessToken.replaceAll("\\s+", "");
     }
 
     private String stringValue(Object value) {

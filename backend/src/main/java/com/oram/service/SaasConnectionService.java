@@ -115,11 +115,12 @@ public class SaasConnectionService {
      */
     @Transactional
     public SaasConnectionDto.Response tokenConnect(SaasType saasType, String rawToken, String workspaceName) {
+        String token = normalizeToken(rawToken);
         // 1. 실제 API 검증 (토큰이 살아있는지, 권한이 있는지)
         SaaSConnector connector = connectorRegistry.getConnector(saasType)
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported SaaS: " + saasType));
 
-        boolean valid = connector.validateToken(rawToken);
+        boolean valid = connector.validateToken(token);
         if (!valid) {
             throw new IllegalArgumentException(
                 saasType.name() + " 토큰 인증 실패. 토큰이 유효한지, 필요한 권한(scope)이 있는지 확인하세요."
@@ -129,20 +130,20 @@ public class SaasConnectionService {
         // 워크스페이스 이름 자동 조회 (사용자가 직접 입력하지 않은 경우)
         String resolvedWorkspaceName = workspaceName != null && !workspaceName.isBlank()
                 ? workspaceName
-                : autoDetectWorkspaceName(saasType, connector, rawToken);
+                : autoDetectWorkspaceName(saasType, connector, token);
 
         // 2. 저장 (AES-256 암호화)
         SaasConnection connection = connectionRepository.findBySaasType(saasType)
                 .orElse(SaasConnection.builder().saasType(saasType).build());
 
-        connection.setAccessTokenEncrypted(tokenEncryptor.encrypt(rawToken));
+        connection.setAccessTokenEncrypted(tokenEncryptor.encrypt(token));
         connection.setWorkspaceId(saasType.name().toLowerCase() + "-token-connect");
         connection.setWorkspaceName(resolvedWorkspaceName);
         connection.setConnected(true);
         connection.setConnectedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(connection::setConnectedBy);
         connectionRepository.save(connection);
-        int syncedUsers = syncUsersFromConnector(saasType, connector, rawToken);
+        int syncedUsers = syncUsersFromConnector(saasType, connector, token);
 
         auditService.log(null, "TOKEN_CONNECT", "SAAS_CONNECTION", saasType.name(),
                 "Token-based connection: " + saasType + " / " + connection.getWorkspaceName() + ", synced users: " + syncedUsers);
@@ -260,6 +261,11 @@ public class SaasConnectionService {
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) return null;
         return email.trim().toLowerCase();
+    }
+
+    private String normalizeToken(String token) {
+        if (token == null) return "";
+        return token.replaceAll("\\s+", "");
     }
 
     private String buildSaasEmployeeId(SaasType saasType, String externalId, String email) {
