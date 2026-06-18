@@ -26,6 +26,12 @@ public class SaasConnectionController {
         return ResponseEntity.ok(saasConnectionService.getAllConnections());
     }
 
+    @GetMapping("/{saasType}/identities")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<SaasConnectionDto.IdentityResponse>> getIdentities(@PathVariable SaasType saasType) {
+        return ResponseEntity.ok(saasConnectionService.getIdentities(saasType));
+    }
+
     /**
      * Token direct connection: connect without registering an OAuth app.
      *

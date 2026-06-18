@@ -5,6 +5,7 @@ import {
   DialogActions, Divider, TextField, Paper, InputAdornment,
   IconButton, Collapse, Stack,
   CircularProgress,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import {
   CheckCircle as ConnectedIcon, Cancel as NotConnectedIcon,
@@ -14,7 +15,7 @@ import {
   Link as ConnectIcon, OpenInNew as OpenIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
-import type { SaasConnection, SaasType } from '../types';
+import type { SaasConnection, SaasIdentity, SaasType } from '../types';
 
 // 각 SaaS별 토큰 발급 방법 안내
 const SAAS_INFO: Record<SaasType, {
@@ -115,6 +116,9 @@ export default function SaasConnections() {
 
   // 해제 다이얼로그
   const [disconnectDialog, setDisconnectDialog] = useState<SaasType | null>(null);
+  const [identityDialog, setIdentityDialog] = useState<SaasType | null>(null);
+  const [identityRows, setIdentityRows] = useState<SaasIdentity[]>([]);
+  const [identityLoading, setIdentityLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -197,6 +201,26 @@ export default function SaasConnections() {
     }
   };
 
+  const openIdentityDialog = async (saasType: SaasType) => {
+    setIdentityDialog(saasType);
+    setIdentityLoading(true);
+    setError(null);
+    try {
+      const rows = await saasApi.getIdentities(saasType);
+      setIdentityRows(rows);
+    } catch (err: any) {
+      setIdentityRows([]);
+      const status = err?.response?.status;
+      setError(
+        status === 403
+          ? '수집 계정 목록 조회 권한이 거부되었습니다. 다시 로그인하거나 백엔드 서버를 재시작해 최신 코드가 반영됐는지 확인하세요.'
+          : err?.response?.data?.error || 'SaaS 수집 계정 목록을 불러오지 못했습니다.'
+      );
+    } finally {
+      setIdentityLoading(false);
+    }
+  };
+
   if (loading) return <LinearProgress />;
 
   const info = connectDialog ? SAAS_INFO[connectDialog] : null;
@@ -225,7 +249,10 @@ export default function SaasConnections() {
             <Grid item xs={12} sm={6} md={4} key={conn.saasType}>
               <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column',
                 borderLeft: conn.isConnected ? `4px solid #2e7d32` : `4px solid #bdbdbd` }}>
-                <CardContent sx={{ flexGrow: 1 }}>
+                <CardContent
+                  sx={{ flexGrow: 1, cursor: conn.isConnected ? 'pointer' : 'default' }}
+                  onClick={() => conn.isConnected && openIdentityDialog(conn.saasType)}
+                >
                   <Box display="flex" alignItems="center" gap={2} mb={1.5}>
                     <Typography fontSize={40}>{meta.emoji}</Typography>
                     <Box>
@@ -269,6 +296,9 @@ export default function SaasConnections() {
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block">
                         매핑된 계정: {conn.identityCount ?? 0}명
+                      </Typography>
+                      <Typography variant="caption" color="primary" display="block">
+                        클릭해서 수집 계정 보기
                       </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
@@ -428,6 +458,82 @@ export default function SaasConnections() {
         <DialogActions>
           <Button onClick={() => setDisconnectDialog(null)}>취소</Button>
           <Button color="error" variant="contained" onClick={handleDisconnect}>연결 해제</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(identityDialog)} onClose={() => setIdentityDialog(null)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {identityDialog && `${SAAS_INFO[identityDialog].label} 수집 계정 목록`}
+        </DialogTitle>
+        <DialogContent>
+          {identityLoading ? (
+            <Box display="flex" alignItems="center" gap={1} py={3}>
+              <CircularProgress size={22} />
+              <Typography variant="body2">수집 계정을 불러오는 중...</Typography>
+            </Box>
+          ) : identityRows.length === 0 ? (
+            <Alert severity="info">
+              수집된 계정이 없습니다. 먼저 해당 SaaS 동기화를 실행해 주세요.
+            </Alert>
+          ) : (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                같은 이메일을 가진 계정은 하나의 직원으로 자동 매핑됩니다. GitHub 비공개 이메일처럼 실제 이메일을 알 수 없는 경우
+                <strong> @github.local</strong> 계정으로 분리될 수 있습니다.
+              </Alert>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>SaaS 계정</strong></TableCell>
+                      <TableCell><strong>이메일</strong></TableCell>
+                      <TableCell><strong>매핑된 직원</strong></TableCell>
+                      <TableCell><strong>상태</strong></TableCell>
+                      <TableCell><strong>동기화 시각</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {identityRows.map(row => (
+                      <TableRow key={row.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            {row.displayName || row.externalUsername || row.externalUserId}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {row.externalUsername || row.externalUserId}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{row.externalEmail || '-'}</TableCell>
+                        <TableCell>
+                          {row.employeeName ? (
+                            <>
+                              <Typography variant="body2">{row.employeeName}</Typography>
+                              <Typography variant="caption" color="text.secondary">{row.employeeEmail}</Typography>
+                            </>
+                          ) : (
+                            <Chip size="small" label="미매핑" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            color={row.accessRevoked ? 'default' : row.status === 'ACTIVE' ? 'success' : 'warning'}
+                            label={row.accessRevoked ? '회수됨' : row.status === 'ACTIVE' ? '활성' : '비활성'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {row.lastSyncedAt ? new Date(row.lastSyncedAt).toLocaleString('ko-KR') : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIdentityDialog(null)}>닫기</Button>
         </DialogActions>
       </Dialog>
     </Box>

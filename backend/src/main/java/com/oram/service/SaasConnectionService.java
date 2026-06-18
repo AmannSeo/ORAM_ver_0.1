@@ -67,6 +67,27 @@ public class SaasConnectionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<SaasConnectionDto.IdentityResponse> getIdentities(SaasType saasType) {
+        return saasIdentityRepository.findBySaasTypeOrderByUpdatedAtDesc(saasType).stream()
+                .map(identity -> SaasConnectionDto.IdentityResponse.builder()
+                        .id(identity.getId())
+                        .saasType(identity.getSaasType())
+                        .externalUserId(identity.getExternalUserId())
+                        .externalUsername(identity.getExternalUsername())
+                        .externalEmail(identity.getExternalEmail())
+                        .displayName(identity.getDisplayName())
+                        .department(identity.getDepartment())
+                        .status(identity.getStatus() != null ? identity.getStatus().name() : null)
+                        .accessRevoked(identity.isAccessRevoked())
+                        .lastSyncedAt(identity.getLastSyncedAt())
+                        .employeeId(identity.getEmployee() != null ? identity.getEmployee().getId() : null)
+                        .employeeName(identity.getEmployee() != null ? identity.getEmployee().getName() : null)
+                        .employeeEmail(identity.getEmployee() != null ? identity.getEmployee().getEmail() : null)
+                        .build())
+                .toList();
+    }
+
     public SaasConnectionDto.OAuthUrlResponse getOAuthUrl(SaasType saasType) {
         SaaSConnector connector = connectorRegistry.getConnector(saasType)
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported SaaS: " + saasType));

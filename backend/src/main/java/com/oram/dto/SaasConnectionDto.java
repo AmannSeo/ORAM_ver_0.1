@@ -46,4 +46,24 @@ public class SaasConnectionDto {
         private int totalFound;
         private List<String> warnings;
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IdentityResponse {
+        private UUID id;
+        private SaasType saasType;
+        private String externalUserId;
+        private String externalUsername;
+        private String externalEmail;
+        private String displayName;
+        private String department;
+        private String status;
+        private boolean accessRevoked;
+        private LocalDateTime lastSyncedAt;
+        private UUID employeeId;
+        private String employeeName;
+        private String employeeEmail;
+    }
 }

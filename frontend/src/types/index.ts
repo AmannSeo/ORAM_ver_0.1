@@ -71,6 +71,22 @@ export interface SaasConnection {
   identityCount?: number;
 }
 
+export interface SaasIdentity {
+  id: string;
+  saasType: SaasType;
+  externalUserId: string;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  department?: string;
+  status?: EmployeeStatus;
+  accessRevoked: boolean;
+  lastSyncedAt?: string;
+  employeeId?: string;
+  employeeName?: string;
+  employeeEmail?: string;
+}
+
 // Offboarding
 export interface OffboardingSummary {
   id: string;

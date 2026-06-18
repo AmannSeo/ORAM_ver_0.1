@@ -41,17 +41,11 @@ public class EmployeeService {
     private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
-    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, int page, int size) {
+    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Employee> result;
-
-        if (status != null && department != null) {
-            result = employeeRepository.findByStatusAndDepartment(status, department, pageable);
-        } else if (status != null) {
-            result = employeeRepository.findByStatus(status, pageable);
-        } else {
-            result = employeeRepository.findAll(pageable);
-        }
+        String normalizedDepartment = normalizeFilter(department);
+        String normalizedQuery = normalizeFilter(query);
+        Page<Employee> result = employeeRepository.search(status, normalizedDepartment, normalizedQuery, pageable);
 
         return EmployeeDto.PageResponse.builder()
                 .content(result.getContent().stream().map(this::toResponse).toList())
@@ -112,6 +106,11 @@ public class EmployeeService {
         Employee employee = findById(id);
         saasIdentityRepository.deleteByEmployeeId(employee.getId());
         employeeRepository.delete(employee);
+    }
+
+    private String normalizeFilter(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 
     @Transactional

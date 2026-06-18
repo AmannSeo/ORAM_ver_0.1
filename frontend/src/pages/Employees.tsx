@@ -32,6 +32,7 @@ export default function Employees() {
   const [totalElements, setTotalElements] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
   const [resigningEmployeeId, setResigningEmployeeId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
@@ -60,9 +61,21 @@ export default function Employees() {
 
   const load = () => {
     setLoading(true);
-    employeeApi.getAll({ status: filterStatus || undefined, department: filterDept || undefined, page, size: rowsPerPage })
+    employeeApi.getAll({
+      status: filterStatus || undefined,
+      department: filterDept || undefined,
+      q: searchQuery || undefined,
+      page,
+      size: rowsPerPage,
+    })
       .then(data => { setEmployees(data.content); setTotalElements(data.totalElements); })
-      .catch(() => setError('직원 목록을 불러오지 못했습니다'))
+      .catch((err: any) => {
+        if (err?.response?.status === 403) {
+          setError('직원 목록 조회 권한이 거부되었습니다. 다시 로그인하거나 백엔드 서버를 재시작해 최신 코드가 반영됐는지 확인하세요.');
+        } else {
+          setError(err?.response?.data?.error || '직원 목록을 불러오지 못했습니다');
+        }
+      })
       .finally(() => setLoading(false));
   };
   useEffect(load, [page, filterStatus]);
@@ -72,6 +85,14 @@ export default function Employees() {
     const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
     return () => window.clearTimeout(timer);
   }, [successMessage]);
+
+  const runSearch = () => {
+    if (page === 0) {
+      load();
+    } else {
+      setPage(0);
+    }
+  };
 
   const handleResign = async () => {
     if (!resignDialog) return;
@@ -233,7 +254,24 @@ export default function Employees() {
             <TextField size="small" label="부서" value={filterDept}
               onChange={e => setFilterDept(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && load()}
-              InputProps={{ endAdornment: <SearchIcon fontSize="small" /> }} />
+            />
+            <TextField
+              size="small"
+              label="직원 검색"
+              placeholder="이름, 이메일, 사번, 부서"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  runSearch();
+                }
+              }}
+              InputProps={{ endAdornment: <SearchIcon fontSize="small" /> }}
+              sx={{ minWidth: 260 }}
+            />
+            <Button variant="outlined" onClick={runSearch}>
+              검색
+            </Button>
           </Box>
 
           {loading ? <LinearProgress /> : (
@@ -241,14 +279,14 @@ export default function Employees() {
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.100' }}>
-                    <TableCell><strong>사번</strong></TableCell>
+                    <TableCell><strong>직원 ID</strong></TableCell>
                     <TableCell><strong>이름</strong></TableCell>
                     <TableCell><strong>이메일</strong></TableCell>
                     <TableCell><strong>부서</strong></TableCell>
                     <TableCell><strong>상태</strong></TableCell>
-                    <TableCell align="center"><strong>수정</strong></TableCell>
-                    <TableCell align="center"><strong>오프보딩</strong></TableCell>
-                    <TableCell align="center"><strong>삭제</strong></TableCell>
+                    <TableCell align="center"><strong>정보 수정</strong></TableCell>
+                    <TableCell align="center"><strong>권한 회수</strong></TableCell>
+                    <TableCell align="center"><strong>직원 삭제</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
