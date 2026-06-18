@@ -178,6 +178,18 @@ public class GitHubConnector implements SaaSConnector {
             }
         }
 
+        for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+            String fullName = stringValue(repo.get("full_name"));
+            if (fullName == null || !fullName.contains("/")) continue;
+
+            String[] parts = fullName.split("/", 2);
+            for (Map<?, ?> collaborator : getRepoCollaborators(parts[0], parts[1], accessToken)) {
+                String login = stringValue(collaborator.get("login"));
+                if (login == null || login.isBlank()) continue;
+                users.putIfAbsent(login, toSyncedUser(login, "GitHub Repo: " + fullName, accessToken));
+            }
+        }
+
         if (users.isEmpty()) {
             Map<?, ?> currentUser = getCurrentUser(accessToken);
             String login = currentUser != null ? stringValue(currentUser.get("login")) : null;
@@ -338,6 +350,27 @@ public class GitHubConnector implements SaaSConnector {
             return toWildcardMaps(members);
         } catch (Exception e) {
             log.warn("GitHub org member listing failed for {}: {}", org, e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<?, ?>> getRepoCollaborators(String owner, String repo, String accessToken) {
+        try {
+            List<Map> collaborators = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/repos/{owner}/{repo}/collaborators")
+                            .queryParam("affiliation", "all")
+                            .queryParam("per_page", 100)
+                            .build(owner, repo))
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(collaborators);
+        } catch (Exception e) {
+            log.warn("GitHub repo collaborator listing failed for {}/{}: {}", owner, repo, e.getMessage());
             return List.of();
         }
     }

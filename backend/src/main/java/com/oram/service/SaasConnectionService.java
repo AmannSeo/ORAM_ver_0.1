@@ -209,6 +209,18 @@ public class SaasConnectionService {
                 "Disconnected from " + saasType);
     }
 
+    @Transactional
+    public int syncConnectedUsers(SaasType saasType) {
+        SaasConnection connection = connectionRepository.findBySaasType(saasType)
+                .filter(SaasConnection::isConnected)
+                .orElseThrow(() -> new IllegalArgumentException("SaaS not connected: " + saasType));
+        SaaSConnector connector = connectorRegistry.getConnector(saasType)
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported SaaS: " + saasType));
+
+        String token = tokenEncryptor.decrypt(connection.getAccessTokenEncrypted());
+        return syncUsersFromConnector(saasType, connector, token);
+    }
+
     private Optional<User> getCurrentUser() {
         try {
             String email = SecurityContextHolder.getContext().getAuthentication().getName();

@@ -11,13 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Slack Web API 커넥터
- * 
- * 실제 운영 시 Slack OAuth App을 생성하고
- * client-id/secret을 환경변수에 설정해야 합니다.
- * PoC 모드: API 호출 실패 시 Mock 데이터를 반환합니다.
- */
 @Slf4j
 @Component
 public class SlackConnector implements SaaSConnector {
@@ -60,34 +53,30 @@ public class SlackConnector implements SaaSConnector {
 
     @Override
     public TokenInfo exchangeCodeForToken(String code) {
-        try {
-            Map<?, ?> response = WebClient.create(SLACK_OAUTH_BASE)
-                    .post()
-                    .uri(uriBuilder -> uriBuilder.path("/access")
-                            .queryParam("client_id", clientId)
-                            .queryParam("client_secret", clientSecret)
-                            .queryParam("code", code)
-                            .queryParam("redirect_uri", redirectUri)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+        Map<?, ?> response = WebClient.create(SLACK_OAUTH_BASE)
+                .post()
+                .uri(uriBuilder -> uriBuilder.path("/access")
+                        .queryParam("client_id", clientId)
+                        .queryParam("client_secret", clientSecret)
+                        .queryParam("code", code)
+                        .queryParam("redirect_uri", redirectUri)
+                        .build())
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
 
-            if (response != null && Boolean.TRUE.equals(response.get("ok"))) {
-                Map<?, ?> team = (Map<?, ?>) response.get("team");
-                return new TokenInfo(
-                        (String) response.get("access_token"),
-                        null,
-                        team != null ? (String) team.get("id") : "unknown",
-                        team != null ? (String) team.get("name") : "Slack Workspace",
-                        86400L
-                );
-            }
-        } catch (Exception e) {
-            log.warn("Slack OAuth exchange failed (PoC mock mode): {}", e.getMessage());
+        if (response != null && Boolean.TRUE.equals(response.get("ok"))) {
+            Map<?, ?> team = (Map<?, ?>) response.get("team");
+            return new TokenInfo(
+                    (String) response.get("access_token"),
+                    null,
+                    team != null ? stringValue(team.get("id")) : "unknown",
+                    team != null ? stringValue(team.get("name")) : "Slack Workspace",
+                    86400L
+            );
         }
-        // PoC Mock fallback
-        return new TokenInfo("mock-slack-token", null, "T_MOCK_ID", "Mock Slack Workspace", 86400L);
+
+        throw new IllegalArgumentException("Slack OAuth token exchange failed.");
     }
 
     @Override
@@ -95,7 +84,7 @@ public class SlackConnector implements SaaSConnector {
         try {
             webClient.post()
                     .uri("/auth.revoke")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
@@ -112,80 +101,202 @@ public class SlackConnector implements SaaSConnector {
                     .uri(uriBuilder -> uriBuilder.path("/users.lookupByEmail")
                             .queryParam("email", email)
                             .build())
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
 
-            if (userResponse != null && Boolean.TRUE.equals(userResponse.get("ok"))) {
+            if (isOk(userResponse)) {
                 Map<?, ?> user = (Map<?, ?>) userResponse.get("user");
                 boolean isAdmin = user != null && Boolean.TRUE.equals(user.get("is_admin"));
                 boolean isOwner = user != null && Boolean.TRUE.equals(user.get("is_owner"));
+                boolean isDeleted = user != null && Boolean.TRUE.equals(user.get("deleted"));
 
-                permissions.add(new DiscoveredPermission(
-                        isAdmin ? "ADMIN" : "MEMBER",
-                        "Slack Workspace",
-                        isAdmin,
-                        isOwner,
-                        false,
-                        true,
-                        0,
-                        1
-                ));
+                if (!isDeleted) {
+                    permissions.add(new DiscoveredPermission(
+                            isOwner ? "OWNER" : isAdmin ? "ADMIN" : "MEMBER",
+                            "Slack Workspace",
+                            isAdmin,
+                            isOwner,
+                            false,
+                            true,
+                            0,
+                            1
+                    ));
+                }
             }
         } catch (Exception e) {
-            log.warn("Slack getPermissions failed, returning mock data: {}", e.getMessage());
-            // PoC Mock data
-            permissions.add(new DiscoveredPermission(
-                    "ADMIN", "Mock Slack Workspace", true, false, false, true, 0, 1
-            ));
+            log.warn("Slack getPermissions failed: {}", e.getMessage());
         }
         return permissions;
     }
 
     @Override
+    public List<SyncedUser> listUsers(String accessToken) {
+        List<SyncedUser> users = new ArrayList<>();
+        String cursor = null;
+
+        do {
+            Map<?, ?> response = fetchUserPage(accessToken, cursor);
+            if (!isOk(response)) break;
+
+            List<?> members = (List<?>) response.get("members");
+            if (members != null) {
+                for (Object row : members) {
+                    Map<?, ?> member = (Map<?, ?>) row;
+                    if (Boolean.TRUE.equals(member.get("is_bot")) || Boolean.TRUE.equals(member.get("deleted"))) {
+                        continue;
+                    }
+                    Map<?, ?> profile = (Map<?, ?>) member.get("profile");
+                    String email = profile != null ? stringValue(profile.get("email")) : null;
+                    String id = stringValue(member.get("id"));
+                    if (email == null || email.isBlank() || id == null || id.isBlank()) continue;
+
+                    String name = firstNonBlank(
+                            profile != null ? stringValue(profile.get("real_name")) : null,
+                            stringValue(member.get("real_name")),
+                            stringValue(member.get("name")),
+                            email
+                    );
+
+                    users.add(new SyncedUser(
+                            "slack:" + id,
+                            name,
+                            email.toLowerCase(),
+                            "Slack",
+                            true
+                    ));
+                }
+            }
+
+            Map<?, ?> metadata = (Map<?, ?>) response.get("response_metadata");
+            cursor = metadata != null ? stringValue(metadata.get("next_cursor")) : null;
+        } while (cursor != null && !cursor.isBlank());
+
+        return users;
+    }
+
+    @Override
     public RevokeResult revokeAccess(String email, String accessToken) {
         log.info("[SLACK] Revoking access for: {}", email);
-        // In production: call users.setInactive or remove from workspace
-        return new RevokeResult(true, "Slack access revoked for " + email, List.of("Workspace Member"));
+
+        Map<?, ?> auth = authTest(accessToken);
+        String teamId = auth != null ? stringValue(auth.get("team_id")) : null;
+        String userId = lookupUserId(email, accessToken);
+
+        if (teamId == null || teamId.isBlank() || userId == null || userId.isBlank()) {
+            return new RevokeResult(false, "Slack user or workspace could not be resolved.", List.of());
+        }
+
+        try {
+            Map<?, ?> response = webClient.post()
+                    .uri("/admin.users.remove")
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
+                    .bodyValue(Map.of("team_id", teamId, "user_id", userId))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (isOk(response)) {
+                return new RevokeResult(true, "Slack user removed from workspace.", List.of("Slack user: " + userId));
+            }
+
+            return new RevokeResult(false,
+                    "Slack revoke failed: " + slackError(response),
+                    List.of());
+        } catch (Exception e) {
+            log.warn("Slack revoke failed: {}", e.getMessage());
+            return new RevokeResult(false, "Slack revoke failed: " + e.getMessage(), List.of());
+        }
     }
 
     @Override
     public boolean validateToken(String accessToken) {
+        return isOk(authTest(accessToken));
+    }
+
+    public String getWorkspaceName(String accessToken) {
+        Map<?, ?> response = authTest(accessToken);
+        if (isOk(response)) {
+            String team = stringValue(response.get("team"));
+            return team != null && !team.isBlank() ? team : "Slack Workspace";
+        }
+        return "Slack Workspace";
+    }
+
+    private Map<?, ?> fetchUserPage(String accessToken, String cursor) {
         try {
-            Map<?, ?> response = webClient.get()
-                    .uri("/auth.test")
-                    .header("Authorization", "Bearer " + accessToken)
+            return webClient.get()
+                    .uri(uriBuilder -> {
+                        var builder = uriBuilder.path("/users.list").queryParam("limit", 200);
+                        if (cursor != null && !cursor.isBlank()) builder.queryParam("cursor", cursor);
+                        return builder.build();
+                    })
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
-            return response != null && Boolean.TRUE.equals(response.get("ok"));
         } catch (Exception e) {
-            return false;
+            log.warn("Slack users.list failed: {}", e.getMessage());
+            return null;
         }
     }
 
-    /**
-     * 토큰으로 워크스페이스 이름을 자동 조회
-     * Slack Bot Token: auth.test API 사용
-     */
-    public String getWorkspaceName(String accessToken) {
+    private Map<?, ?> authTest(String accessToken) {
         try {
-            Map<?, ?> response = webClient.get()
+            return webClient.get()
                     .uri("/auth.test")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
-            if (response != null && Boolean.TRUE.equals(response.get("ok"))) {
-                Object team = response.get("team");
-                if (team instanceof String) return (String) team;
-                Object teamName = response.get("team"); // team name directly in some token types
-                return teamName != null ? teamName.toString() : "Slack Workspace";
-            }
         } catch (Exception e) {
-            log.warn("Slack getWorkspaceName failed: {}", e.getMessage());
+            log.warn("Slack auth.test failed: {}", e.getMessage());
+            return null;
         }
-        return "Slack Workspace";
+    }
+
+    private String lookupUserId(String email, String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/users.lookupByEmail")
+                            .queryParam("email", email)
+                            .build())
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (!isOk(response)) return null;
+            Map<?, ?> user = (Map<?, ?>) response.get("user");
+            return user != null ? stringValue(user.get("id")) : null;
+        } catch (Exception e) {
+            log.warn("Slack users.lookupByEmail failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean isOk(Map<?, ?> response) {
+        return response != null && Boolean.TRUE.equals(response.get("ok"));
+    }
+
+    private String slackError(Map<?, ?> response) {
+        if (response == null) return "no_response";
+        Object error = response.get("error");
+        return error != null ? error.toString() : "unknown_error";
+    }
+
+    private String sanitizeToken(String accessToken) {
+        return accessToken == null ? "" : accessToken.replaceAll("\\s+", "");
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return "-";
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
     }
 }

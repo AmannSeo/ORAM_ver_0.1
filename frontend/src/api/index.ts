@@ -52,6 +52,8 @@ export const saasApi = {
     api.post<SaasConnection>(`/saas-connections/token-connect/${saasType}`, { token, workspaceName }).then((r) => r.data),
   demoConnect: (saasType: SaasType) =>
     api.post<SaasConnection>(`/saas-connections/demo-connect/${saasType}`).then((r) => r.data),
+  syncUsers: (saasType: SaasType) =>
+    api.post<{ message: string; syncedCount: number }>(`/saas-connections/${saasType}/sync`).then((r) => r.data),
   disconnect: (saasType: SaasType) => api.delete(`/saas-connections/${saasType}`),
 };
 

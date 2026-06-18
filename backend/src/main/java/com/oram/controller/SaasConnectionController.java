@@ -86,6 +86,16 @@ public class SaasConnectionController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{saasType}/sync")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
+    public ResponseEntity<Map<String, Object>> syncUsers(@PathVariable SaasType saasType) {
+        int syncedCount = saasConnectionService.syncConnectedUsers(saasType);
+        return ResponseEntity.ok(Map.of(
+                "message", "SaaS users synced.",
+                "syncedCount", syncedCount
+        ));
+    }
+
     @PostMapping("/demo-connect/{saasType}")
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<SaasConnectionDto.Response> demoConnect(@PathVariable SaasType saasType) {

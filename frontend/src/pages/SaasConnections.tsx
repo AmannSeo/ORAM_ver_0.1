@@ -32,7 +32,7 @@ const SAAS_INFO: Record<SaasType, {
       'Slack API Apps 페이지 접속 → 앱 선택 또는 "Create New App"',
       '"OAuth & Permissions" 메뉴로 이동',
       'Bot Token Scopes: users:read, users:read.email 추가',
-      'User Token Scopes: admin.users:write 추가\n  ※ admin.users:write는 Bot Token Scopes가 아니라 User Token Scopes에 있습니다.',
+      '권한 해제까지 하려면 User Token Scopes: admin.users:write 추가\n  ※ admin.users:write는 Enterprise 워크스페이스에서만 동작합니다.',
       '"Install to Workspace" 또는 "Reinstall to Workspace" 클릭 → 관리자 계정으로 승인',
       '"OAuth Tokens" 섹션에서 Bot User OAuth Token(xoxb-) 또는 User OAuth Token(xoxp-) 복사',
       '복사한 토큰을 아래에 붙여넣기',
@@ -45,7 +45,7 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'admin.users API', url: 'https://api.slack.com/methods/admin.users.remove' },
     ],
     detectItems: ['워크스페이스 멤버', '관리자(Admin)', '소유자(Owner)'],
-    revokeNote: '계정 비활성화 (Slack Business+ 이상 필요)',
+    revokeNote: 'Enterprise + User Token(admin.users:write)일 때 제거 가능',
   },
   GITHUB: {
     label: 'GitHub', color: '#181717', emoji: '🐙',
@@ -55,7 +55,7 @@ const SAAS_INFO: Record<SaasType, {
     steps: [
       'GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)',
       '"Generate new token (classic)" 클릭',
-      'Scopes 선택: read:org, admin:org (조직 멤버 관리용)',
+      'Scopes 선택: read:org, admin:org, repo (조직 멤버와 저장소 collaborator 조회/제거용)',
       '"Generate token" 클릭 → 토큰 복사 (한 번만 표시됨)',
       '복사한 토큰을 아래에 붙여넣기',
     ],
@@ -66,8 +66,8 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'GitHub 토큰 문서', url: 'https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens' },
       { label: '조직 설정', url: 'https://github.com/settings/organizations' },
     ],
-    detectItems: ['Organization 멤버십', 'Owner 권한', '저장소 접근', 'PAT 존재 여부'],
-    revokeNote: 'Organization에서 멤버 제거',
+    detectItems: ['Organization 멤버십', '저장소 Collaborator', '저장소 접근 권한'],
+    revokeNote: '조직 멤버 또는 저장소 collaborator 제거 가능',
   },
   NOTION: {
     label: 'Notion', color: '#000000', emoji: '📝',
@@ -89,7 +89,7 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'Notion API 참조', url: 'https://developers.notion.com/reference/intro' },
     ],
     detectItems: ['워크스페이스 멤버', '페이지 접근 권한'],
-    revokeNote: '⚠️ Notion API 제한으로 자동 제거 불가 — 수동 처리 필요',
+    revokeNote: '⚠️ 사용자 목록 조회 가능, 멤버 제거는 Notion API 제한으로 수동 처리',
   },
 };
 
@@ -137,7 +137,7 @@ export default function SaasConnections() {
     const normalizedToken = token.replace(/\s+/g, '');
     try {
       await saasApi.tokenConnect(connectDialog, normalizedToken);
-      setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 이제 오프보딩 시 권한을 탐지합니다.`);
+      setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 연결 가능한 사용자 동기화를 실행했습니다.`);
       setConnectDialog(null);
       load();
     } catch (err: any) {
@@ -162,6 +162,21 @@ export default function SaasConnections() {
       load();
     } catch {
       setError('데모 연결에 실패했습니다');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleSyncUsers = async (saasType: SaasType) => {
+    setConnecting(true);
+    setError(null);
+    try {
+      const result = await saasApi.syncUsers(saasType);
+      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: 신규 ${result.syncedCount}명`);
+      load();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';
+      setError(msg);
     } finally {
       setConnecting(false);
     }
@@ -261,10 +276,16 @@ export default function SaasConnections() {
                 <Divider />
                 <CardActions sx={{ px: 2, py: 1.5, gap: 1 }}>
                   {conn.isConnected ? (
-                    <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
-                      onClick={() => setDisconnectDialog(conn.saasType)}>
-                      연결 해제
-                    </Button>
+                    <>
+                      <Button variant="contained" startIcon={<ConnectIcon />} size="small"
+                        onClick={() => handleSyncUsers(conn.saasType)} disabled={connecting}>
+                        동기화
+                      </Button>
+                      <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
+                        onClick={() => setDisconnectDialog(conn.saasType)}>
+                        연결 해제
+                      </Button>
+                    </>
                   ) : (
                     <>
                       <Button variant="contained" startIcon={<ConnectIcon />} size="small"
@@ -367,8 +388,8 @@ export default function SaasConnections() {
               {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
               <Alert severity="info" sx={{ mt: 2 }}>
-                토큰이 입력되면 ORAM이 실제 {info.label} API를 호출해 토큰 유효성을 검증합니다.
-                검증 성공 시 AES-256 암호화 후 저장됩니다.
+                토큰이 입력되면 ORAM이 실제 {info.label} API를 호출해 토큰 유효성을 검증하고,
+                가능한 사용자 목록을 자동 동기화합니다. 검증 성공 시 AES-256 암호화 후 저장됩니다.
               </Alert>
             </DialogContent>
             <DialogActions>
