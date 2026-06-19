@@ -312,7 +312,9 @@ public class SaasConnectionService {
                 saasIdentityRepository.save(identity);
             }
 
-            int missingCount = detectMissingAccounts(saasType, previousIdentities, seenExternalIds);
+            int missingCount = users.isEmpty()
+                    ? 0
+                    : detectMissingAccounts(saasType, previousIdentities, seenExternalIds);
 
             if (created > 0 || mapped > 0) {
                 auditService.log(null, "SYNC_SAAS_USERS", "SAAS_CONNECTION", saasType.name(),

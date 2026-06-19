@@ -92,7 +92,7 @@ function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint 
             boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
           }}
         >
-          蹂닿린
+          보기
         </Box>
       </Stack>
     </CardContent>
@@ -112,7 +112,7 @@ function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint 
 
   if (onClick) {
     return (
-      <Tooltip title={hint || '紐⑸줉 蹂닿린'} placement="top">
+      <Tooltip title={hint || '목록 보기'} placement="top">
         <Card elevation={1} sx={cardSx}>
           <CardActionArea
             onClick={onClick}
@@ -262,16 +262,34 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([
-      dashboardApi.getStats(),
-      dashboardApi.getSaasSyncAlerts(5),
-    ])
-      .then(([statsData, alertData]) => {
-        setStats(statsData);
-        setSaasAlerts(alertData);
-      })
-      .catch(() => setError('대시보드 정보를 불러오지 못했습니다'))
-      .finally(() => setLoading(false));
+    let active = true;
+
+    const loadDashboard = () => {
+      Promise.all([
+        dashboardApi.getStats(),
+        dashboardApi.getSaasSyncAlerts(5),
+      ])
+        .then(([statsData, alertData]) => {
+          if (!active) return;
+          setStats(statsData);
+          setSaasAlerts(alertData);
+          setError(null);
+        })
+        .catch(() => {
+          if (active) setError('대시보드 정보를 불러오지 못했습니다');
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+
+    loadDashboard();
+    const timer = window.setInterval(loadDashboard, 30000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   if (loading) return <LinearProgress />;
@@ -323,52 +341,52 @@ export default function Dashboard() {
     stats.criticalRiskCount > 0
       ? {
           severity: 'error',
-          title: 'Critical accounts',
-          status: `${stats.criticalRiskCount} risk`,
-          meta: 'Risk analysis',
-          description: '?ㅽ봽蹂대뵫 寃곌낵?먯꽌 ?묎렐 沅뚰븳 ?댁젣 ?щ?瑜??곗꽑 ?뺤씤?섏꽭??',
+          title: '위험 계정',
+          status: `${stats.criticalRiskCount}건`,
+          meta: 'AI 리스크 분석',
+          description: '오프보딩 결과에서 접근 권한 회수 필요 여부를 우선 확인하세요.',
           icon: <WarningIcon fontSize="small" />,
         }
       : {
           severity: 'success',
-          title: 'Critical accounts',
-          status: 'Clear',
-          meta: 'Risk analysis',
-          description: '?꾩옱 CRITICAL ?꾪뿕 怨꾩젙? 媛먯??섏? ?딆븯?듬땲??',
+          title: '위험 계정',
+          status: '정상',
+          meta: 'AI 리스크 분석',
+          description: '현재 최고 위험 계정은 감지되지 않았습니다.',
           icon: <CheckIcon fontSize="small" />,
         },
     stats.pendingOffboardings > 0
       ? {
           severity: 'warning',
-          title: 'Offboarding queue',
-          status: `${stats.pendingOffboardings} active`,
-          meta: 'Workflow status',
-          description: '?ㅽ봽蹂대뵫 愿由??섏씠吏?먯꽌 泥섎━ ?곹깭瑜??뺤씤?섏꽭??',
+          title: '오프보딩 대기',
+          status: `${stats.pendingOffboardings}건`,
+          meta: '처리 상태',
+          description: '오프보딩 관리 페이지에서 처리 상태를 확인하세요.',
           icon: <PendingIcon fontSize="small" />,
         }
       : {
           severity: 'success',
-          title: 'Offboarding queue',
-          status: 'Idle',
-          meta: 'Workflow status',
-          description: '?湲?以묒씠嫄곕굹 泥섎━ 以묒씤 ?ㅽ봽蹂대뵫 ?묒뾽???놁뒿?덈떎.',
+          title: '오프보딩 대기',
+          status: '없음',
+          meta: '처리 상태',
+          description: '대기 중이거나 처리 중인 오프보딩 작업이 없습니다.',
           icon: <CheckIcon fontSize="small" />,
         },
     stats.connectedSaasCount < 3
       ? {
           severity: 'info',
-          title: 'SaaS connections',
-          status: `${3 - stats.connectedSaasCount} left`,
-          meta: 'Slack 쨌 GitHub 쨌 Notion',
-          description: '?곌껐 愿由ъ뿉??媛?SaaS ?곕룞 ?곹깭瑜??뺤씤?섏꽭??',
+          title: 'SaaS 연결',
+          status: `${3 - stats.connectedSaasCount}개 남음`,
+          meta: 'Slack · GitHub · Notion',
+          description: '연결 관리에서 각 SaaS 연동 상태를 확인하세요.',
           icon: <CloudIcon fontSize="small" />,
         }
       : {
           severity: 'success',
-          title: 'SaaS connections',
-          status: 'Complete',
-          meta: 'Slack 쨌 GitHub 쨌 Notion',
-          description: '吏???뚮옯??3媛쒓? 紐⑤몢 ?곌껐???곹깭?낅땲??',
+          title: 'SaaS 연결',
+          status: '완료',
+          meta: 'Slack · GitHub · Notion',
+          description: '지원 SaaS 3개가 모두 연결된 상태입니다.',
           icon: <CloudIcon fontSize="small" />,
         },
   ];
@@ -380,10 +398,10 @@ export default function Dashboard() {
           <Stack spacing={3}>
             <Box>
               <Typography variant="h4" fontWeight="bold" gutterBottom>
-                ??쒕낫??
+                대시보드
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                吏곸썝 ?묎렐 沅뚰븳, SaaS ?곌껐, ?ㅽ봽蹂대뵫 ?꾪뿕 吏?쒕? ?쒕늿???뺤씤?⑸땲??
+                직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
               </Typography>
             </Box>
 
@@ -394,7 +412,7 @@ export default function Dashboard() {
             >
               <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
-                  title="?꾩껜 吏곸썝"
+                  title="전체 직원"
                   value={stats.totalEmployees}
                   icon={<PeopleIcon />}
                   color="#4d63e6"
@@ -429,7 +447,7 @@ export default function Dashboard() {
               </Grid>
               <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
-                  title="?곌껐 SaaS"
+                  title="연결 SaaS"
                   value={stats.connectedSaasCount}
                   icon={<CloudIcon />}
                   color="#3f8cd6"
@@ -471,7 +489,7 @@ export default function Dashboard() {
               sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
             >
               <Grid item xs={12} md={6}>
-                <ChartCard title="吏곸썝 ?곹깭 鍮꾩쑉" subtitle={`?ъ쭅 ${activeRate}% 쨌 ?댁궗 ${resignedRate}%`}>
+                <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
                   {employeeStatusData.length > 0 ? (
                     <ResponsiveContainer>
                       <PieChart>
@@ -496,14 +514,14 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   ) : (
                     <Box height="100%" display="flex" alignItems="center" justifyContent="center">
-                      <Typography color="text.secondary">吏곸썝 ?곗씠?곌? ?놁뒿?덈떎</Typography>
+                      <Typography color="text.secondary">직원 데이터가 없습니다</Typography>
                     </Box>
                   )}
                 </ChartCard>
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <ChartCard title="SaaS ?곌껐 ?꾪솴" subtitle={`${stats.connectedSaasCount}/3媛??뚮옯???곌껐`}>
+                <ChartCard title="SaaS 연결 현황" subtitle={`${stats.connectedSaasCount}/3개 플랫폼 연결`}>
                   <ResponsiveContainer>
                     <RadialBarChart
                       cx="50%"
@@ -522,7 +540,7 @@ export default function Dashboard() {
                         {saasRate}%
                       </text>
                       <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#607d8b">
-                        ?곌껐瑜?
+                        연결률
                       </text>
                     </RadialBarChart>
                   </ResponsiveContainer>
@@ -530,7 +548,7 @@ export default function Dashboard() {
               </Grid>
 
               <Grid item xs={12} md={5}>
-                <ChartCard title="議곗튂 ?꾩슂 ??ぉ" subtitle={`${openActionCount}媛???ぉ ?뺤씤 ?꾩슂`}>
+                <ChartCard title="조치 필요 항목" subtitle={`${openActionCount}개 항목 확인 필요`}>
                   <ResponsiveContainer>
                     <BarChart data={actionData} margin={{ top: 16, right: 12, left: -20, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
