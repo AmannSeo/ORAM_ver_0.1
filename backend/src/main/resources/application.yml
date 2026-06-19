@@ -47,6 +47,11 @@ oram:
     initial-delay-ms: ${SAAS_SYNC_INITIAL_DELAY_MS:30000}
     fixed-delay-ms: ${SAAS_SYNC_FIXED_DELAY_MS:60000}
 
+  ai:
+    model-url: ${AI_MODEL_URL:http://127.0.0.1:8090}
+    model-server-enabled: ${AI_MODEL_SERVER_ENABLED:true}
+    request-timeout-ms: ${AI_MODEL_REQUEST_TIMEOUT_MS:3000}
+
   # OAuth 2.0 Configuration
   oauth:
     slack:

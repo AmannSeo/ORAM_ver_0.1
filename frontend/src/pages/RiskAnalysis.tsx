@@ -294,6 +294,29 @@ function RiskSimulator() {
                         sx={{ bgcolor: 'grey.200', '& .MuiLinearProgress-bar': { bgcolor: getScoreColor(result.score) } }} />
                     </Box>
                   ))}
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    AI 판단 근거
+                  </Typography>
+                  {result.engine && (
+                    <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                      Engine: {result.engine}
+                    </Typography>
+                  )}
+                  {(result.explanations || [])
+                    .filter((item) => item.contribution > 0)
+                    .slice(0, 5)
+                    .map((item) => (
+                      <Box key={item.feature} mb={1.25}>
+                        <Box display="flex" justifyContent="space-between" gap={1}>
+                          <Typography variant="caption" fontWeight={700}>{item.feature}</Typography>
+                          <Typography variant="caption" fontWeight={700}>{item.contribution}점</Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {item.description}
+                        </Typography>
+                      </Box>
+                    ))}
                 </Box>
               )}
             </CardContent>
