@@ -13,8 +13,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Predicate;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -45,7 +48,7 @@ public class EmployeeService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         String normalizedDepartment = normalizeFilter(department);
         String normalizedQuery = normalizeFilter(query);
-        Page<Employee> result = employeeRepository.search(status, normalizedDepartment, normalizedQuery, pageable);
+        Page<Employee> result = employeeRepository.findAll(buildEmployeeSearchSpec(status, normalizedDepartment, normalizedQuery), pageable);
 
         return EmployeeDto.PageResponse.builder()
                 .content(result.getContent().stream().map(this::toResponse).toList())
@@ -111,6 +114,34 @@ public class EmployeeService {
     private String normalizeFilter(String value) {
         if (value == null || value.isBlank()) return null;
         return value.trim();
+    }
+
+    private Specification<Employee> buildEmployeeSearchSpec(EmployeeStatus status, String department, String query) {
+        return (root, criteriaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            if (department != null) {
+                predicates.add(cb.like(cb.lower(root.get("department")), "%" + department.toLowerCase() + "%"));
+            }
+
+            if (query != null) {
+                String like = "%" + query.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("employeeId")), like),
+                        cb.like(cb.lower(root.get("name")), like),
+                        cb.like(cb.lower(root.get("email")), like),
+                        cb.like(cb.lower(root.get("department")), like)
+                ));
+            }
+
+            return predicates.isEmpty()
+                    ? cb.conjunction()
+                    : cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     @Transactional

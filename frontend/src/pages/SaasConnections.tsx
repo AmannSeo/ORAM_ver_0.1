@@ -13,6 +13,7 @@ import {
   Visibility as ShowIcon, VisibilityOff as HideIcon,
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
   Link as ConnectIcon, OpenInNew as OpenIcon,
+  PeopleAlt as PeopleIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import type { SaasConnection, SaasIdentity, SaasType } from '../types';
@@ -237,6 +238,10 @@ export default function SaasConnections() {
           <br />
           ORAM은 이 토큰으로 직원 권한 조회·해제 API를 대신 호출합니다. 토큰은 AES-256으로 암호화 저장됩니다.
         </Typography>
+        <Typography variant="body2" color="info.dark" mt={1}>
+          <strong>직원 목록:</strong> 같은 이메일은 하나의 직원으로 통합됩니다.
+          SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong> 버튼에서 따로 확인할 수 있습니다.
+        </Typography>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
@@ -249,10 +254,7 @@ export default function SaasConnections() {
             <Grid item xs={12} sm={6} md={4} key={conn.saasType}>
               <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column',
                 borderLeft: conn.isConnected ? `4px solid #2e7d32` : `4px solid #bdbdbd` }}>
-                <CardContent
-                  sx={{ flexGrow: 1, cursor: conn.isConnected ? 'pointer' : 'default' }}
-                  onClick={() => conn.isConnected && openIdentityDialog(conn.saasType)}
-                >
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Box display="flex" alignItems="center" gap={2} mb={1.5}>
                     <Typography fontSize={40}>{meta.emoji}</Typography>
                     <Box>
@@ -295,10 +297,7 @@ export default function SaasConnections() {
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block">
-                        매핑된 계정: {conn.identityCount ?? 0}명
-                      </Typography>
-                      <Typography variant="caption" color="primary" display="block">
-                        클릭해서 수집 계정 보기
+                        수집 계정: {conn.identityCount ?? 0}명
                       </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
@@ -310,7 +309,7 @@ export default function SaasConnections() {
                 </CardContent>
 
                 <Divider />
-                <CardActions sx={{ px: 2, py: 1.5, gap: 1 }}>
+                <CardActions sx={{ px: 2, py: 1.5, gap: 1, flexWrap: 'wrap' }}>
                   {conn.isConnected ? (
                     <>
                       <Button
@@ -321,6 +320,14 @@ export default function SaasConnections() {
                         disabled={syncingSaas === conn.saasType}
                       >
                         {syncingSaas === conn.saasType ? '동기화 중...' : '동기화'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PeopleIcon />}
+                        size="small"
+                        onClick={() => openIdentityDialog(conn.saasType)}
+                      >
+                        수집 계정
                       </Button>
                       <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
                         onClick={() => setDisconnectDialog(conn.saasType)}>
@@ -463,7 +470,7 @@ export default function SaasConnections() {
 
       <Dialog open={Boolean(identityDialog)} onClose={() => setIdentityDialog(null)} maxWidth="md" fullWidth>
         <DialogTitle>
-          {identityDialog && `${SAAS_INFO[identityDialog].label} 수집 계정 목록`}
+          {identityDialog && `${SAAS_INFO[identityDialog].label} 수집 계정 목록 (${identityRows.length}명)`}
         </DialogTitle>
         <DialogContent>
           {identityLoading ? (

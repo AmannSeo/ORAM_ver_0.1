@@ -30,7 +30,6 @@ public class EmployeeController {
     private final UserRepository userRepository;
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
             @RequestParam(required = false) EmployeeStatus status,
             @RequestParam(required = false) String department,
@@ -41,7 +40,6 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<EmployeeDto.Response> getEmployee(@PathVariable UUID id) {
         return ResponseEntity.ok(employeeService.getEmployee(id));
     }

@@ -27,7 +27,6 @@ public class SaasConnectionController {
     }
 
     @GetMapping("/{saasType}/identities")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<SaasConnectionDto.IdentityResponse>> getIdentities(@PathVariable SaasType saasType) {
         return ResponseEntity.ok(saasConnectionService.getIdentities(saasType));
     }
