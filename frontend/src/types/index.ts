@@ -42,6 +42,19 @@ export interface Employee {
   department: string;
   status: EmployeeStatus;
   createdAt: string;
+  connectedSaas?: EmployeeSaasAccount[];
+}
+
+export interface EmployeeSaasAccount {
+  id: string;
+  saasType: SaasType;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  status?: EmployeeStatus;
+  accessRevoked: boolean;
+  hasRevokePermission: boolean;
+  lastSyncedAt?: string;
 }
 
 export interface EmployeePageResponse {

@@ -11425,3 +11425,1367 @@ Unconditional classes:
 2026-06-19T21:15:42.928+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
 2026-06-19T21:15:42.928+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
 2026-06-19T21:15:42.934+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:23:12.109+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:23:12.109+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:23:12.109+09:00 DEBUG 32876 --- [nio-8080-exec-5] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:23:12.109+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:23:12.109+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:23:12.116+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:23:12.116+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:23:12.116+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:03.785+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:03.791+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:48:03.792+09:00 DEBUG 32876 --- [nio-8080-exec-3] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:48:03.794+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:48:03.799+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:48:03.802+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:03.802+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:48:03.803+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:03.808+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:03.809+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:48:03.810+09:00 DEBUG 32876 --- [nio-8080-exec-7] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:48:03.812+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:48:03.814+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:48:03.815+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:03.815+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:48:03.816+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:27.703+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:27.705+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=1&size=10", parameters={masked}
+2026-06-19T21:48:27.706+09:00 DEBUG 32876 --- [nio-8080-exec-8] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:48:27.707+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:48:27.710+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:27.711+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=181f3d46-3000-4729-bd72-db9467c86453, empl (truncated)...]
+2026-06-19T21:48:27.711+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:29.840+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:29.850+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:48:29.850+09:00 DEBUG 32876 --- [nio-8080-exec-9] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:48:29.850+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:48:29.854+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:48:29.854+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:29.854+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:48:29.854+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:59.501+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : POST "/api/auth/login", parameters={}
+2026-06-19T21:48:59.501+09:00 DEBUG 32876 --- [io-8080-exec-10] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.AuthController#login(LoginRequest)
+2026-06-19T21:48:59.509+09:00 DEBUG 32876 --- [io-8080-exec-10] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [AuthDto.LoginRequest(email=admin@oram.local, password=Admin1234!)]
+2026-06-19T21:48:59.566+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:59.658+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:59.666+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:59.666+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [AuthDto.LoginResponse(token=eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBvcmFtLmxvY2FsIiwiaWF0IjoxNzgxODc (truncated)...]
+2026-06-19T21:48:59.675+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:59.709+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:59.711+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : GET "/api/dashboard/stats", parameters={}
+2026-06-19T21:48:59.711+09:00 DEBUG 32876 --- [nio-8080-exec-1] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.DashboardController#getStats()
+2026-06-19T21:48:59.713+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(*) 
+    from
+        employees e1_0
+2026-06-19T21:48:59.713+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        e1_0.status=?
+2026-06-19T21:48:59.713+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        e1_0.status=?
+2026-06-19T21:48:59.716+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(sc1_0.id) 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.is_connected
+2026-06-19T21:48:59.718+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.risk_level=?
+2026-06-19T21:48:59.718+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.status=?
+2026-06-19T21:48:59.725+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.status=?
+2026-06-19T21:48:59.725+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:59.725+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [DashboardDto.Stats(totalEmployees=13, activeEmployees=13, resignedEmployees=0, connectedSaasCount=3, (truncated)...]
+2026-06-19T21:48:59.725+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:48:59.732+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:48:59.733+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : GET "/api/dashboard/stats", parameters={}
+2026-06-19T21:48:59.734+09:00 DEBUG 32876 --- [nio-8080-exec-2] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.DashboardController#getStats()
+2026-06-19T21:48:59.735+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(*) 
+    from
+        employees e1_0
+2026-06-19T21:48:59.736+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        e1_0.status=?
+2026-06-19T21:48:59.737+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        e1_0.status=?
+2026-06-19T21:48:59.739+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(sc1_0.id) 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.is_connected
+2026-06-19T21:48:59.740+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.risk_level=?
+2026-06-19T21:48:59.741+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.status=?
+2026-06-19T21:48:59.742+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        count(or1_0.id) 
+    from
+        offboarding_results or1_0 
+    where
+        or1_0.status=?
+2026-06-19T21:48:59.743+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:48:59.744+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [DashboardDto.Stats(totalEmployees=13, activeEmployees=13, resignedEmployees=0, connectedSaasCount=3, (truncated)...]
+2026-06-19T21:48:59.744+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:02.568+09:00 DEBUG 32876 --- [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:02.574+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:49:02.574+09:00 DEBUG 32876 --- [nio-8080-exec-6] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:49:02.574+09:00 DEBUG 32876 --- [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-4] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:49:02.578+09:00 DEBUG 32876 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:49:02.591+09:00 DEBUG 32876 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:49:02.591+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:02.591+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:49:02.591+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:04.733+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:04.737+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : GET "/api/saas-connections", parameters={}
+2026-06-19T21:49:04.737+09:00 DEBUG 32876 --- [nio-8080-exec-5] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.SaasConnectionController#getAllConnections()
+2026-06-19T21:49:04.738+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.739+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+2026-06-19T21:49:04.740+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.744+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.746+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.746+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.746+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.746+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.746+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.750+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.750+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:04.750+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[SaasConnectionDto.Response(id=22222222-0002-0002-0002-000000000001, saasType=SLACK, workspaceName=O (truncated)...]
+2026-06-19T21:49:04.750+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : GET "/api/saas-connections", parameters={}
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.SaasConnectionController#getAllConnections()
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.756+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.766+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.767+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:04.768+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.769+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:04.769+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:04.770+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[SaasConnectionDto.Response(id=22222222-0002-0002-0002-000000000001, saasType=SLACK, workspaceName=O (truncated)...]
+2026-06-19T21:49:04.771+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:05.544+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:05.544+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:05.544+09:00 DEBUG 32876 --- [nio-8080-exec-7] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:05.548+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:05.550+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:05.551+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:05.552+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:05.556+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:05.560+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:05.560+09:00 DEBUG 32876 --- [nio-8080-exec-8] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:05.562+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:05.563+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:05.563+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:05.563+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:05.569+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:05.573+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:05.575+09:00 DEBUG 32876 --- [nio-8080-exec-9] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:05.575+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:05.577+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:05.577+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:05.577+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:05.583+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:05.589+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:05.589+09:00 DEBUG 32876 --- [io-8080-exec-10] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:05.591+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:05.593+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:05.593+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:05.593+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:06.275+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:06.276+09:00 DEBUG 32876 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:06.286+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:06.288+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:06.288+09:00 DEBUG 32876 --- [nio-8080-exec-2] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:06.288+09:00 DEBUG 32876 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:06.290+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:06.291+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:06.292+09:00 DEBUG 32876 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.019+09:00 DEBUG 32876 --- [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.022+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:08.023+09:00 DEBUG 32876 --- [nio-8080-exec-6] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-6] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:08.024+09:00 DEBUG 32876 --- [nio-8080-exec-4] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:08.039+09:00 DEBUG 32876 --- [nio-8080-exec-5] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : GET "/api/offboarding", parameters={}
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.OffboardingController#getAllResults()
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        or1_0.id,
+        or1_0.completed_at,
+        or1_0.created_at,
+        or1_0.employee_id,
+        or1_0.reviewed_by,
+        or1_0.revoked_all,
+        or1_0.risk_level,
+        or1_0.risk_score,
+        or1_0.started_at,
+        or1_0.status 
+    from
+        offboarding_results or1_0
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[]]
+2026-06-19T21:49:08.049+09:00 DEBUG 32876 --- [nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.760+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.766+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : GET "/api/saas-connections", parameters={}
+2026-06-19T21:49:08.766+09:00 DEBUG 32876 --- [nio-8080-exec-7] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.SaasConnectionController#getAllConnections()
+2026-06-19T21:49:08.767+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.768+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.774+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.775+09:00 DEBUG 32876 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.776+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.776+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[SaasConnectionDto.Response(id=22222222-0002-0002-0002-000000000001, saasType=SLACK, workspaceName=O (truncated)...]
+2026-06-19T21:49:08.777+09:00 DEBUG 32876 --- [nio-8080-exec-7] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:08.781+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:08.782+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : GET "/api/saas-connections", parameters={}
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.SaasConnectionController#getAllConnections()
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        sc1_0.id,
+        sc1_0.access_token_encrypted,
+        sc1_0.is_connected,
+        sc1_0.connected_at,
+        sc1_0.connected_by,
+        sc1_0.expires_at,
+        sc1_0.refresh_token_encrypted,
+        sc1_0.saas_type,
+        sc1_0.workspace_id,
+        sc1_0.workspace_name 
+    from
+        saas_connections sc1_0 
+    where
+        sc1_0.saas_type=?
+2026-06-19T21:49:08.783+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.791+09:00 DEBUG 32876 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        count(si1_0.id) 
+    from
+        saas_identities si1_0 
+    where
+        si1_0.saas_type=?
+2026-06-19T21:49:08.792+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:08.792+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [[SaasConnectionDto.Response(id=22222222-0002-0002-0002-000000000001, saasType=SLACK, workspaceName=O (truncated)...]
+2026-06-19T21:49:08.793+09:00 DEBUG 32876 --- [nio-8080-exec-8] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:11.056+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [nio-8080-exec-9] o.s.web.servlet.DispatcherServlet        : Completed 200 OK
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role,
+        u1_0.updated_at 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : GET "/api/employees?page=0&size=10", parameters={masked}
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to com.oram.controller.EmployeeController#getEmployees(EmployeeStatus, String, String, int, int)
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        e1_0.id,
+        e1_0.created_at,
+        e1_0.department,
+        e1_0.email,
+        e1_0.employee_id,
+        e1_0.name,
+        e1_0.status,
+        e1_0.updated_at 
+    from
+        employees e1_0 
+    where
+        1=1 
+    order by
+        e1_0.created_at desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        count(e1_0.id) 
+    from
+        employees e1_0 
+    where
+        1=1
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json]
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [EmployeeDto.PageResponse(content=[EmployeeDto.Response(id=5a2429b3-7588-417b-b383-5eb4761dec60, empl (truncated)...]
+2026-06-19T21:49:11.058+09:00 DEBUG 32876 --- [io-8080-exec-10] o.s.web.servlet.DispatcherServlet        : Completed 200 OK

@@ -6,8 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -19,22 +17,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     Optional<Employee> findByEmployeeId(String employeeId);
     Page<Employee> findByStatus(EmployeeStatus status, Pageable pageable);
     Page<Employee> findByStatusAndDepartment(EmployeeStatus status, String department, Pageable pageable);
-    @Query("""
-            select e from Employee e
-            where (:status is null or e.status = :status)
-              and (:department is null or lower(e.department) like lower(concat('%', :department, '%')))
-              and (:query is null
-                   or lower(e.employeeId) like lower(concat('%', :query, '%'))
-                   or lower(e.name) like lower(concat('%', :query, '%'))
-                   or lower(e.email) like lower(concat('%', :query, '%'))
-                   or lower(e.department) like lower(concat('%', :query, '%')))
-            """)
-    Page<Employee> search(
-            @Param("status") EmployeeStatus status,
-            @Param("department") String department,
-            @Param("query") String query,
-            Pageable pageable
-    );
     long countByStatus(EmployeeStatus status);
     boolean existsByEmail(String email);
     boolean existsByEmployeeId(String employeeId);

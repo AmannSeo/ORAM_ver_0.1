@@ -62,7 +62,7 @@ oram:
 
 # CORS
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
 
 logging:
   level:

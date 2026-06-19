@@ -1,6 +1,7 @@
 package com.oram.dto;
 
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,23 @@ public class EmployeeDto {
         private String department;
         private EmployeeStatus status;
         private LocalDateTime createdAt;
+        private java.util.List<SaasAccount> connectedSaas;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SaasAccount {
+        private UUID id;
+        private SaasType saasType;
+        private String externalUsername;
+        private String externalEmail;
+        private String displayName;
+        private EmployeeStatus status;
+        private boolean accessRevoked;
+        private boolean hasRevokePermission;
+        private LocalDateTime lastSyncedAt;
     }
 
     @Data

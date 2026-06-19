@@ -344,6 +344,20 @@ public class EmployeeService {
     }
 
     private EmployeeDto.Response toResponse(Employee e) {
+        List<EmployeeDto.SaasAccount> connectedSaas = saasIdentityRepository.findByEmployeeId(e.getId()).stream()
+                .map(identity -> EmployeeDto.SaasAccount.builder()
+                        .id(identity.getId())
+                        .saasType(identity.getSaasType())
+                        .externalUsername(identity.getExternalUsername())
+                        .externalEmail(identity.getExternalEmail())
+                        .displayName(identity.getDisplayName())
+                        .status(identity.getStatus())
+                        .accessRevoked(identity.isAccessRevoked())
+                        .hasRevokePermission(identity.isHasRevokePermission())
+                        .lastSyncedAt(identity.getLastSyncedAt())
+                        .build())
+                .toList();
+
         return EmployeeDto.Response.builder()
                 .id(e.getId())
                 .employeeId(e.getEmployeeId())
@@ -352,6 +366,7 @@ public class EmployeeService {
                 .department(e.getDepartment())
                 .status(e.getStatus())
                 .createdAt(e.getCreatedAt())
+                .connectedSaas(connectedSaas)
                 .build();
     }
 }

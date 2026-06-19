@@ -15,9 +15,21 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { employeeApi } from '../api';
-import type { Employee, EmployeeStatus } from '../types';
+import type { Employee, EmployeeSaasAccount, EmployeeStatus, SaasType } from '../types';
 import StatusChip from '../components/common/StatusChip';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
+const SAAS_BADGE: Record<SaasType, { short: string; label: string; color: string; bg: string }> = {
+  SLACK: { short: 'SL', label: 'Slack', color: '#4A154B', bg: '#f3e8f4' },
+  GITHUB: { short: 'GI', label: 'GitHub', color: '#24292f', bg: '#eef0f2' },
+  NOTION: { short: 'NO', label: 'Notion', color: '#111111', bg: '#f2f2f2' },
+};
+
+const renderSaasTooltip = (account: EmployeeSaasAccount) => {
+  const meta = SAAS_BADGE[account.saasType];
+  const status = account.accessRevoked ? '회수됨' : account.status === 'RESIGNED' ? '비활성' : '활성';
+  return `${meta.label} / ${account.displayName || account.externalUsername || account.externalEmail || '-'} / ${status}`;
+};
 
 export default function Employees() {
   const navigate = useNavigate();
@@ -283,6 +295,7 @@ export default function Employees() {
                     <TableCell><strong>이름</strong></TableCell>
                     <TableCell><strong>이메일</strong></TableCell>
                     <TableCell><strong>부서</strong></TableCell>
+                    <TableCell><strong>연결된 SaaS</strong></TableCell>
                     <TableCell><strong>상태</strong></TableCell>
                     <TableCell align="center"><strong>정보 수정</strong></TableCell>
                     <TableCell align="center"><strong>권한 회수</strong></TableCell>
@@ -292,7 +305,7 @@ export default function Employees() {
                 <TableBody>
                   {employees.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                         직원이 없습니다. "직원 등록" 또는 "CSV 가져오기"로 추가하세요.
                       </TableCell>
                     </TableRow>
@@ -303,6 +316,35 @@ export default function Employees() {
                       <TableCell><strong>{emp.name}</strong></TableCell>
                       <TableCell>{emp.email}</TableCell>
                       <TableCell>{emp.department}</TableCell>
+                      <TableCell>
+                        {emp.connectedSaas && emp.connectedSaas.length > 0 ? (
+                          <Box display="flex" gap={0.75} flexWrap="wrap">
+                            {emp.connectedSaas.map(account => {
+                              const meta = SAAS_BADGE[account.saasType];
+                              const revoked = account.accessRevoked;
+                              return (
+                                <Tooltip key={account.id} title={renderSaasTooltip(account)}>
+                                  <Chip
+                                    label={meta.short}
+                                    size="small"
+                                    sx={{
+                                      minWidth: 34,
+                                      height: 28,
+                                      fontWeight: 700,
+                                      color: revoked ? 'text.disabled' : meta.color,
+                                      bgcolor: revoked ? 'grey.100' : meta.bg,
+                                      border: '1px solid',
+                                      borderColor: revoked ? 'divider' : meta.color,
+                                    }}
+                                  />
+                                </Tooltip>
+                              );
+                            })}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled">-</Typography>
+                        )}
+                      </TableCell>
                       <TableCell><StatusChip status={emp.status} /></TableCell>
                       <TableCell align="center">
                         <Tooltip title="직원 정보 수정">
