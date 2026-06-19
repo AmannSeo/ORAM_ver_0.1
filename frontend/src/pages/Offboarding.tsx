@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
+  Card,
+  CardContent,
   Chip,
+  Grid,
   IconButton,
   LinearProgress,
   Paper,
@@ -18,7 +21,9 @@ import {
 } from '@mui/material';
 import {
   AutoAwesome as AutoIcon,
+  CheckCircle as CheckIcon,
   PersonSearch as ManualIcon,
+  Sync as SyncIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -66,6 +71,8 @@ export default function Offboarding() {
     [results],
   );
 
+  const manualCount = results.length - autoCount;
+
   if (loading) return <LinearProgress />;
 
   return (
@@ -84,6 +91,33 @@ export default function Offboarding() {
           <Chip label={`전체 ${results.length}건`} variant="outlined" />
         </Stack>
       </Stack>
+
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <StatusCard
+            icon={<CheckIcon color="success" />}
+            title="자동 분석 파이프라인"
+            value="활성"
+            description="SaaS 동기화에서 비활성 또는 이탈 계정이 감지되면 자동으로 AI 분석 결과가 생성됩니다."
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <StatusCard
+            icon={<SyncIcon color="primary" />}
+            title="감지 방식"
+            value="주기 동기화"
+            description="GitHub, Slack, Notion 계정 목록을 다시 조회해 이전 상태와 비교합니다."
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <StatusCard
+            icon={<AutoIcon color="primary" />}
+            title="분석 결과"
+            value={`${autoCount} 자동 / ${manualCount} 수동`}
+            description="자동 분석이 발생하면 아래 표에 감지 사유와 분석 엔진이 함께 표시됩니다."
+          />
+        </Grid>
+      </Grid>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -105,7 +139,7 @@ export default function Offboarding() {
             {results.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                  아직 자동 분석 결과가 없습니다. SaaS 동기화 또는 퇴사 처리가 발생하면 이곳에 표시됩니다.
+                  아직 자동 분석 결과가 없습니다. SaaS 동기화에서 비활성 또는 이탈 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
             )}
@@ -162,5 +196,36 @@ export default function Offboarding() {
         </Table>
       </TableContainer>
     </Box>
+  );
+}
+
+function StatusCard({
+  icon,
+  title,
+  value,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <CardContent>
+        <Stack direction="row" spacing={1.25} alignItems="center" mb={1}>
+          {icon}
+          <Typography variant="body2" fontWeight="bold" color="text.secondary">
+            {title}
+          </Typography>
+        </Stack>
+        <Typography variant="h6" fontWeight="bold">
+          {value}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {description}
+        </Typography>
+      </CardContent>
+    </Card>
   );
 }
