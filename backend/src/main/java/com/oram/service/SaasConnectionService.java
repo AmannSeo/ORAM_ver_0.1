@@ -48,6 +48,7 @@ public class SaasConnectionService {
     private final SaasSyncAlertRepository saasSyncAlertRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
     public List<SaasConnectionDto.Response> getAllConnections() {
@@ -310,6 +311,17 @@ public class SaasConnectionService {
                 identity.setStatus(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED);
                 identity.setLastSyncedAt(LocalDateTime.now());
                 saasIdentityRepository.save(identity);
+
+                if (employee != null && !user.active()) {
+                    employee.setStatus(EmployeeStatus.RESIGNED);
+                    employeeRepository.save(employee);
+                    UUID resultId = offboardingService.autoAnalyzeOffboarding(
+                            employee,
+                            saasType + "_SYNC_INACTIVE_ACCOUNT"
+                    );
+                    warnings.add("Auto risk analysis created for inactive " + saasType
+                            + " account: " + employee.getEmail() + " (" + resultId + ")");
+                }
             }
 
             int missingCount = users.isEmpty()
@@ -378,6 +390,18 @@ public class SaasConnectionService {
             identity.setRevokeMessage("Account was not returned by the latest " + saasType + " sync.");
             identity.setRevokedAt(LocalDateTime.now());
             saasIdentityRepository.save(identity);
+
+            if (identity.getEmployee() != null) {
+                Employee employee = identity.getEmployee();
+                employee.setStatus(EmployeeStatus.RESIGNED);
+                employeeRepository.save(employee);
+                UUID resultId = offboardingService.autoAnalyzeOffboarding(
+                        employee,
+                        saasType + "_SYNC_MISSING_ACCOUNT"
+                );
+                log.info("Auto risk analysis created for missing {} identity. employee={}, resultId={}",
+                        saasType, employee.getEmail(), resultId);
+            }
 
             saasSyncAlertRepository
                     .findBySaasTypeAndExternalUserIdAndStatus(

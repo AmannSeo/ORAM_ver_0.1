@@ -4,7 +4,12 @@ import com.oram.config.EncryptionConfig;
 import com.oram.connector.ConnectorRegistry;
 import com.oram.connector.SaaSConnector;
 import com.oram.dto.OffboardingDto;
-import com.oram.entity.*;
+import com.oram.entity.Employee;
+import com.oram.entity.OffboardingResult;
+import com.oram.entity.PermissionRecord;
+import com.oram.entity.SaasConnection;
+import com.oram.entity.SaasIdentity;
+import com.oram.entity.User;
 import com.oram.enums.OffboardingStatus;
 import com.oram.enums.RiskLevel;
 import com.oram.enums.SaasType;
@@ -37,14 +42,24 @@ public class OffboardingService {
     private final EncryptionConfig.TokenEncryptor tokenEncryptor;
     private final SaasIdentityRepository saasIdentityRepository;
 
-    /**
-     * Step 1-6: 오프보딩 워크플로우 전체 실행
-     */
     @Transactional
     public UUID triggerOffboarding(Employee employee) {
-        log.info("Triggering offboarding for employee: {}", employee.getEmail());
+        return createAndAnalyzeOffboarding(employee, "MANUAL_TRIGGER", true);
+    }
 
-        // 결과 레코드 생성
+    @Transactional
+    public UUID autoAnalyzeOffboarding(Employee employee, String triggerReason) {
+        Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
+        if (latest.isPresent() && !latest.get().isRevokedAll()) {
+            return analyzeExistingResult(latest.get(), triggerReason);
+        }
+        return createAndAnalyzeOffboarding(employee, triggerReason, false);
+    }
+
+    private UUID createAndAnalyzeOffboarding(Employee employee, String triggerReason, boolean manualTrigger) {
+        log.info("Triggering {} offboarding analysis for employee: {}, reason={}",
+                manualTrigger ? "manual" : "automatic", employee.getEmail(), triggerReason);
+
         OffboardingResult result = OffboardingResult.builder()
                 .employee(employee)
                 .status(OffboardingStatus.IN_PROGRESS)
@@ -52,12 +67,29 @@ public class OffboardingService {
                 .build();
         result = resultRepository.save(result);
 
-        try {
-            // Step 2-3: 연결된 모든 SaaS에서 권한 검색
-            List<PermissionRecord> permissions = discoverPermissions(employee, result);
-            result.setPermissions(permissions);
+        return analyzeAndSaveResult(result, triggerReason, manualTrigger);
+    }
 
-            // Step 4: 리스크 점수 계산
+    private UUID analyzeExistingResult(OffboardingResult result, String triggerReason) {
+        result.setStatus(OffboardingStatus.IN_PROGRESS);
+        if (result.getStartedAt() == null) {
+            result.setStartedAt(LocalDateTime.now());
+        }
+        result.getPermissions().clear();
+        result = resultRepository.save(result);
+
+        return analyzeAndSaveResult(result, triggerReason, false);
+    }
+
+    private UUID analyzeAndSaveResult(OffboardingResult result, String triggerReason, boolean manualTrigger) {
+        Employee employee = result.getEmployee();
+        try {
+            List<PermissionRecord> permissions = discoverPermissions(employee, result);
+            if (permissions.isEmpty()) {
+                permissions = buildIdentityBasedPermissions(employee, result);
+            }
+            result.getPermissions().addAll(permissions);
+
             RiskFeatures features = RiskFeatures.aggregate(permissions);
             var scoreResponse = riskAnalyzer.analyze(features);
 
@@ -68,11 +100,15 @@ public class OffboardingService {
 
             resultRepository.save(result);
 
-            auditService.log(null, "OFFBOARDING_TRIGGERED", "EMPLOYEE", employee.getId().toString(),
-                    "Offboarding completed. Risk: " + scoreResponse.getScore() + "/" + scoreResponse.getLevel());
+            auditService.log(null, manualTrigger ? "OFFBOARDING_TRIGGERED" : "AUTO_RISK_ANALYZED",
+                    "EMPLOYEE", employee.getId().toString(),
+                    "Offboarding analysis completed. Reason: " + triggerReason
+                            + ", Risk: " + scoreResponse.getScore() + "/" + scoreResponse.getLevel()
+                            + ", Engine: " + scoreResponse.getEngine());
 
-            log.info("Offboarding completed for {}. Score={}, Level={}", 
-                    employee.getEmail(), scoreResponse.getScore(), scoreResponse.getLevel());
+            log.info("Offboarding analysis completed for {}. Reason={}, Score={}, Level={}, Engine={}",
+                    employee.getEmail(), triggerReason, scoreResponse.getScore(),
+                    scoreResponse.getLevel(), scoreResponse.getEngine());
 
             return result.getId();
         } catch (Exception e) {
@@ -112,7 +148,7 @@ public class OffboardingService {
                             .build();
                     allPermissions.add(record);
                 }
-                log.info("Discovered {} permissions in {} for {}", 
+                log.info("Discovered {} permissions in {} for {}",
                         discovered.size(), connection.getSaasType(), employee.getEmail());
             } catch (Exception e) {
                 log.warn("Permission discovery failed for SaaS {}: {}", connection.getSaasType(), e.getMessage());
@@ -121,9 +157,29 @@ public class OffboardingService {
         return allPermissions;
     }
 
-    /**
-     * Step 6: 전체 권한 일괄 해제
-     */
+    private List<PermissionRecord> buildIdentityBasedPermissions(Employee employee, OffboardingResult result) {
+        List<SaasIdentity> identities = saasIdentityRepository.findByEmployeeId(employee.getId());
+        List<PermissionRecord> permissions = new ArrayList<>();
+
+        for (SaasIdentity identity : identities) {
+            permissions.add(PermissionRecord.builder()
+                    .offboardingResult(result)
+                    .saasType(identity.getSaasType())
+                    .permissionType(identity.isHasRevokePermission() ? "SYNCED_ACCOUNT" : "MISSING_OR_LIMITED_ACCOUNT")
+                    .resourceName(identity.getDisplayName() != null ? identity.getDisplayName() : identity.getExternalUsername())
+                    .admin(false)
+                    .owner(false)
+                    .hasApiToken(false)
+                    .recentLogin(identity.getLastSyncedAt() != null
+                            && identity.getLastSyncedAt().isAfter(LocalDateTime.now().minusDays(7)))
+                    .repoCount(identity.getSaasType() == SaasType.GITHUB ? 1 : 0)
+                    .workspaceCount(1)
+                    .build());
+        }
+
+        return permissions;
+    }
+
     @Transactional
     public OffboardingDto.RevokeResponse revokeAll(UUID resultId, User reviewedBy) {
         OffboardingResult result = findById(resultId);
@@ -243,7 +299,7 @@ public class OffboardingService {
                     .accountMatched(false)
                     .resourceCount(resourceCount)
                     .action("No matched SaaS identity")
-                    .reason("이 직원과 매핑된 " + saasType + " 계정이 없습니다. SaaS 동기화를 먼저 실행해야 합니다.")
+                    .reason("No mapped " + saasType + " account exists for this employee. Run SaaS sync first.")
                     .build();
         }
 
@@ -255,13 +311,13 @@ public class OffboardingService {
                     .accountMatched(true)
                     .resourceCount(resourceCount)
                     .action("Manual removal required")
-                    .reason("Notion 공개 API는 워크스페이스 멤버 자동 제거를 제공하지 않아 관리자 수동 조치가 필요합니다.")
+                    .reason("Notion public API does not provide full workspace member removal for this flow.")
                     .build();
         }
 
         String reason = saasType == SaasType.SLACK
-                ? "Slack은 Enterprise Grid 사용자 토큰과 admin.users:write 권한이 있어야 실제 제거가 성공합니다."
-                : "GitHub 토큰이 repo/admin:org 권한을 가지고 있으면 collaborator 또는 org member 제거를 시도합니다.";
+                ? "Slack revocation needs an Enterprise Grid token with admin.users:write."
+                : "GitHub revocation will attempt collaborator or organization member removal with the configured token.";
 
         return OffboardingDto.RevokePlanItem.builder()
                 .saasType(saasType)
@@ -352,16 +408,18 @@ public class OffboardingService {
         RiskLevel level = result.getRiskLevel();
 
         if (level == RiskLevel.CRITICAL || level == RiskLevel.HIGH) {
-            actions.add("즉시 모든 SaaS 접근 권한 회수가 필요합니다.");
+            actions.add("Immediately revoke all SaaS access.");
         }
 
         result.getPermissions().forEach(p -> {
-            if (p.isOwner()) actions.add(p.getSaasType() + " Owner 권한을 즉시 회수해야 합니다.");
-            if (p.isHasApiToken()) actions.add(p.getSaasType() + " API 토큰/PAT를 즉시 무효화해야 합니다.");
-            if (p.isAdmin()) actions.add(p.getSaasType() + " Admin 권한 회수를 권장합니다.");
+            if (p.isOwner()) actions.add(p.getSaasType() + " Owner access should be revoked immediately.");
+            if (p.isHasApiToken()) actions.add(p.getSaasType() + " API token/PAT should be invalidated immediately.");
+            if (p.isAdmin()) actions.add(p.getSaasType() + " Admin access should be reviewed and revoked.");
         });
 
-        if (actions.isEmpty()) actions.add("표준 오프보딩 절차를 진행하세요.");
+        if (actions.isEmpty()) {
+            actions.add("Proceed with the standard offboarding review.");
+        }
         return actions;
     }
 }

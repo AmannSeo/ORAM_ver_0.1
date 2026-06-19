@@ -54,7 +54,7 @@ public class OffboardingResult {
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;
 
-    @OneToMany(mappedBy = "offboardingResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "offboardingResult", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PermissionRecord> permissions = new ArrayList<>();
 
