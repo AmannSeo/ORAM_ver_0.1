@@ -40,6 +40,15 @@ public class OffboardingResult {
     @Column(name = "risk_level", length = 20)
     private RiskLevel riskLevel;
 
+    @Column(name = "analysis_source", length = 30)
+    private String analysisSource;
+
+    @Column(name = "analysis_trigger", length = 100)
+    private String analysisTrigger;
+
+    @Column(name = "analysis_engine", length = 100)
+    private String analysisEngine;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
 

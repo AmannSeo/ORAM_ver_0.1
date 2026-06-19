@@ -128,6 +128,9 @@ export interface OffboardingSummary {
   status: OffboardingStatus;
   riskScore?: number;
   riskLevel?: RiskLevel;
+  analysisSource?: 'MANUAL' | 'AUTOMATIC' | string;
+  analysisTrigger?: string;
+  analysisEngine?: string;
   startedAt?: string;
   revokedAll: boolean;
 }

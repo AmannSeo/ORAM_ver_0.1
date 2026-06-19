@@ -95,6 +95,9 @@ public class OffboardingService {
 
             result.setRiskScore(scoreResponse.getScore());
             result.setRiskLevel(scoreResponse.getLevel());
+            result.setAnalysisSource(manualTrigger ? "MANUAL" : "AUTOMATIC");
+            result.setAnalysisTrigger(triggerReason);
+            result.setAnalysisEngine(scoreResponse.getEngine());
             result.setStatus(OffboardingStatus.COMPLETED);
             result.setCompletedAt(LocalDateTime.now());
 
@@ -360,6 +363,9 @@ public class OffboardingService {
                 .status(r.getStatus())
                 .riskScore(r.getRiskScore())
                 .riskLevel(r.getRiskLevel())
+                .analysisSource(r.getAnalysisSource())
+                .analysisTrigger(r.getAnalysisTrigger())
+                .analysisEngine(r.getAnalysisEngine())
                 .startedAt(r.getStartedAt())
                 .revokedAll(r.isRevokedAll())
                 .build();
@@ -386,6 +392,9 @@ public class OffboardingService {
                 .status(r.getStatus())
                 .riskScore(r.getRiskScore())
                 .riskLevel(r.getRiskLevel())
+                .analysisSource(r.getAnalysisSource())
+                .analysisTrigger(r.getAnalysisTrigger())
+                .analysisEngine(r.getAnalysisEngine())
                 .permissions(perms)
                 .recommendedActions(generateRecommendations(r))
                 .revokedAll(r.isRevokedAll())

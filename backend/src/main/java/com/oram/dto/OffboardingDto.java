@@ -25,6 +25,9 @@ public class OffboardingDto {
         private OffboardingStatus status;
         private Integer riskScore;
         private RiskLevel riskLevel;
+        private String analysisSource;
+        private String analysisTrigger;
+        private String analysisEngine;
         private LocalDateTime startedAt;
         private boolean revokedAll;
     }
@@ -39,6 +42,9 @@ public class OffboardingDto {
         private OffboardingStatus status;
         private Integer riskScore;
         private RiskLevel riskLevel;
+        private String analysisSource;
+        private String analysisTrigger;
+        private String analysisEngine;
         private List<PermissionInfo> permissions;
         private List<String> recommendedActions;
         private boolean revokedAll;
