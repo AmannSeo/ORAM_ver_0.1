@@ -3,6 +3,7 @@ package com.oram.controller;
 import com.oram.dto.EmployeeDto;
 import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasType;
 import com.oram.repository.UserRepository;
 import com.oram.service.EmployeeService;
 import jakarta.validation.Valid;
@@ -33,10 +34,11 @@ public class EmployeeController {
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
             @RequestParam(required = false) EmployeeStatus status,
             @RequestParam(required = false) String department,
+            @RequestParam(required = false) SaasType saasType,
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(employeeService.getEmployees(status, department, q, page, size));
+        return ResponseEntity.ok(employeeService.getEmployees(status, department, saasType, q, page, size));
     }
 
     @GetMapping("/{id}")

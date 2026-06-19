@@ -10,12 +10,15 @@ import com.oram.dto.SaasConnectionDto;
 import com.oram.entity.Employee;
 import com.oram.entity.SaasIdentity;
 import com.oram.entity.SaasConnection;
+import com.oram.entity.SaasSyncAlert;
 import com.oram.entity.User;
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasSyncAlertStatus;
 import com.oram.enums.SaasType;
 import com.oram.repository.EmployeeRepository;
 import com.oram.repository.SaasIdentityRepository;
 import com.oram.repository.SaasConnectionRepository;
+import com.oram.repository.SaasSyncAlertRepository;
 import com.oram.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -40,6 +45,7 @@ public class SaasConnectionService {
     private final EncryptionConfig.TokenEncryptor tokenEncryptor;
     private final EmployeeRepository employeeRepository;
     private final SaasIdentityRepository saasIdentityRepository;
+    private final SaasSyncAlertRepository saasSyncAlertRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
 
@@ -265,6 +271,8 @@ public class SaasConnectionService {
     private SaasConnectionDto.SyncUsersResponse syncUsersFromConnector(SaasType saasType, SaaSConnector connector, String token) {
         try {
             List<SaaSConnector.SyncedUser> users = connector.listUsers(token);
+            List<SaasIdentity> previousIdentities = saasIdentityRepository.findBySaasTypeOrderByUpdatedAtDesc(saasType);
+            Set<String> seenExternalIds = new HashSet<>();
             List<String> warnings = new ArrayList<>();
             int created = 0;
             int mapped = 0;
@@ -276,6 +284,7 @@ public class SaasConnectionService {
                     warnings.add("Skipped a " + saasType + " account because it had no stable id or email.");
                     continue;
                 }
+                seenExternalIds.add(externalId);
 
                 Employee employee = resolveOrCreateEmployee(saasType, user, email, externalId);
                 SaasIdentity identity = saasIdentityRepository
@@ -303,9 +312,17 @@ public class SaasConnectionService {
                 saasIdentityRepository.save(identity);
             }
 
+            int missingCount = detectMissingAccounts(saasType, previousIdentities, seenExternalIds);
+
             if (created > 0 || mapped > 0) {
                 auditService.log(null, "SYNC_SAAS_USERS", "SAAS_CONNECTION", saasType.name(),
                         "Synced identities from " + saasType + ": created=" + created + ", mapped=" + mapped);
+            }
+
+            if (missingCount > 0) {
+                warnings.add(saasType + "에서 이전 동기화 때 존재하던 계정 " + missingCount + "개가 이번 동기화에서 사라졌습니다.");
+                auditService.log(null, "SAAS_ACCOUNT_MISSING", "SAAS_CONNECTION", saasType.name(),
+                        "Detected missing identities from " + saasType + ": missing=" + missingCount);
             }
 
             if (users.isEmpty()) {
@@ -316,6 +333,7 @@ public class SaasConnectionService {
                     .message(buildSyncMessage(saasType, users.size(), created, mapped, warnings))
                     .syncedCount(created)
                     .totalFound(users.size())
+                    .missingCount(missingCount)
                     .warnings(warnings)
                     .build();
         } catch (Exception e) {
@@ -341,6 +359,44 @@ public class SaasConnectionService {
             return "GitHub 동기화 실패: 토큰 scope(repo, read:org, admin:org) 또는 조직/저장소 접근 권한을 확인하세요. 상세: " + detail;
         }
         return saasType + " 동기화 실패: " + detail;
+    }
+
+    private int detectMissingAccounts(SaasType saasType, List<SaasIdentity> previousIdentities, Set<String> seenExternalIds) {
+        int missingCount = 0;
+        for (SaasIdentity identity : previousIdentities) {
+            if (identity.getExternalUserId() == null || seenExternalIds.contains(identity.getExternalUserId())) {
+                continue;
+            }
+            if (identity.isAccessRevoked()) {
+                continue;
+            }
+
+            identity.setStatus(EmployeeStatus.RESIGNED);
+            identity.setHasRevokePermission(false);
+            identity.setRevokeMessage("Account was not returned by the latest " + saasType + " sync.");
+            identity.setRevokedAt(LocalDateTime.now());
+            saasIdentityRepository.save(identity);
+
+            saasSyncAlertRepository
+                    .findBySaasTypeAndExternalUserIdAndStatus(
+                            saasType,
+                            identity.getExternalUserId(),
+                            SaasSyncAlertStatus.OPEN
+                    )
+                    .orElseGet(() -> saasSyncAlertRepository.save(SaasSyncAlert.builder()
+                            .saasType(saasType)
+                            .employee(identity.getEmployee())
+                            .externalUserId(identity.getExternalUserId())
+                            .externalUsername(identity.getExternalUsername())
+                            .externalEmail(identity.getExternalEmail())
+                            .displayName(identity.getDisplayName())
+                            .reason("MISSING_FROM_LATEST_SYNC")
+                            .detail("This account existed in ORAM, but was not returned by the latest " + saasType + " user sync.")
+                            .status(SaasSyncAlertStatus.OPEN)
+                            .build()));
+            missingCount++;
+        }
+        return missingCount;
     }
 
     private String normalizeEmail(String email) {

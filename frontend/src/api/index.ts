@@ -1,6 +1,7 @@
 import api from './axios';
 import type {
   DashboardStats,
+  SaasSyncAlert,
   Employee,
   EmployeePageResponse,
   CreateEmployeeRequest,
@@ -17,10 +18,12 @@ import type {
 
 export const dashboardApi = {
   getStats: () => api.get<DashboardStats>('/dashboard/stats').then((r) => r.data),
+  getSaasSyncAlerts: (limit = 5) =>
+    api.get<SaasSyncAlert[]>('/dashboard/saas-sync-alerts', { params: { limit } }).then((r) => r.data),
 };
 
 export const employeeApi = {
-  getAll: (params?: { status?: string; department?: string; q?: string; page?: number; size?: number }) =>
+  getAll: (params?: { status?: string; department?: string; saasType?: SaasType; q?: string; page?: number; size?: number }) =>
     api.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),
   getById: (id: string) => api.get<Employee>(`/employees/${id}`).then((r) => r.data),
   create: (data: CreateEmployeeRequest) =>
@@ -56,7 +59,7 @@ export const saasApi = {
   demoConnect: (saasType: SaasType) =>
     api.post<SaasConnection>(`/saas-connections/demo-connect/${saasType}`).then((r) => r.data),
   syncUsers: (saasType: SaasType) =>
-    api.post<{ message: string; syncedCount: number; totalFound: number; warnings: string[] }>(`/saas-connections/${saasType}/sync`).then((r) => r.data),
+    api.post<{ message: string; syncedCount: number; totalFound: number; missingCount: number; warnings: string[] }>(`/saas-connections/${saasType}/sync`).then((r) => r.data),
   getIdentities: (saasType: SaasType) =>
     api.get<SaasIdentity[]>(`/saas-connections/${saasType}/identities`).then((r) => r.data),
   disconnect: (saasType: SaasType) => api.delete(`/saas-connections/${saasType}`),

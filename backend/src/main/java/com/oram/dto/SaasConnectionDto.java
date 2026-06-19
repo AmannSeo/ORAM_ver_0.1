@@ -44,6 +44,7 @@ public class SaasConnectionDto {
         private String message;
         private int syncedCount;
         private int totalFound;
+        private int missingCount;
         private List<String> warnings;
     }
 

@@ -31,6 +31,22 @@ export interface DashboardStats {
   connectedSaasCount: number;
   criticalRiskCount: number;
   pendingOffboardings: number;
+  openSaasSyncAlerts: number;
+}
+
+export interface SaasSyncAlert {
+  id: string;
+  saasType: SaasType;
+  status: 'OPEN' | 'RESOLVED';
+  reason: string;
+  detail: string;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  employeeEmail?: string;
+  createdAt: string;
 }
 
 // Employee

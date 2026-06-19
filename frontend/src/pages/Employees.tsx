@@ -44,6 +44,7 @@ export default function Employees() {
   const [totalElements, setTotalElements] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
+  const [filterSaas, setFilterSaas] = useState<SaasType | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
   const [resigningEmployeeId, setResigningEmployeeId] = useState<string | null>(null);
@@ -76,6 +77,7 @@ export default function Employees() {
     employeeApi.getAll({
       status: filterStatus || undefined,
       department: filterDept || undefined,
+      saasType: filterSaas || undefined,
       q: searchQuery || undefined,
       page,
       size: rowsPerPage,
@@ -90,7 +92,7 @@ export default function Employees() {
       })
       .finally(() => setLoading(false));
   };
-  useEffect(load, [page, filterStatus]);
+  useEffect(load, [page, filterStatus, filterSaas]);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -261,6 +263,19 @@ export default function Employees() {
                 <MenuItem value="">전체</MenuItem>
                 <MenuItem value="ACTIVE">재직 중</MenuItem>
                 <MenuItem value="RESIGNED">퇴사</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>SaaS 보기</InputLabel>
+              <Select
+                value={filterSaas}
+                label="SaaS 보기"
+                onChange={e => { setFilterSaas(e.target.value as SaasType | ''); setPage(0); }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="SLACK">Slack</MenuItem>
+                <MenuItem value="GITHUB">GitHub</MenuItem>
+                <MenuItem value="NOTION">Notion</MenuItem>
               </Select>
             </FormControl>
             <TextField size="small" label="부서" value={filterDept}

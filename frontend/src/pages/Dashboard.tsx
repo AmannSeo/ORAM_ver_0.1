@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, CardActionArea,
   Alert, LinearProgress, Tooltip, Chip, Stack, Divider,
@@ -18,7 +18,7 @@ import {
   XAxis, YAxis,
 } from 'recharts';
 import { dashboardApi } from '../api';
-import type { DashboardStats } from '../types';
+import type { DashboardStats, SaasSyncAlert } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 interface StatCardProps {
@@ -92,7 +92,7 @@ function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint 
             boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
           }}
         >
-          보기
+          蹂닿린
         </Box>
       </Stack>
     </CardContent>
@@ -112,7 +112,7 @@ function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint 
 
   if (onClick) {
     return (
-      <Tooltip title={hint || '목록 보기'} placement="top">
+      <Tooltip title={hint || '紐⑸줉 蹂닿린'} placement="top">
         <Card elevation={1} sx={cardSx}>
           <CardActionArea
             onClick={onClick}
@@ -256,14 +256,21 @@ function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [saasAlerts, setSaasAlerts] = useState<SaasSyncAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    dashboardApi.getStats()
-      .then(setStats)
-      .catch(() => setError('대시보드 통계를 불러오지 못했습니다'))
+    Promise.all([
+      dashboardApi.getStats(),
+      dashboardApi.getSaasSyncAlerts(5),
+    ])
+      .then(([statsData, alertData]) => {
+        setStats(statsData);
+        setSaasAlerts(alertData);
+      })
+      .catch(() => setError('대시보드 정보를 불러오지 못했습니다'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -278,7 +285,7 @@ export default function Dashboard() {
     ? Math.round((stats.resignedEmployees / stats.totalEmployees) * 100)
     : 0;
   const saasRate = Math.round((stats.connectedSaasCount / 3) * 100);
-  const openActionCount = stats.criticalRiskCount + stats.pendingOffboardings;
+  const openActionCount = stats.criticalRiskCount + stats.pendingOffboardings + (stats.openSaasSyncAlerts || 0);
 
   const employeeStatusData = [
     { name: '재직 중', value: stats.activeEmployees, color: '#2e7d32' },
@@ -302,14 +309,24 @@ export default function Dashboard() {
     { name: '연결 SaaS', value: stats.connectedSaasCount, fill: '#0288d1' },
   ];
 
+  const saasAlertLogs: ActivityLogItem[] = saasAlerts.map(alert => ({
+    severity: 'warning',
+    title: `${alert.saasType} 계정 이탈 감지`,
+    status: '확인 필요',
+    meta: alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '미매핑 계정',
+    description: `${alert.displayName || alert.externalUsername || alert.externalEmail || '계정'}이 최근 ${alert.saasType} 동기화 결과에서 사라졌습니다. 퇴사 또는 권한 변경 여부를 확인하세요.`,
+    icon: <WarningIcon fontSize="small" />,
+  }));
+
   const activityLogs: ActivityLogItem[] = [
+    ...saasAlertLogs,
     stats.criticalRiskCount > 0
       ? {
           severity: 'error',
           title: 'Critical accounts',
           status: `${stats.criticalRiskCount} risk`,
           meta: 'Risk analysis',
-          description: '오프보딩 결과에서 접근 권한 해제 여부를 우선 확인하세요.',
+          description: '?ㅽ봽蹂대뵫 寃곌낵?먯꽌 ?묎렐 沅뚰븳 ?댁젣 ?щ?瑜??곗꽑 ?뺤씤?섏꽭??',
           icon: <WarningIcon fontSize="small" />,
         }
       : {
@@ -317,7 +334,7 @@ export default function Dashboard() {
           title: 'Critical accounts',
           status: 'Clear',
           meta: 'Risk analysis',
-          description: '현재 CRITICAL 위험 계정은 감지되지 않았습니다.',
+          description: '?꾩옱 CRITICAL ?꾪뿕 怨꾩젙? 媛먯??섏? ?딆븯?듬땲??',
           icon: <CheckIcon fontSize="small" />,
         },
     stats.pendingOffboardings > 0
@@ -326,7 +343,7 @@ export default function Dashboard() {
           title: 'Offboarding queue',
           status: `${stats.pendingOffboardings} active`,
           meta: 'Workflow status',
-          description: '오프보딩 관리 페이지에서 처리 상태를 확인하세요.',
+          description: '?ㅽ봽蹂대뵫 愿由??섏씠吏?먯꽌 泥섎━ ?곹깭瑜??뺤씤?섏꽭??',
           icon: <PendingIcon fontSize="small" />,
         }
       : {
@@ -334,7 +351,7 @@ export default function Dashboard() {
           title: 'Offboarding queue',
           status: 'Idle',
           meta: 'Workflow status',
-          description: '대기 중이거나 처리 중인 오프보딩 작업이 없습니다.',
+          description: '?湲?以묒씠嫄곕굹 泥섎━ 以묒씤 ?ㅽ봽蹂대뵫 ?묒뾽???놁뒿?덈떎.',
           icon: <CheckIcon fontSize="small" />,
         },
     stats.connectedSaasCount < 3
@@ -342,16 +359,16 @@ export default function Dashboard() {
           severity: 'info',
           title: 'SaaS connections',
           status: `${3 - stats.connectedSaasCount} left`,
-          meta: 'Slack · GitHub · Notion',
-          description: '연결 관리에서 각 SaaS 연동 상태를 확인하세요.',
+          meta: 'Slack 쨌 GitHub 쨌 Notion',
+          description: '?곌껐 愿由ъ뿉??媛?SaaS ?곕룞 ?곹깭瑜??뺤씤?섏꽭??',
           icon: <CloudIcon fontSize="small" />,
         }
       : {
           severity: 'success',
           title: 'SaaS connections',
           status: 'Complete',
-          meta: 'Slack · GitHub · Notion',
-          description: '지원 플랫폼 3개가 모두 연결된 상태입니다.',
+          meta: 'Slack 쨌 GitHub 쨌 Notion',
+          description: '吏???뚮옯??3媛쒓? 紐⑤몢 ?곌껐???곹깭?낅땲??',
           icon: <CloudIcon fontSize="small" />,
         },
   ];
@@ -363,10 +380,10 @@ export default function Dashboard() {
           <Stack spacing={3}>
             <Box>
               <Typography variant="h4" fontWeight="bold" gutterBottom>
-                대시보드
+                ??쒕낫??
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
+                吏곸썝 ?묎렐 沅뚰븳, SaaS ?곌껐, ?ㅽ봽蹂대뵫 ?꾪뿕 吏?쒕? ?쒕늿???뺤씤?⑸땲??
               </Typography>
             </Box>
 
@@ -377,7 +394,7 @@ export default function Dashboard() {
             >
               <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
-                  title="전체 직원"
+                  title="?꾩껜 吏곸썝"
                   value={stats.totalEmployees}
                   icon={<PeopleIcon />}
                   color="#4d63e6"
@@ -412,7 +429,7 @@ export default function Dashboard() {
               </Grid>
               <Grid item xs={12} sm={6} md={4} lg={2}>
                 <StatCard
-                  title="연결 SaaS"
+                  title="?곌껐 SaaS"
                   value={stats.connectedSaasCount}
                   icon={<CloudIcon />}
                   color="#3f8cd6"
@@ -454,7 +471,7 @@ export default function Dashboard() {
               sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
             >
               <Grid item xs={12} md={6}>
-                <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
+                <ChartCard title="吏곸썝 ?곹깭 鍮꾩쑉" subtitle={`?ъ쭅 ${activeRate}% 쨌 ?댁궗 ${resignedRate}%`}>
                   {employeeStatusData.length > 0 ? (
                     <ResponsiveContainer>
                       <PieChart>
@@ -479,14 +496,14 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   ) : (
                     <Box height="100%" display="flex" alignItems="center" justifyContent="center">
-                      <Typography color="text.secondary">직원 데이터가 없습니다</Typography>
+                      <Typography color="text.secondary">吏곸썝 ?곗씠?곌? ?놁뒿?덈떎</Typography>
                     </Box>
                   )}
                 </ChartCard>
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <ChartCard title="SaaS 연결 현황" subtitle={`${stats.connectedSaasCount}/3개 플랫폼 연결`}>
+                <ChartCard title="SaaS ?곌껐 ?꾪솴" subtitle={`${stats.connectedSaasCount}/3媛??뚮옯???곌껐`}>
                   <ResponsiveContainer>
                     <RadialBarChart
                       cx="50%"
@@ -505,7 +522,7 @@ export default function Dashboard() {
                         {saasRate}%
                       </text>
                       <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#607d8b">
-                        연결률
+                        ?곌껐瑜?
                       </text>
                     </RadialBarChart>
                   </ResponsiveContainer>
@@ -513,7 +530,7 @@ export default function Dashboard() {
               </Grid>
 
               <Grid item xs={12} md={5}>
-                <ChartCard title="조치 필요 항목" subtitle={`${openActionCount}개 항목 확인 필요`}>
+                <ChartCard title="議곗튂 ?꾩슂 ??ぉ" subtitle={`${openActionCount}媛???ぉ ?뺤씤 ?꾩슂`}>
                   <ResponsiveContainer>
                     <BarChart data={actionData} margin={{ top: 16, right: 12, left: -20, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -531,7 +548,7 @@ export default function Dashboard() {
               </Grid>
 
               <Grid item xs={12} md={7}>
-                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다">
+                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다.">
                   <ResponsiveContainer>
                     <BarChart data={overviewData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />

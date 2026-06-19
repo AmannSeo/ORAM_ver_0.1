@@ -2,7 +2,9 @@ package com.oram.service;
 
 import com.oram.dto.EmployeeDto;
 import com.oram.entity.Employee;
+import com.oram.entity.SaasIdentity;
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasType;
 import com.oram.repository.EmployeeRepository;
 import com.oram.repository.OffboardingResultRepository;
 import com.oram.repository.PermissionRecordRepository;
@@ -44,11 +46,11 @@ public class EmployeeService {
     private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
-    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, String query, int page, int size) {
+    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, SaasType saasType, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         String normalizedDepartment = normalizeFilter(department);
         String normalizedQuery = normalizeFilter(query);
-        Page<Employee> result = employeeRepository.findAll(buildEmployeeSearchSpec(status, normalizedDepartment, normalizedQuery), pageable);
+        Page<Employee> result = employeeRepository.findAll(buildEmployeeSearchSpec(status, normalizedDepartment, saasType, normalizedQuery), pageable);
 
         return EmployeeDto.PageResponse.builder()
                 .content(result.getContent().stream().map(this::toResponse).toList())
@@ -116,7 +118,7 @@ public class EmployeeService {
         return value.trim();
     }
 
-    private Specification<Employee> buildEmployeeSearchSpec(EmployeeStatus status, String department, String query) {
+    private Specification<Employee> buildEmployeeSearchSpec(EmployeeStatus status, String department, SaasType saasType, String query) {
         return (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -126,6 +128,19 @@ public class EmployeeService {
 
             if (department != null) {
                 predicates.add(cb.like(cb.lower(root.get("department")), "%" + department.toLowerCase() + "%"));
+            }
+
+            if (saasType != null) {
+                List<UUID> employeeIds = saasIdentityRepository.findBySaasTypeOrderByUpdatedAtDesc(saasType).stream()
+                        .map(SaasIdentity::getEmployee)
+                        .filter(employee -> employee != null && employee.getId() != null)
+                        .map(Employee::getId)
+                        .distinct()
+                        .toList();
+
+                predicates.add(employeeIds.isEmpty()
+                        ? cb.disjunction()
+                        : root.get("id").in(employeeIds));
             }
 
             if (query != null) {
