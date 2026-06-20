@@ -14,6 +14,8 @@ import {
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
   Link as ConnectIcon, OpenInNew as OpenIcon,
   PeopleAlt as PeopleIcon,
+  NotificationsActive as AlertIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import type { SaasConnection, SaasIdentity, SaasType } from '../types';
@@ -100,6 +102,16 @@ const DEFAULT_CONNECTIONS: SaasConnection[] = (Object.keys(SAAS_INFO) as SaasTyp
   saasType,
   isConnected: false,
 }));
+
+function formatDateTime(value?: string) {
+  if (!value) return '아직 없음';
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function SaasConnections() {
   const [connections, setConnections] = useState<SaasConnection[]>([]);
@@ -306,6 +318,18 @@ export default function SaasConnections() {
                       <Typography variant="caption" color="text.secondary" display="block">
                         수집 계정: {conn.identityCount ?? 0}명
                       </Typography>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
+                        <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                          마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
+                        <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
+                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'}>
+                          열린 알림: {conn.openAlertCount ?? 0}건
+                        </Typography>
+                      </Stack>
                       <Typography variant="caption" color="text.secondary" display="block">
                         동기화 시 비활성/누락 계정은 대시보드 알림으로 표시됩니다.
                       </Typography>

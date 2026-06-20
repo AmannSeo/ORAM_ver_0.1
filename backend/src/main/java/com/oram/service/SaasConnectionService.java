@@ -64,11 +64,15 @@ public class SaasConnectionService {
                             .connectedAt(c.getConnectedAt())
                             .connectedBy(c.getConnectedBy() != null ? c.getConnectedBy().getEmail() : null)
                             .identityCount(saasIdentityRepository.countBySaasType(type))
+                            .lastSyncedAt(saasIdentityRepository.findLatestSyncedAtBySaasType(type))
+                            .openAlertCount(saasSyncAlertRepository.countBySaasTypeAndStatus(type, SaasSyncAlertStatus.OPEN))
                             .build()
                     ).orElse(SaasConnectionDto.Response.builder()
                             .saasType(type)
                             .isConnected(false)
                             .identityCount(saasIdentityRepository.countBySaasType(type))
+                            .lastSyncedAt(saasIdentityRepository.findLatestSyncedAtBySaasType(type))
+                            .openAlertCount(saasSyncAlertRepository.countBySaasTypeAndStatus(type, SaasSyncAlertStatus.OPEN))
                             .build());
                 })
                 .toList();

@@ -26,6 +26,8 @@ public class SaasConnectionDto {
         private LocalDateTime connectedAt;
         private String connectedBy;
         private long identityCount;
+        private LocalDateTime lastSyncedAt;
+        private long openAlertCount;
     }
 
     @Data

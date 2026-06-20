@@ -98,6 +98,8 @@ export interface SaasConnection {
   connectedAt?: string;
   connectedBy?: string;
   identityCount?: number;
+  lastSyncedAt?: string;
+  openAlertCount?: number;
 }
 
 export interface SaasSyncUsersResponse {
