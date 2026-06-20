@@ -100,6 +100,16 @@ export interface SaasConnection {
   identityCount?: number;
 }
 
+export interface SaasSyncUsersResponse {
+  message: string;
+  syncedCount: number;
+  totalFound: number;
+  missingCount: number;
+  inactiveCount: number;
+  resolvedAlertCount: number;
+  warnings: string[];
+}
+
 export interface SaasIdentity {
   id: string;
   saasType: SaasType;

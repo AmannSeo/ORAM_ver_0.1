@@ -48,7 +48,7 @@ const STATUS_LABEL: Record<string, string> = {
 function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 비활성 계정 감지';
-  if (trigger.includes('SYNC_MISSING_ACCOUNT')) return 'SaaS 계정 이탈 감지';
+  if (trigger.includes('SYNC_MISSING_ACCOUNT')) return 'SaaS 계정 누락 감지';
   if (trigger === 'MANUAL_TRIGGER') return '관리자 수동 요청';
   return trigger;
 }
@@ -70,7 +70,6 @@ export default function Offboarding() {
     () => results.filter((result) => result.analysisSource === 'AUTOMATIC').length,
     [results],
   );
-
   const manualCount = results.length - autoCount;
 
   if (loading) return <LinearProgress />;
@@ -86,7 +85,7 @@ export default function Offboarding() {
             SaaS 동기화와 퇴사 이벤트에서 자동 생성된 AI 리스크 분석 결과를 확인합니다.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <Chip icon={<AutoIcon />} label={`자동 분석 ${autoCount}건`} color="primary" variant="outlined" />
           <Chip label={`전체 ${results.length}건`} variant="outlined" />
         </Stack>
@@ -98,7 +97,7 @@ export default function Offboarding() {
             icon={<CheckIcon color="success" />}
             title="자동 분석 파이프라인"
             value="활성"
-            description="SaaS 동기화에서 비활성 또는 이탈 계정이 감지되면 자동으로 AI 분석 결과가 생성됩니다."
+            description="SaaS 동기화에서 비활성 또는 누락 계정이 감지되면 자동으로 AI 분석 결과가 생성됩니다."
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -106,7 +105,7 @@ export default function Offboarding() {
             icon={<SyncIcon color="primary" />}
             title="감지 방식"
             value="주기 동기화"
-            description="GitHub, Slack, Notion 계정 목록을 다시 조회해 이전 상태와 비교합니다."
+            description="GitHub, Slack, Notion 계정 목록을 다시 조회하고 이전 상태와 비교합니다."
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -114,7 +113,7 @@ export default function Offboarding() {
             icon={<AutoIcon color="primary" />}
             title="분석 결과"
             value={`${autoCount} 자동 / ${manualCount} 수동`}
-            description="자동 분석이 발생하면 아래 표에 감지 사유와 분석 엔진이 함께 표시됩니다."
+            description="분석 목록에서 자동 감지 사유와 권한 회수 여부를 함께 확인할 수 있습니다."
           />
         </Grid>
       </Grid>
@@ -139,7 +138,7 @@ export default function Offboarding() {
             {results.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                  아직 자동 분석 결과가 없습니다. SaaS 동기화에서 비활성 또는 이탈 계정이 감지되면 이곳에 표시됩니다.
+                  아직 분석 결과가 없습니다. SaaS 동기화에서 비활성 또는 누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
             )}

@@ -254,6 +254,28 @@ function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
   );
 }
 
+function saasAlertReasonLabel(reason: string) {
+  switch (reason) {
+    case 'MISSING_FROM_LATEST_SYNC':
+      return '계정 누락 감지';
+    case 'INACTIVE_FROM_LATEST_SYNC':
+      return '비활성 계정 감지';
+    default:
+      return 'SaaS 계정 점검';
+  }
+}
+
+function saasAlertDescription(alert: SaasSyncAlert) {
+  const account = alert.displayName || alert.externalUsername || alert.externalEmail || '계정';
+  if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
+    return `${account}이 최근 ${alert.saasType} 동기화에서 비활성 상태로 반환됐습니다. ORAM이 퇴사/점검 대상으로 표시하고 자동 분석을 생성했습니다.`;
+  }
+  if (alert.reason === 'MISSING_FROM_LATEST_SYNC') {
+    return `${account}이 이전에는 존재했지만 최근 ${alert.saasType} 동기화 결과에서 사라졌습니다. 퇴사 또는 권한 변경 여부를 확인하세요.`;
+  }
+  return alert.detail || `${account}의 SaaS 계정 상태 확인이 필요합니다.`;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [saasAlerts, setSaasAlerts] = useState<SaasSyncAlert[]>([]);
@@ -318,6 +340,7 @@ export default function Dashboard() {
   const actionData = [
     { name: '최고 위험', value: stats.criticalRiskCount, fill: '#d32f2f' },
     { name: '진행 중', value: stats.pendingOffboardings, fill: '#ed6c02' },
+    { name: 'SaaS 알림', value: stats.openSaasSyncAlerts || 0, fill: '#7b1fa2' },
   ];
 
   const overviewData = [
@@ -328,11 +351,11 @@ export default function Dashboard() {
   ];
 
   const saasAlertLogs: ActivityLogItem[] = saasAlerts.map(alert => ({
-    severity: 'warning',
-    title: `${alert.saasType} 계정 이탈 감지`,
+    severity: alert.reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning',
+    title: `${alert.saasType} ${saasAlertReasonLabel(alert.reason)}`,
     status: '확인 필요',
     meta: alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '미매핑 계정',
-    description: `${alert.displayName || alert.externalUsername || alert.externalEmail || '계정'}이 최근 ${alert.saasType} 동기화 결과에서 사라졌습니다. 퇴사 또는 권한 변경 여부를 확인하세요.`,
+    description: saasAlertDescription(alert),
     icon: <WarningIcon fontSize="small" />,
   }));
 

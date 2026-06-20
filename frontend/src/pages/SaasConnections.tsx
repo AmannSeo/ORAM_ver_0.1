@@ -179,9 +179,15 @@ export default function SaasConnections() {
     setError(null);
     try {
       const result = await saasApi.syncUsers(saasType);
-      const warningText = result.warnings?.length ? ` (${result.warnings.join(' / ')})` : '';
-      const missingText = result.missingCount ? `, 이탈 감지 ${result.missingCount}명` : '';
-      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: 확인 ${result.totalFound}명, 신규 ${result.syncedCount}명${missingText}${warningText}`);
+      const details = [
+        `확인 ${result.totalFound}명`,
+        `신규 ${result.syncedCount}명`,
+        result.inactiveCount ? `비활성 ${result.inactiveCount}명` : null,
+        result.missingCount ? `누락 ${result.missingCount}명` : null,
+        result.resolvedAlertCount ? `해제 알림 ${result.resolvedAlertCount}건` : null,
+      ].filter(Boolean).join(', ');
+      const warningText = result.warnings?.length ? `\n확인 필요: ${result.warnings.join(' / ')}` : '';
+      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: ${details}${warningText}`);
       load();
     } catch (err: any) {
       const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';
@@ -299,6 +305,9 @@ export default function SaasConnections() {
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block">
                         수집 계정: {conn.identityCount ?? 0}명
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        동기화 시 비활성/누락 계정은 대시보드 알림으로 표시됩니다.
                       </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
