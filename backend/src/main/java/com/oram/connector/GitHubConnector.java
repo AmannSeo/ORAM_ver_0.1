@@ -183,8 +183,10 @@ public class GitHubConnector implements SaaSConnector {
             int status = deleteRepoCollaborator(parts[0], parts[1], login, accessToken);
             if (status == 204) {
                 revokedResources.add("Repository collaborator: " + fullName);
-            } else if (status == 403) {
-                blockedResources.add("Repository permission denied: " + fullName);
+            } else if (status == 404) {
+                blockedResources.add("Repository collaborator not found or not visible: " + fullName);
+            } else if (status != 204) {
+                blockedResources.add("Repository " + fullName + " remove failed: " + githubStatusReason(status));
             }
         }
 
@@ -195,15 +197,17 @@ public class GitHubConnector implements SaaSConnector {
             int status = deleteOrgMember(orgLogin, login, accessToken);
             if (status == 204) {
                 revokedResources.add("Organization member: " + orgLogin);
-            } else if (status == 403) {
-                blockedResources.add("Organization permission denied: " + orgLogin);
+            } else if (status == 404) {
+                blockedResources.add("Organization member not found or not visible: " + orgLogin);
+            } else if (status != 204) {
+                blockedResources.add("Organization " + orgLogin + " remove failed: " + githubStatusReason(status));
             }
         }
 
         if (revokedResources.isEmpty()) {
             String message = blockedResources.isEmpty()
                     ? "No removable GitHub access found. Access may be inherited through a team/org role, or the token cannot see that account."
-                    : "GitHub access was found, but the token does not have permission to remove it.";
+                    : "GitHub revoke could not complete. Check token scopes, organization role, and whether the target account is still visible to the token.";
             return new RevokeResult(false, message, blockedResources);
         }
 
@@ -535,6 +539,16 @@ public class GitHubConnector implements SaaSConnector {
                 .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
                 .exchangeToMono(response -> Mono.just(response.statusCode().value()))
                 .block();
+    }
+
+    private String githubStatusReason(int status) {
+        return switch (status) {
+            case 401 -> "401 Unauthorized - token is invalid or expired";
+            case 403 -> "403 Forbidden - token lacks admin permission or required scope";
+            case 404 -> "404 Not Found - account/resource is not visible to the token or already removed";
+            case 422 -> "422 Unprocessable Entity - GitHub rejected the removal request";
+            default -> status + " response from GitHub API";
+        };
     }
 
     private String authHeader(String accessToken) {

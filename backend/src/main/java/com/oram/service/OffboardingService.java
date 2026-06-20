@@ -230,8 +230,8 @@ public class OffboardingService {
 
         return OffboardingDto.RevokeResponse.builder()
                 .message(revokedAnyAccess
-                        ? "Access revoked successfully."
-                        : "No access was revoked. Check connector permissions and SaaS account mapping.")
+                        ? "권한 회수 요청이 완료되었습니다."
+                        : "자동으로 회수된 권한이 없습니다. SaaS 토큰 권한과 계정 매핑 상태를 확인하세요.")
                 .revokedAt(LocalDateTime.now())
                 .revokedSaas(revokedSaas)
                 .items(items)
@@ -301,8 +301,8 @@ public class OffboardingService {
                     .canRevoke(false)
                     .accountMatched(false)
                     .resourceCount(resourceCount)
-                    .action("No matched SaaS identity")
-                    .reason("No mapped " + saasType + " account exists for this employee. Run SaaS sync first.")
+                    .action("매핑 계정 없음")
+                    .reason("이 직원과 매핑된 " + saasType + " 계정이 없습니다. SaaS 동기화를 먼저 실행하세요.")
                     .build();
         }
 
@@ -313,14 +313,14 @@ public class OffboardingService {
                     .canRevoke(false)
                     .accountMatched(true)
                     .resourceCount(resourceCount)
-                    .action("Manual removal required")
-                    .reason("Notion public API does not provide full workspace member removal for this flow.")
+                    .action("수동 제거 필요")
+                    .reason("Notion 공개 API는 이 흐름에서 워크스페이스 멤버 제거를 제공하지 않습니다.")
                     .build();
         }
 
         String reason = saasType == SaasType.SLACK
-                ? "Slack revocation needs an Enterprise Grid token with admin.users:write."
-                : "GitHub revocation will attempt collaborator or organization member removal with the configured token.";
+                ? "Slack 자동 제거는 Enterprise Grid와 admin.users:write 권한이 있는 사용자 토큰에서만 성공할 수 있습니다."
+                : "GitHub 토큰 권한으로 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.";
 
         return OffboardingDto.RevokePlanItem.builder()
                 .saasType(saasType)
@@ -328,7 +328,7 @@ public class OffboardingService {
                 .canRevoke(true)
                 .accountMatched(true)
                 .resourceCount(resourceCount)
-                .action("Automated revoke attempt")
+                .action("자동 회수 시도")
                 .reason(reason)
                 .build();
     }
@@ -340,7 +340,7 @@ public class OffboardingService {
                 .canRevoke(revokeResult.success())
                 .accountMatched(true)
                 .resourceCount(revokeResult.revokedResources() != null ? revokeResult.revokedResources().size() : 0)
-                .action(revokeResult.success() ? "Revoked" : "Revoke failed")
+                .action(revokeResult.success() ? "회수 완료" : "회수 실패")
                 .reason(revokeResult.message())
                 .resources(revokeResult.revokedResources())
                 .build();
