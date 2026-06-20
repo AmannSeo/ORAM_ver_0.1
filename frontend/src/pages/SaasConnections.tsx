@@ -162,10 +162,12 @@ export default function SaasConnections() {
     } catch (err: any) {
       const status = err?.response?.status;
       const serverMessage = err?.response?.data?.error;
+      const serverEmail = err?.response?.data?.email;
+      const serverRole = err?.response?.data?.role;
       const msg = status === 401
         ? '로그인 세션이 만료되었습니다. 다시 로그인한 뒤 연결하세요.'
         : status === 403
-          ? '관리자 또는 보안 담당자 계정만 SaaS를 연결할 수 있습니다. 현재 로그인 계정의 권한을 확인하세요.'
+          ? `관리자 또는 보안 담당자 계정만 SaaS를 연결할 수 있습니다. 서버 인식: ${serverEmail || '확인 불가'} / ${serverRole || '확인 불가'}`
           : serverMessage || '토큰 연결에 실패했습니다. 토큰 값과 GitHub 권한(scope)을 확인하세요.';
       setError(msg);
     } finally {
