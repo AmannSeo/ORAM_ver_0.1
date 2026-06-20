@@ -37,10 +37,12 @@ import {
 import {
   Add as AddIcon,
   BarChart as AnalyzeIcon,
+  Cloud as CloudIcon,
   Delete as DeleteIcon,
   DeleteSweep as DeleteAllIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
+  People as PeopleIcon,
   PersonOff as ResignIcon,
   Search as SearchIcon,
   Upload as UploadIcon,
@@ -58,27 +60,36 @@ const SAAS_BADGE: Record<SaasType, { short: string; label: string; color: string
 
 const AVATAR_COLORS = ['#2563eb', '#059669', '#475569', '#d97706'];
 
+const compactButtonSx = {
+  minWidth: 'auto',
+  height: 32,
+  px: 1.25,
+  borderRadius: 1.5,
+  fontSize: 12,
+  fontWeight: 800,
+  whiteSpace: 'nowrap',
+  '& .MuiButton-startIcon': { mr: 0.5 },
+};
+
+function getRoleLabel(employee: Employee) {
+  const department = (employee.department || '').toLowerCase();
+  if (department.includes('보안') || department.includes('security')) return '보안 분석가';
+  if (department.includes('infra') || department.includes('sre') || department.includes('인프라')) return 'SRE';
+  if (department.includes('개발') || department.includes('engineering')) return '개발자';
+  if (department.includes('data') || department.includes('데이터')) return '데이터 분석가';
+  if (department.includes('product') || department.includes('프로덕트')) return '프로덕트 매니저';
+  return 'Employee';
+}
+
+function isPriorityTarget(employee: Employee) {
+  const saasCount = employee.connectedSaas?.length ?? 0;
+  return (employee.status === 'RESIGNED' && saasCount > 0) || (employee.status === 'ACTIVE' && saasCount >= 3);
+}
+
 function renderSaasTooltip(account: EmployeeSaasAccount) {
   const meta = SAAS_BADGE[account.saasType];
   const status = account.accessRevoked ? '회수됨' : account.status === 'RESIGNED' ? '비활성' : '활성';
   return `${meta.label} / ${account.displayName || account.externalUsername || account.externalEmail || '-'} / ${status}`;
-}
-
-function roleLabel(employee: Employee) {
-  const department = (employee.department || '').toLowerCase();
-  if (department.includes('보안') || department.includes('security')) return '보안 분석가';
-  if (department.includes('인프라') || department.includes('infra') || department.includes('sre')) return 'SRE';
-  if (department.includes('플랫폼') || department.includes('개발') || department.includes('engineering')) {
-    return employee.connectedSaas?.some((account) => account.saasType === 'GITHUB') ? '개발자' : '엔지니어';
-  }
-  if (department.includes('데이터') || department.includes('data')) return '데이터 분석가';
-  if (department.includes('프로덕트') || department.includes('product')) return '프로덕트 매니저';
-  return 'Employee';
-}
-
-function priorityTarget(employee: Employee) {
-  const saasCount = employee.connectedSaas?.length ?? 0;
-  return (employee.status === 'RESIGNED' && saasCount > 0) || (employee.status === 'ACTIVE' && saasCount >= 3);
 }
 
 export default function Employees() {
@@ -102,8 +113,18 @@ export default function Employees() {
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState<Employee | null>(null);
-  const [newEmployee, setNewEmployee] = useState({ employeeId: '', name: '', email: '', department: '', status: 'ACTIVE' as EmployeeStatus });
-  const [editEmployee, setEditEmployee] = useState({ name: '', department: '', status: 'ACTIVE' as EmployeeStatus });
+  const [newEmployee, setNewEmployee] = useState({
+    employeeId: '',
+    name: '',
+    email: '',
+    department: '',
+    status: 'ACTIVE' as EmployeeStatus,
+  });
+  const [editEmployee, setEditEmployee] = useState({
+    name: '',
+    department: '',
+    status: 'ACTIVE' as EmployeeStatus,
+  });
   const [csvDialog, setCsvDialog] = useState(false);
   const [csvResult, setCsvResult] = useState<{
     importedCount: number;
@@ -119,7 +140,7 @@ export default function Employees() {
   const activeCount = useMemo(() => employees.filter((employee) => employee.status === 'ACTIVE').length, [employees]);
   const resignedCount = useMemo(() => employees.filter((employee) => employee.status === 'RESIGNED').length, [employees]);
   const saasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
-  const highAttentionCount = useMemo(() => employees.filter(priorityTarget).length, [employees]);
+  const priorityCount = useMemo(() => employees.filter(isPriorityTarget).length, [employees]);
 
   const load = () => {
     setLoading(true);
@@ -251,41 +272,40 @@ export default function Employees() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1440, mx: 'auto' }}>
-      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" gap={2} mb={3}>
+    <Box sx={{ width: '100%' }}>
+      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" gap={2} mb={2.5}>
         <Box>
-          <Typography variant="h4" fontWeight={900}>
+          <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', letterSpacing: 0 }}>
             직원 권한 관리
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography variant="body2" color="#64748b" mt={0.75}>
             직원별 SaaS 계정, 접근 상태, 오프보딩 조치를 한 화면에서 관리합니다.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" color="error" startIcon={<DeleteAllIcon />} onClick={() => setDeleteAllDialog(true)} disabled={totalElements === 0}>
-            전체 삭제
-          </Button>
-          <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => { setCsvResult(null); setCsvDialog(true); }}>
-            CSV 가져오기
-          </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddDialog(true)}>
-            직원 등록
-          </Button>
-        </Stack>
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<DeleteAllIcon />}
+          onClick={() => setDeleteAllDialog(true)}
+          disabled={totalElements === 0}
+          sx={{ alignSelf: { xs: 'stretch', lg: 'center' }, borderRadius: 2, bgcolor: 'white', whiteSpace: 'nowrap' }}
+        >
+          전체 삭제
+        </Button>
       </Stack>
 
-      <Stack direction="row" spacing={1} mb={3}>
-        <Button variant={tab === 'employees' ? 'contained' : 'outlined'} onClick={() => setTab('employees')}>직원 목록</Button>
-        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')}>HR 연동</Button>
+      <Stack direction="row" spacing={1} mb={2.5}>
+        <Button variant={tab === 'employees' ? 'contained' : 'outlined'} onClick={() => setTab('employees')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>직원 목록</Button>
+        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
       </Stack>
 
       {tab === 'employees' && (
         <>
           <Grid container spacing={2} mb={2.5}>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="재직자" value={activeCount} sub="활성 계정 보유" color="#2563eb" bg="#eff6ff" accent="#3b82f6" /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="퇴사자" value={resignedCount} sub="오프보딩 대상" color="#475569" bg="#f1f5f9" accent="#94a3b8" /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="SaaS 연결 직원" value={saasLinkedCount} sub="1개 이상 연동" color="#059669" bg="#ecfdf5" accent="#10b981" /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="우선 점검 대상" value={highAttentionCount} sub="즉시 조치 필요" color="#dc2626" bg="#fef2f2" accent="#ef4444" /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="재직자" value={activeCount} sub="활성 계정 보유" color="#2563eb" bg="#eff6ff" accent="#3b82f6" icon={<PeopleIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="퇴사자" value={resignedCount} sub="오프보딩 대상" color="#475569" bg="#f1f5f9" accent="#94a3b8" icon={<ResignIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="SaaS 연결 직원" value={saasLinkedCount} sub="1개 이상 연동" color="#059669" bg="#ecfdf5" accent="#10b981" icon={<CloudIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="우선 점검 대상" value={priorityCount} sub="즉시 조치 필요" color="#dc2626" bg="#fef2f2" accent="#ef4444" icon={<PriorityIcon fontSize="small" />} /></Grid>
           </Grid>
 
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
@@ -324,7 +344,7 @@ export default function Employees() {
       )}
 
       {tab === 'hr' && (
-        <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Paper elevation={0} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white' }}>
           <Typography variant="h6" fontWeight={900} gutterBottom>HR 이벤트 연동</Typography>
           <Typography color="text.secondary" mb={2}>
             HR 시스템에서 퇴사 이벤트를 ORAM Webhook으로 보내면 오프보딩 분석이 자동으로 시작됩니다.
@@ -337,7 +357,7 @@ export default function Employees() {
               X-ORAM-Webhook-Secret: oram-webhook-secret-poc
             </Typography>
           </Box>
-          <Alert severity="success">현재 PoC에서는 Webhook 엔드포인트가 활성화되어 있습니다.</Alert>
+          <Alert severity="success">현재 PoC에서 Webhook 엔드포인트가 활성화되어 있습니다.</Alert>
         </Paper>
       )}
 
@@ -375,20 +395,43 @@ export default function Employees() {
   );
 }
 
-function MetricCard({ label, value, sub, color, bg, accent }: { label: string; value: number; sub: string; color: string; bg: string; accent: string }) {
+function MetricCard({ label, value, sub, color, bg, accent, icon }: {
+  label: string;
+  value: number;
+  sub: string;
+  color: string;
+  bg: string;
+  accent: string;
+  icon: ReactNode;
+}) {
   return (
-    <Card elevation={0} sx={{ position: 'relative', overflow: 'hidden', border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'white', '&:before': { content: '""', position: 'absolute', left: 0, top: 0, width: 4, height: '100%', bgcolor: accent } }}>
-      <CardContent>
+    <Card
+      elevation={0}
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid #e2e8f0',
+        borderRadius: 3,
+        bgcolor: 'white',
+        minHeight: 148,
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+        transition: 'transform 160ms ease, box-shadow 160ms ease',
+        '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 14px 28px rgba(15, 23, 42, 0.08)' },
+        '&:before': { content: '""', position: 'absolute', left: 0, top: 0, width: 4, height: '100%', bgcolor: accent },
+      }}
+    >
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={700}>{label}</Typography>
-            <Typography variant="h4" fontWeight={900} color="text.primary" mt={1}>{value}<Typography component="span" ml={0.5} color="text.secondary" fontSize={16}>명</Typography></Typography>
+            <Typography variant="body2" color="#64748b" fontWeight={800}>{label}</Typography>
+            <Typography variant="h4" fontWeight={900} color="#0f172a" mt={1}>
+              {value}
+              <Typography component="span" ml={0.5} color="#94a3b8" fontSize={16}>명</Typography>
+            </Typography>
           </Box>
-          <Box sx={{ width: 42, height: 42, borderRadius: 2, bgcolor: bg, color, display: 'grid', placeItems: 'center' }}>
-            <PriorityIcon fontSize="small" />
-          </Box>
+          <Box sx={{ width: 42, height: 42, borderRadius: 2, bgcolor: bg, color, display: 'grid', placeItems: 'center' }}>{icon}</Box>
         </Stack>
-        <Typography variant="caption" color="text.secondary" mt={1.5} display="block">{sub}</Typography>
+        <Typography variant="caption" color="#94a3b8" mt={1.5} display="block">{sub}</Typography>
       </CardContent>
     </Card>
   );
@@ -409,9 +452,9 @@ function FilterPanel(props: {
   setPage: (value: number) => void;
 }) {
   return (
-    <Paper elevation={0} sx={{ p: 2, mb: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'white' }}>
+    <Paper elevation={0} sx={{ p: 2, mb: 2.5, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
       <Grid container spacing={1.5} alignItems="flex-end">
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} sm={6} lg={2}>
           <FormControl size="small" fullWidth>
             <InputLabel>상태</InputLabel>
             <Select value={props.filterStatus} label="상태" onChange={(e) => { props.setFilterStatus(e.target.value); props.setPage(0); }}>
@@ -421,7 +464,7 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} sm={6} lg={2}>
           <FormControl size="small" fullWidth>
             <InputLabel>SaaS</InputLabel>
             <Select value={props.filterSaas} label="SaaS" onChange={(e) => { props.setFilterSaas(e.target.value as SaasType | ''); props.setPage(0); }}>
@@ -432,19 +475,19 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} lg={3}>
           <TextField size="small" label="부서" placeholder="부서명 입력" value={props.filterDept} onChange={(e) => props.setFilterDept(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} lg={3}>
           <TextField size="small" label="직원 검색" placeholder="이름 또는 이메일" value={props.searchQuery} onChange={(e) => props.setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} md={2}>
-          <Button variant="contained" startIcon={<SearchIcon />} onClick={props.runSearch} fullWidth sx={{ height: 40 }}>검색</Button>
+        <Grid item xs={12} lg={2}>
+          <Button variant="contained" startIcon={<SearchIcon />} onClick={props.runSearch} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>검색</Button>
         </Grid>
       </Grid>
-      <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2} pt={2} borderTop="1px solid" borderColor="divider">
-        <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv}>CSV 가져오기</Button>
-        <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} sx={{ bgcolor: '#0f172a', color: 'white', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
+      <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2} pt={2} borderTop="1px solid #f1f5f9" flexWrap="wrap" useFlexGap>
+        <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
+        <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} sx={{ borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
       </Stack>
     </Paper>
   );
@@ -463,62 +506,58 @@ function EmployeeTable(props: {
   navigate: (path: string) => void;
 }) {
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden', bgcolor: 'white' }}>
-      <Table sx={{ minWidth: 980 }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
+      <Table sx={{ minWidth: 1180, tableLayout: 'fixed' }}>
         <TableHead>
-          <TableRow sx={{ bgcolor: '#f8fafc' }}>
-            <HeaderCell>ID / EMAIL</HeaderCell>
-            <HeaderCell>사번 / 상태</HeaderCell>
-            <HeaderCell>부서 / 직책</HeaderCell>
-            <HeaderCell>CONNECTED SAAS</HeaderCell>
-            <HeaderCell>계정 상태</HeaderCell>
-            <HeaderCell align="right">계정 권한 제어</HeaderCell>
+          <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <HeaderCell width="24%">ID / EMAIL</HeaderCell>
+            <HeaderCell width="14%">사번 / 상태</HeaderCell>
+            <HeaderCell width="18%">부서 / 직책</HeaderCell>
+            <HeaderCell width="15%">CONNECTED SAAS</HeaderCell>
+            <HeaderCell width="14%">계정 상태</HeaderCell>
+            <HeaderCell width="15%" align="right">권한 제어</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} align="center" sx={{ py: 6, color: 'text.secondary' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={6} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
             <TableRow key={employee.id} hover sx={{ '& td': { borderColor: '#f1f5f9' }, '&:hover': { bgcolor: '#f8fafc' } }}>
               <TableCell sx={{ py: 1.75 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Box sx={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length], color: 'white', fontWeight: 900 }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
+                  <Box sx={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length], color: 'white', fontWeight: 900, flexShrink: 0 }}>
                     {employee.name.slice(0, 1)}
                   </Box>
                   <Box minWidth={0}>
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography fontWeight={800} noWrap>{employee.name}</Typography>
-                      {priorityTarget(employee) && <PriorityIcon color="error" sx={{ fontSize: 16 }} />}
+                      <Typography fontWeight={900} noWrap>{employee.name}</Typography>
+                      {isPriorityTarget(employee) && <PriorityIcon color="error" sx={{ fontSize: 16, flexShrink: 0 }} />}
                     </Stack>
-                    <Typography variant="body2" color="text.secondary" noWrap>{employee.email}</Typography>
+                    <Typography variant="body2" color="#64748b" noWrap>{employee.email}</Typography>
                   </Box>
                 </Stack>
               </TableCell>
               <TableCell>
-                <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }}>{employee.employeeId}</Typography>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }} noWrap>{employee.employeeId}</Typography>
                 <Box mt={0.75}><StatusChip status={employee.status} /></Box>
               </TableCell>
               <TableCell>
-                <Typography fontWeight={700}>{employee.department || 'UNKNOWN'}</Typography>
-                <Typography variant="body2" color="text.secondary">{roleLabel(employee)}</Typography>
+                <Typography fontWeight={800} noWrap>{employee.department || 'UNKNOWN'}</Typography>
+                <Typography variant="body2" color="#64748b" noWrap>{getRoleLabel(employee)}</Typography>
               </TableCell>
-              <TableCell>
-                <SaaSBadges employee={employee} />
-              </TableCell>
-              <TableCell>
-                <AccountState employee={employee} />
-              </TableCell>
+              <TableCell><SaaSBadges employee={employee} /></TableCell>
+              <TableCell><AccountState employee={employee} /></TableCell>
               <TableCell align="right">
-                <Stack direction="row" spacing={0.75} justifyContent="flex-end">
-                  <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)}>수정</Button>
-                  <Button size="small" variant="outlined" startIcon={<AnalyzeIcon />} onClick={() => props.navigate('/risk-analysis')} sx={{ borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}>분석</Button>
+                <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
+                  <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>
+                  <Button size="small" variant="outlined" startIcon={<AnalyzeIcon />} onClick={() => props.navigate('/risk-analysis')} sx={{ ...compactButtonSx, borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}>분석</Button>
                   {employee.status === 'ACTIVE' ? (
-                    <Button size="small" variant="outlined" color="warning" startIcon={props.resigningEmployeeId === employee.id ? <CircularProgress size={14} /> : <ResignIcon />} onClick={() => props.openResignDialog(employee)} disabled={props.resigningEmployeeId === employee.id}>퇴사 처리</Button>
+                    <Button size="small" variant="outlined" color="warning" startIcon={props.resigningEmployeeId === employee.id ? <CircularProgress size={14} /> : <ResignIcon />} onClick={() => props.openResignDialog(employee)} disabled={props.resigningEmployeeId === employee.id} sx={compactButtonSx}>퇴사</Button>
                   ) : (
-                    <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)}>삭제</Button>
+                    <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)} sx={compactButtonSx}>삭제</Button>
                   )}
                 </Stack>
               </TableCell>
@@ -531,9 +570,9 @@ function EmployeeTable(props: {
   );
 }
 
-function HeaderCell({ children, align }: { children: ReactNode; align?: 'left' | 'center' | 'right' }) {
+function HeaderCell({ children, align, width }: { children: ReactNode; align?: 'left' | 'center' | 'right'; width?: string }) {
   return (
-    <TableCell align={align} sx={{ color: '#64748b', fontWeight: 900, letterSpacing: 0.6, fontSize: 12, textTransform: 'uppercase' }}>
+    <TableCell align={align} sx={{ width, color: '#64748b', fontWeight: 900, letterSpacing: 0.6, fontSize: 12, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
       {children}
     </TableCell>
   );
@@ -541,7 +580,7 @@ function HeaderCell({ children, align }: { children: ReactNode; align?: 'left' |
 
 function SaaSBadges({ employee }: { employee: Employee }) {
   if (!employee.connectedSaas || employee.connectedSaas.length === 0) {
-    return <Typography variant="caption" color="text.secondary">연동 없음</Typography>;
+    return <Typography variant="caption" color="#94a3b8">연동 없음</Typography>;
   }
   return (
     <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
@@ -576,15 +615,15 @@ function AccountState({ employee }: { employee: Employee }) {
   if (employee.status === 'RESIGNED') {
     return (
       <Box>
-        <Typography variant="body2" fontWeight={800} color="error.main">접근 차단 필요</Typography>
-        <Typography variant="caption" color="text.secondary">{count}개 계정 활성</Typography>
+        <Typography variant="body2" fontWeight={900} color="error.main" noWrap>접근 차단 필요</Typography>
+        <Typography variant="caption" color="#94a3b8" noWrap>{count}개 계정 활성</Typography>
       </Box>
     );
   }
   return (
     <Box>
-      <Typography variant="body2" fontWeight={800} color="text.primary">정상</Typography>
-      <Typography variant="caption" color="text.secondary">{count}개 계정 연동</Typography>
+      <Typography variant="body2" fontWeight={900} color="#0f172a" noWrap>정상</Typography>
+      <Typography variant="caption" color="#94a3b8" noWrap>{count}개 계정 연동</Typography>
     </Box>
   );
 }

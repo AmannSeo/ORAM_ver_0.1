@@ -12,7 +12,7 @@ export default function StatusChip({ status }: Props) {
       color={status === 'ACTIVE' ? 'success' : 'default'}
       size="small"
       variant={status === 'ACTIVE' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700 }}
+      sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}
     />
   );
 }

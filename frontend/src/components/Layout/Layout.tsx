@@ -45,7 +45,7 @@ const NAV_ITEMS = [
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '관리자',
-  SECURITY_MANAGER: '보안 담당자',
+  SECURITY_MANAGER: '보안 관리자',
   AUDITOR: '감사자',
 };
 
@@ -93,7 +93,7 @@ export default function Layout() {
             ORAM
           </Typography>
           <Typography variant="caption" color="#94a3b8">
-            Access Control
+            Security Offboarding
           </Typography>
         </Box>
       </Toolbar>
@@ -111,11 +111,11 @@ export default function Layout() {
                   color: selected ? '#ffffff' : '#cbd5e1',
                   '& .MuiListItemIcon-root': { color: selected ? '#ffffff' : '#94a3b8', minWidth: 38 },
                   '&.Mui-selected': {
-                    bgcolor: '#2563eb',
-                    boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
+                    bgcolor: '#1e293b',
+                    boxShadow: 'none',
                   },
-                  '&.Mui-selected:hover': { bgcolor: '#1d4ed8' },
-                  '&:hover': { bgcolor: selected ? '#1d4ed8' : 'rgba(148, 163, 184, 0.12)' },
+                  '&.Mui-selected:hover': { bgcolor: '#1e293b' },
+                  '&:hover': { bgcolor: selected ? '#1e293b' : 'rgba(148, 163, 184, 0.12)' },
                 }}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
@@ -146,9 +146,18 @@ export default function Layout() {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8fafc' }}>
-      <AppBar position="fixed" elevation={0} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#2563eb' }}>
-        <Toolbar>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f1f5f9' }}>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: '#ffffff',
+          color: '#0f172a',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 2, sm: 3 } }}>
           <IconButton
             color="inherit"
             edge="start"
@@ -157,10 +166,16 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <ShieldIcon sx={{ mr: 1 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 800 }}>
-            ORAM 퇴사자 접근 권한 관리
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ flexGrow: 1, fontWeight: 700, color: '#64748b', display: { xs: 'none', md: 'block' } }}
+          >
+            오프보딩 / <Box component="span" sx={{ color: '#334155' }}>직원 권한 관리</Box>
           </Typography>
+          <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
+            <Typography variant="subtitle2" fontWeight={900}>ORAM</Typography>
+          </Box>
           <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
               <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 800 }}>
