@@ -145,6 +145,9 @@ export interface OffboardingSummary {
   analysisEngine?: string;
   startedAt?: string;
   revokedAll: boolean;
+  falsePositive: boolean;
+  falsePositiveReason?: string;
+  falsePositiveAt?: string;
 }
 
 export interface PermissionInfo {

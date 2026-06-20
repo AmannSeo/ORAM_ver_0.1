@@ -89,6 +89,11 @@ export const offboardingApi = {
     api.get<RevokePlanResponse>(`/offboarding/${id}/revoke-plan`).then((r) => r.data),
   revokeAll: (id: string) =>
     api.post<{ message: string; revokedAt: string; revokedSaas: SaasType[]; items: RevokePlanItem[] }>(`/offboarding/${id}/revoke-all`).then((r) => r.data),
+  markFalsePositive: (id: string, reason?: string) =>
+    api.post<{ message: string; resultId: string; falsePositiveAt: string }>(
+      `/offboarding/${id}/false-positive`,
+      { reason }
+    ).then((r) => r.data),
 };
 
 export const riskApi = {

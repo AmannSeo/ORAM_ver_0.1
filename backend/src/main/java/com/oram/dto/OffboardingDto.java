@@ -30,6 +30,9 @@ public class OffboardingDto {
         private String analysisEngine;
         private LocalDateTime startedAt;
         private boolean revokedAll;
+        private boolean falsePositive;
+        private String falsePositiveReason;
+        private LocalDateTime falsePositiveAt;
     }
 
     @Data
@@ -48,6 +51,9 @@ public class OffboardingDto {
         private List<PermissionInfo> permissions;
         private List<String> recommendedActions;
         private boolean revokedAll;
+        private boolean falsePositive;
+        private String falsePositiveReason;
+        private LocalDateTime falsePositiveAt;
         private LocalDateTime startedAt;
         private LocalDateTime completedAt;
     }
@@ -90,6 +96,23 @@ public class OffboardingDto {
         private LocalDateTime revokedAt;
         private List<SaasType> revokedSaas;
         private List<RevokePlanItem> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FalsePositiveRequest {
+        private String reason;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FalsePositiveResponse {
+        private String message;
+        private UUID resultId;
+        private LocalDateTime falsePositiveAt;
     }
 
     @Data

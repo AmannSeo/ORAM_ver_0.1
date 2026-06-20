@@ -20,11 +20,13 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
   AutoAwesome as AutoIcon,
+  Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
   DeleteSweep as RevokeIcon,
   ErrorOutline as ErrorIcon,
@@ -90,8 +92,12 @@ export default function OffboardingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revokeDialog, setRevokeDialog] = useState(false);
+  const [falsePositiveDialog, setFalsePositiveDialog] = useState(false);
+  const [falsePositiveReason, setFalsePositiveReason] = useState('');
+  const [falsePositiveLoading, setFalsePositiveLoading] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [revokeSuccess, setRevokeSuccess] = useState<string | null>(null);
+  const [falsePositiveSuccess, setFalsePositiveSuccess] = useState<string | null>(null);
   const [revokeResults, setRevokeResults] = useState<RevokePlanItem[]>([]);
 
   const load = async () => {
@@ -147,6 +153,23 @@ export default function OffboardingDetailPage() {
     }
   };
 
+  const handleFalsePositive = async () => {
+    if (!resultId) return;
+    setFalsePositiveLoading(true);
+    setError(null);
+    try {
+      const res = await offboardingApi.markFalsePositive(resultId, falsePositiveReason);
+      setFalsePositiveDialog(false);
+      setFalsePositiveSuccess(res.message);
+      await load();
+    } catch {
+      setError('오탐 처리 요청에 실패했습니다.');
+      setFalsePositiveDialog(false);
+    } finally {
+      setFalsePositiveLoading(false);
+    }
+  };
+
   if (loading) return <LinearProgress />;
   if (error && !detail) return <Alert severity="error">{error}</Alert>;
   if (!detail) return null;
@@ -171,7 +194,20 @@ export default function OffboardingDetailPage() {
             잔여 SaaS 권한, 위험도 산정 근거, 권한 회수 가능 여부를 확인합니다.
           </Typography>
         </Box>
-        {!detail.revokedAll ? (
+        {detail.falsePositive && (
+          <Chip icon={<FalsePositiveIcon />} label="오탐 처리됨" color="default" />
+        )}
+        {!detail.falsePositive && !detail.revokedAll ? (
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<FalsePositiveIcon />}
+              size="large"
+              onClick={() => setFalsePositiveDialog(true)}
+            >
+              오탐 처리
+            </Button>
           <Button
             variant="contained"
             color="error"
@@ -182,12 +218,22 @@ export default function OffboardingDetailPage() {
           >
             권한 일괄 회수
           </Button>
-        ) : (
+          </Stack>
+        ) : !detail.falsePositive ? (
           <Chip icon={<CheckIcon />} label="권한 회수 완료" color="success" />
+        ) : (
+          <></>
         )}
       </Stack>
 
       {revokeSuccess && <Alert severity="success" sx={{ mb: 2 }}>{revokeSuccess}</Alert>}
+      {falsePositiveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{falsePositiveSuccess}</Alert>}
+      {detail.falsePositive && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          오탐으로 처리된 항목입니다. 권한 회수 대상과 AI 리스크 목록에서 제외됩니다.
+          {detail.falsePositiveReason ? ` 사유: ${detail.falsePositiveReason}` : ''}
+        </Alert>
+      )}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {revokeResults.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -368,6 +414,41 @@ export default function OffboardingDetailPage() {
             startIcon={revoking ? <CircularProgress size={16} color="inherit" /> : <RevokeIcon />}
           >
             {revoking ? '회수 중...' : '권한 회수 실행'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={falsePositiveDialog} onClose={() => setFalsePositiveDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>오탐 처리</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Typography>
+              <strong>{detail.employee.name}</strong> 직원의 AI 리스크 분석 결과를 오탐으로 처리합니다.
+              처리 후 권한 회수 대상과 AI 리스크 목록에서 제외되며, 감사 로그에는 기록됩니다.
+            </Typography>
+            <TextField
+              label="오탐 처리 사유"
+              value={falsePositiveReason}
+              onChange={(event) => setFalsePositiveReason(event.target.value)}
+              placeholder="예: 이미 별도 관리자 검토로 정상 권한임을 확인"
+              fullWidth
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFalsePositiveDialog(false)} disabled={falsePositiveLoading}>
+            취소
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleFalsePositive}
+            disabled={falsePositiveLoading}
+            startIcon={falsePositiveLoading ? <CircularProgress size={16} color="inherit" /> : <FalsePositiveIcon />}
+          >
+            {falsePositiveLoading ? '처리 중...' : '오탐으로 제외'}
           </Button>
         </DialogActions>
       </Dialog>

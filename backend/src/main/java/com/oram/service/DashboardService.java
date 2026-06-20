@@ -63,6 +63,7 @@ public class DashboardService {
         Map<UUID, OffboardingResult> latestByEmployee = new LinkedHashMap<>();
 
         offboardingResultRepository.findAll().stream()
+                .filter(result -> !result.isFalsePositive())
                 .sorted(Comparator.comparing(
                         OffboardingResult::getCreatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())

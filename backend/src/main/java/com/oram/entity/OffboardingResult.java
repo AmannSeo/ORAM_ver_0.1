@@ -59,6 +59,16 @@ public class OffboardingResult {
     @Builder.Default
     private boolean revokedAll = false;
 
+    @Column(name = "false_positive")
+    @Builder.Default
+    private boolean falsePositive = false;
+
+    @Column(name = "false_positive_reason", length = 500)
+    private String falsePositiveReason;
+
+    @Column(name = "false_positive_at")
+    private LocalDateTime falsePositiveAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;

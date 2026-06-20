@@ -54,7 +54,7 @@ function RiskPersonList() {
   useEffect(() => {
     offboardingApi.getAll()
       .then(data => {
-        const pending = data.filter(r => !r.revokedAll);
+        const pending = data.filter(r => !r.revokedAll && !r.falsePositive);
         // 리스크 점수 높은 순 정렬
         const sorted = [...pending].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
         setResults(sorted);
@@ -73,7 +73,7 @@ function RiskPersonList() {
       <Box textAlign="center" py={8} color="text.disabled">
         <OkIcon sx={{ fontSize: 64, mb: 2 }} />
         <Typography variant="h6">처리할 리스크 항목이 없습니다</Typography>
-        <Typography variant="body2">권한 해제가 완료된 직원은 이 목록에서 제외됩니다.</Typography>
+        <Typography variant="body2">권한 해제가 완료되었거나 오탐 처리된 직원은 이 목록에서 제외됩니다.</Typography>
       </Box>
     );
   }
@@ -170,7 +170,7 @@ function RiskPersonList() {
       <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'grey.50' }}>
         <Typography variant="caption" color="text.secondary">
           💡 <strong>이 목록은 오프보딩 페이지와 동일한 데이터입니다.</strong>
-          권한 해제가 완료된 직원은 제외되며, 리스크 점수 높은 순으로 정렬되어 어떤 직원을 먼저 처리해야 하는지 쉽게 파악할 수 있습니다.
+          권한 해제가 완료되었거나 오탐 처리된 직원은 제외되며, 리스크 점수 높은 순으로 정렬되어 어떤 직원을 먼저 처리해야 하는지 쉽게 파악할 수 있습니다.
           "권한 해제" 버튼을 클릭하면 해당 직원의 오프보딩 상세 페이지로 이동합니다.
         </Typography>
       </Paper>
@@ -334,7 +334,7 @@ export default function RiskAnalysis() {
 
   useEffect(() => {
     offboardingApi.getAll().then(data => {
-      const pending = data.filter(r => !r.revokedAll && (r.riskLevel === 'CRITICAL' || r.riskLevel === 'HIGH')).length;
+      const pending = data.filter(r => !r.revokedAll && !r.falsePositive && (r.riskLevel === 'CRITICAL' || r.riskLevel === 'HIGH')).length;
       setTotalPending(pending);
     }).catch(() => {});
   }, []);

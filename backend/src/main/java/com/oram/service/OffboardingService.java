@@ -53,7 +53,7 @@ public class OffboardingService {
     @Transactional
     public UUID analyzeEmployee(Employee employee) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
-        if (latest.isPresent() && !latest.get().isRevokedAll()) {
+        if (latest.isPresent() && !latest.get().isRevokedAll() && !latest.get().isFalsePositive()) {
             return analyzeExistingResult(latest.get(), "MANUAL_ANALYSIS_REQUEST", true);
         }
         return createAndAnalyzeOffboarding(employee, "MANUAL_ANALYSIS_REQUEST", true);
@@ -62,7 +62,7 @@ public class OffboardingService {
     @Transactional
     public UUID autoAnalyzeOffboarding(Employee employee, String triggerReason) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
-        if (latest.isPresent() && !latest.get().isRevokedAll()) {
+        if (latest.isPresent() && !latest.get().isRevokedAll() && !latest.get().isFalsePositive()) {
             return analyzeExistingResult(latest.get(), triggerReason, false);
         }
         return createAndAnalyzeOffboarding(employee, triggerReason, false);
@@ -199,6 +199,9 @@ public class OffboardingService {
     @Transactional
     public OffboardingDto.RevokeResponse revokeAll(UUID resultId, User reviewedBy) {
         OffboardingResult result = findById(resultId);
+        if (result.isFalsePositive()) {
+            throw new IllegalStateException("False positive result cannot be revoked.");
+        }
         Employee employee = result.getEmployee();
 
         List<SaasType> revokedSaas = new ArrayList<>();
@@ -251,6 +254,29 @@ public class OffboardingService {
                 .build();
     }
 
+    @Transactional
+    public OffboardingDto.FalsePositiveResponse markFalsePositive(UUID resultId, User reviewedBy, String reason) {
+        OffboardingResult result = findById(resultId);
+        String resolvedReason = reason == null || reason.isBlank()
+                ? "관리자가 오탐으로 판단했습니다."
+                : reason.trim();
+
+        result.setFalsePositive(true);
+        result.setFalsePositiveReason(resolvedReason);
+        result.setFalsePositiveAt(LocalDateTime.now());
+        result.setReviewedBy(reviewedBy);
+        resultRepository.save(result);
+
+        auditService.log(reviewedBy, "MARK_FALSE_POSITIVE", "OFFBOARDING_RESULT", resultId.toString(),
+                "Marked offboarding risk as false positive. Reason: " + resolvedReason);
+
+        return OffboardingDto.FalsePositiveResponse.builder()
+                .message("오탐으로 처리했습니다. 이 항목은 권한 회수 대상과 AI 리스크 목록에서 제외됩니다.")
+                .resultId(resultId)
+                .falsePositiveAt(result.getFalsePositiveAt())
+                .build();
+    }
+
     @Transactional(readOnly = true)
     public OffboardingDto.RevokePlanResponse getRevokePlan(UUID resultId) {
         OffboardingResult result = findById(resultId);
@@ -286,6 +312,7 @@ public class OffboardingService {
         Map<UUID, OffboardingResult> latestByEmployee = new LinkedHashMap<>();
 
         resultRepository.findAll().stream()
+                .filter(result -> !result.isFalsePositive())
                 .sorted(Comparator.comparing(
                         OffboardingResult::getCreatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())
@@ -399,6 +426,9 @@ public class OffboardingService {
                 .analysisEngine(r.getAnalysisEngine())
                 .startedAt(r.getStartedAt())
                 .revokedAll(r.isRevokedAll())
+                .falsePositive(r.isFalsePositive())
+                .falsePositiveReason(r.getFalsePositiveReason())
+                .falsePositiveAt(r.getFalsePositiveAt())
                 .build();
     }
 
@@ -429,6 +459,9 @@ public class OffboardingService {
                 .permissions(perms)
                 .recommendedActions(generateRecommendations(r))
                 .revokedAll(r.isRevokedAll())
+                .falsePositive(r.isFalsePositive())
+                .falsePositiveReason(r.getFalsePositiveReason())
+                .falsePositiveAt(r.getFalsePositiveAt())
                 .startedAt(r.getStartedAt())
                 .completedAt(r.getCompletedAt())
                 .build();
@@ -445,6 +478,11 @@ public class OffboardingService {
 
     private List<String> generateRecommendations(OffboardingResult result) {
         List<String> actions = new ArrayList<>();
+        if (result.isFalsePositive()) {
+            actions.add("오탐으로 처리된 항목입니다. 권한 회수 대상에서 제외됩니다.");
+            return actions;
+        }
+
         RiskLevel level = result.getRiskLevel();
 
         if (level == RiskLevel.CRITICAL || level == RiskLevel.HIGH) {

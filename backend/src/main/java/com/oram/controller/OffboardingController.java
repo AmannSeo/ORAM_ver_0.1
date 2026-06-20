@@ -47,4 +47,15 @@ public class OffboardingController {
         User reviewer = userRepository.findByEmail(authentication.getName()).orElse(null);
         return ResponseEntity.ok(offboardingService.revokeAll(resultId, reviewer));
     }
+
+    @PostMapping("/{resultId}/false-positive")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
+    public ResponseEntity<OffboardingDto.FalsePositiveResponse> markFalsePositive(
+            @PathVariable UUID resultId,
+            @RequestBody(required = false) OffboardingDto.FalsePositiveRequest request,
+            Authentication authentication) {
+        User reviewer = userRepository.findByEmail(authentication.getName()).orElse(null);
+        String reason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(offboardingService.markFalsePositive(resultId, reviewer, reason));
+    }
 }
