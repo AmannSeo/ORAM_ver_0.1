@@ -311,6 +311,7 @@ public class SaasConnectionService {
                         ? user.department()
                         : saasType.name());
                 identity.setStatus(user.active() ? EmployeeStatus.ACTIVE : EmployeeStatus.RESIGNED);
+                identity.setHasRevokePermission(saasType != SaasType.NOTION && user.active());
                 identity.setLastSyncedAt(LocalDateTime.now());
                 saasIdentityRepository.save(identity);
 
