@@ -49,6 +49,10 @@ public class OffboardingService {
 
     @Transactional
     public UUID analyzeEmployee(Employee employee) {
+        Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
+        if (latest.isPresent() && !latest.get().isRevokedAll()) {
+            return analyzeExistingResult(latest.get(), "MANUAL_ANALYSIS_REQUEST", true);
+        }
         return createAndAnalyzeOffboarding(employee, "MANUAL_ANALYSIS_REQUEST", true);
     }
 
@@ -56,7 +60,7 @@ public class OffboardingService {
     public UUID autoAnalyzeOffboarding(Employee employee, String triggerReason) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
         if (latest.isPresent() && !latest.get().isRevokedAll()) {
-            return analyzeExistingResult(latest.get(), triggerReason);
+            return analyzeExistingResult(latest.get(), triggerReason, false);
         }
         return createAndAnalyzeOffboarding(employee, triggerReason, false);
     }
@@ -75,15 +79,16 @@ public class OffboardingService {
         return analyzeAndSaveResult(result, triggerReason, manualTrigger);
     }
 
-    private UUID analyzeExistingResult(OffboardingResult result, String triggerReason) {
+    private UUID analyzeExistingResult(OffboardingResult result, String triggerReason, boolean manualTrigger) {
         result.setStatus(OffboardingStatus.IN_PROGRESS);
         if (result.getStartedAt() == null) {
             result.setStartedAt(LocalDateTime.now());
         }
+        result.setCompletedAt(null);
         result.getPermissions().clear();
         result = resultRepository.save(result);
 
-        return analyzeAndSaveResult(result, triggerReason, false);
+        return analyzeAndSaveResult(result, triggerReason, manualTrigger);
     }
 
     private UUID analyzeAndSaveResult(OffboardingResult result, String triggerReason, boolean manualTrigger) {
