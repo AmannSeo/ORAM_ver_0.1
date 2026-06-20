@@ -530,25 +530,31 @@ function EmployeeTable(props: {
 }) {
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
-      <Table sx={{ minWidth: 1180, tableLayout: 'fixed' }}>
+      <Table sx={{ minWidth: 1240, tableLayout: 'fixed' }}>
         <TableHead>
           <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-            <HeaderCell width="24%">ID / EMAIL</HeaderCell>
+            <HeaderCell width="6%">NO.</HeaderCell>
+            <HeaderCell width="22%">ID / EMAIL</HeaderCell>
             <HeaderCell width="14%">사번 / 상태</HeaderCell>
             <HeaderCell width="18%">부서 / 등록 원천</HeaderCell>
             <HeaderCell width="15%">연동 SaaS</HeaderCell>
             <HeaderCell width="14%">계정 상태</HeaderCell>
-            <HeaderCell width="15%" align="right">권한 제어</HeaderCell>
+            <HeaderCell width="11%" align="right">권한 제어</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={7} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
             <TableRow key={employee.id} hover sx={{ '& td': { borderColor: '#f1f5f9' }, '&:hover': { bgcolor: '#f8fafc' } }}>
+              <TableCell>
+                <Typography variant="body2" fontWeight={900} color="#64748b">
+                  {props.page * props.rowsPerPage + index + 1}
+                </Typography>
+              </TableCell>
               <TableCell sx={{ py: 1.75 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
                   <Box sx={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length], color: 'white', fontWeight: 900, flexShrink: 0 }}>

@@ -323,16 +323,19 @@ export default function Dashboard() {
       </Stack>
 
       <Grid container spacing={2} mb={2.5}>
-        <Grid item xs={12} sm={6} xl={3}>
+        <Grid item xs={12} sm={6} lg={2.4}>
+          <StatCard title="총 인원" value={stats.totalEmployees} description="ORAM에 등록된 전체 직원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="조치 필요" value={actionCount} description="알림 + 위험 분석 + 진행 중 오프보딩" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
-        <Grid item xs={12} sm={6} xl={3}>
+        <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="퇴사자" value={stats.resignedEmployees} description="권한 회수 검토 대상" icon={<PeopleIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
         </Grid>
-        <Grid item xs={12} sm={6} xl={3}>
+        <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="SaaS 감지 알림" value={stats.openSaasSyncAlerts || 0} description="비활성 또는 누락 계정" icon={<CloudIcon />} tone={(stats.openSaasSyncAlerts || 0) > 0 ? 'info' : 'success'} onClick={() => navigate('/saas-connections')} />
         </Grid>
-        <Grid item xs={12} sm={6} xl={3}>
+        <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="최고 위험" value={stats.criticalRiskCount} description="XGBoost 분석 결과" icon={<SecurityIcon />} tone={stats.criticalRiskCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
       </Grid>

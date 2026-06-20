@@ -71,8 +71,18 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/analyze")
-    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
-    public ResponseEntity<Map<String, Object>> analyzeEmployee(@PathVariable UUID id) {
+    public ResponseEntity<Map<String, Object>> analyzeEmployee(@PathVariable UUID id, Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+
+        if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Only ADMIN or SECURITY_MANAGER can run employee risk analysis.",
+                    "email", email != null ? email : "anonymous",
+                    "role", user != null ? user.getRole().name() : "unknown"
+            ));
+        }
+
         UUID offboardingResultId = employeeService.analyzeEmployee(id);
         return ResponseEntity.ok(Map.of(
                 "message", "Employee risk analysis completed.",
