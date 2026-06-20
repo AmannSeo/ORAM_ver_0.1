@@ -39,6 +39,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
+import RiskCriteriaHelp, { RiskLevelLegend } from '../components/common/RiskCriteriaHelp';
 import type { OffboardingSummary } from '../types';
 
 const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success' | 'error' | 'default'> = {
@@ -186,16 +187,25 @@ export default function Offboarding() {
 
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Box sx={{ mb: 2 }}>
+        <RiskLevelLegend />
+      </Box>
 
       <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.100' }}>
+              <TableCell width={72}><strong>No.</strong></TableCell>
               <TableCell><strong>직원</strong></TableCell>
               <TableCell><strong>생성 방식</strong></TableCell>
               <TableCell><strong>감지 사유</strong></TableCell>
               <TableCell><strong>상태</strong></TableCell>
-              <TableCell><strong>잔여 접근 위험도</strong></TableCell>
+              <TableCell>
+                <Stack direction="row" alignItems="center" spacing={0.25}>
+                  <strong>잔여 접근 위험도</strong>
+                  <RiskCriteriaHelp />
+                </Stack>
+              </TableCell>
               <TableCell><strong>권한 회수</strong></TableCell>
               <TableCell><strong>생성/갱신 시각</strong></TableCell>
               <TableCell align="center"><strong>처리</strong></TableCell>
@@ -205,16 +215,21 @@ export default function Offboarding() {
           <TableBody>
             {results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 5, color: 'text.secondary' }}>
                   아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
             )}
-            {results.map((result) => {
+            {results.map((result, index) => {
               const automatic = result.analysisSource === 'AUTOMATIC';
               const revoking = revokeLoadingId === result.id;
               return (
                 <TableRow key={result.id} hover>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={800} color="text.secondary">
+                      {index + 1}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Typography fontWeight="bold">{result.employee.name}</Typography>
                     <Typography variant="caption" color="text.secondary">{result.employee.email}</Typography>

@@ -43,6 +43,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { dashboardApi, employeeApi, offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
+import RiskCriteriaHelp, { RiskLevelLegend } from '../components/common/RiskCriteriaHelp';
 import type { DashboardStats, Employee, OffboardingSummary, SaasSyncAlert } from '../types';
 
 type Severity = 'error' | 'warning' | 'info' | 'success';
@@ -215,6 +216,9 @@ function OffboardingQueue({ items }: { items: OffboardingSummary[] }) {
           <Typography variant="h6" fontWeight={900}>권한 회수 대상</Typography>
           <Button size="small" variant="outlined" onClick={() => navigate('/offboarding')}>전체 보기</Button>
         </Stack>
+        <Box sx={{ mb: 1.25 }}>
+          <RiskLevelLegend />
+        </Box>
         {visible.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>현재 권한 회수 대상이 없습니다.</Alert>
         ) : (
@@ -222,14 +226,26 @@ function OffboardingQueue({ items }: { items: OffboardingSummary[] }) {
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell width={56}>No.</TableCell>
+                  <TableCell width={56}>No.</TableCell>
                   <TableCell>직원</TableCell>
-                  <TableCell>위험도</TableCell>
+                  <TableCell>
+                    <Stack direction="row" alignItems="center" spacing={0.25}>
+                      <span>위험도</span>
+                      <RiskCriteriaHelp />
+                    </Stack>
+                  </TableCell>
                   <TableCell>상태</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {visible.map((item) => (
+                {visible.map((item, index) => (
                   <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/offboarding/${item.id}`)}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={800} color="text.secondary">
+                        {index + 1}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={800}>{item.employee.name}</Typography>
                       <Typography variant="caption" color="#64748b">{item.employee.email}</Typography>
@@ -280,8 +296,13 @@ function EmployeeBriefList({ employees }: { employees: Employee[] }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {employees.slice(0, 6).map((employee) => (
+                {employees.slice(0, 6).map((employee, index) => (
                   <TableRow key={employee.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate('/employees')}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={800} color="text.secondary">
+                        {index + 1}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={800}>{employee.name}</Typography>
                       <Typography variant="caption" color="#64748b">{employee.email}</Typography>

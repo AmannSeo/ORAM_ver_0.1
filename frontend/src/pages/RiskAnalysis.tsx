@@ -13,6 +13,7 @@ import {
 import { riskApi, offboardingApi } from '../api';
 import type { RiskScoreResponse, OffboardingSummary, RiskLevel } from '../types';
 import RiskBadge from '../components/common/RiskBadge';
+import RiskCriteriaHelp, { RiskLevelLegend } from '../components/common/RiskCriteriaHelp';
 import { useNavigate } from 'react-router-dom';
 
 // ─── 시뮬레이터 상수 ──────────────────────────────────────────
@@ -86,7 +87,7 @@ function RiskPersonList() {
           { level: 'CRITICAL', count: critical.length, color: '#d32f2f', label: '즉시 조치 필요' },
           { level: 'HIGH',     count: high.length,     color: '#f57c00', label: '24시간 내 해제' },
           { level: 'MEDIUM',   count: results.filter(r => r.riskLevel === 'MEDIUM').length, color: '#0288d1', label: '1주일 내 해제' },
-          { level: 'LOW',      count: results.filter(r => r.riskLevel === 'LOW').length,    color: '#2e7d32', label: '표준 처리' },
+          { level: 'LOW',      count: results.filter(r => r.riskLevel === 'LOW').length,    color: '#166534', label: '표준 처리' },
         ] as const).map(item => (
           <Grid item xs={6} sm={3} key={item.level}>
             <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: item.color, borderWidth: item.count > 0 && (item.level === 'CRITICAL' || item.level === 'HIGH') ? 2 : 1 }}>
@@ -103,12 +104,16 @@ function RiskPersonList() {
           <strong>{critical.length}명의 CRITICAL 위험 직원</strong>이 있습니다. 즉시 권한을 해제하세요!
         </Alert>
       )}
+      <Box sx={{ mb: 2 }}>
+        <RiskLevelLegend />
+      </Box>
 
       {/* 인원 테이블 */}
       <TableContainer component={Paper} elevation={2}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.100' }}>
+              <TableCell width={72}><strong>No.</strong></TableCell>
               <TableCell><strong>직원명</strong></TableCell>
               <TableCell><strong>이메일</strong></TableCell>
               <TableCell><strong>부서</strong></TableCell>
@@ -118,7 +123,7 @@ function RiskPersonList() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {results.map(r => (
+            {results.map((r, index) => (
               <TableRow
                 key={r.id}
                 hover
@@ -127,6 +132,11 @@ function RiskPersonList() {
                            r.riskLevel === 'HIGH' ? 'warning.50' : 'inherit',
                 }}
               >
+                <TableCell>
+                  <Typography variant="body2" fontWeight={800} color="text.secondary">
+                    {index + 1}
+                  </Typography>
+                </TableCell>
                 <TableCell>
                   <Box display="flex" alignItems="center" gap={1}>
                     {(r.riskLevel === 'CRITICAL' || r.riskLevel === 'HIGH') && (
@@ -344,6 +354,7 @@ export default function RiskAnalysis() {
       <Box display="flex" alignItems="center" gap={1} mb={1}>
         <AIIcon color="primary" />
         <Typography variant="h4" fontWeight="bold">AI 리스크 분석</Typography>
+        <RiskCriteriaHelp />
       </Box>
       <Typography variant="body2" color="text.secondary" mb={2}>
         퇴사 직원의 보안 위험도를 AI가 분석하고, 우선 해제해야 할 인원을 알려줍니다
