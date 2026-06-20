@@ -51,6 +51,7 @@ import {
 import { dashboardApi, employeeApi } from '../api';
 import type { DashboardStats, Employee, EmployeeSaasAccount, EmployeeStatus, SaasType } from '../types';
 import StatusChip from '../components/common/StatusChip';
+import { useAuthStore } from '../store/authStore';
 
 const SAAS_BADGE: Record<SaasType, { short: string; label: string; color: string; bg: string; border: string }> = {
   SLACK: { short: 'SL', label: 'Slack', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
@@ -92,6 +93,7 @@ function renderSaasTooltip(account: EmployeeSaasAccount) {
 
 export default function Employees() {
   const navigate = useNavigate();
+  const { token, user } = useAuthStore();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'employees' | 'hr'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -185,6 +187,11 @@ export default function Employees() {
   };
 
   const handleAnalyze = async (employee: Employee) => {
+    if (!token) {
+      setError('로그인 토큰이 없습니다. 다시 로그인한 뒤 분석을 실행하세요.');
+      return;
+    }
+
     setAnalyzingEmployeeId(employee.id);
     setError(null);
     try {
@@ -193,7 +200,9 @@ export default function Employees() {
       navigate(`/offboarding/${result.offboardingResultId}`);
     } catch (err: any) {
       if (err?.response?.status === 403) {
-        setError('분석 권한이 없습니다. 관리자 또는 보안 관리자 계정으로 실행해야 합니다.');
+        const email = err?.response?.data?.email;
+        const role = err?.response?.data?.role;
+        setError(`분석 권한이 없습니다. 화면 로그인: ${user?.email || '확인 불가'} / ${user?.role || '확인 불가'}, 서버 인식: ${email || '확인 불가'} / ${role || '확인 불가'}`);
       } else {
         setError(err?.response?.data?.error || 'SaaS 권한 분석 요청에 실패했습니다.');
       }

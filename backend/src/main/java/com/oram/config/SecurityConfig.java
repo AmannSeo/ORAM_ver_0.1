@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/employees/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/employees/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/saas-connections/*/identities").permitAll()
                 .anyRequest().authenticated()
             )

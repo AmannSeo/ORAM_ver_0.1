@@ -5,7 +5,9 @@ import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
 import com.oram.repository.UserRepository;
+import com.oram.security.JwtTokenProvider;
 import com.oram.service.EmployeeService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,7 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
@@ -71,8 +74,11 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/analyze")
-    public ResponseEntity<Map<String, Object>> analyzeEmployee(@PathVariable UUID id, Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
+    public ResponseEntity<Map<String, Object>> analyzeEmployee(
+            @PathVariable UUID id,
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = resolveAuthenticatedEmail(authentication, request);
         var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
 
         if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
@@ -88,6 +94,27 @@ public class EmployeeController {
                 "message", "Employee risk analysis completed.",
                 "offboardingResultId", offboardingResultId.toString()
         ));
+    }
+
+    private String resolveAuthenticatedEmail(Authentication authentication, HttpServletRequest request) {
+        if (authentication != null && authentication.getName() != null && !"anonymousUser".equals(authentication.getName())) {
+            return authentication.getName();
+        }
+
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            String token = authorization.substring(7);
+            if (jwtTokenProvider.validateToken(token)) {
+                return jwtTokenProvider.getEmailFromToken(token);
+            }
+        }
+
+        String fallbackToken = request.getHeader("X-ORAM-Auth-Token");
+        if (fallbackToken != null && !fallbackToken.isBlank() && jwtTokenProvider.validateToken(fallbackToken)) {
+            return jwtTokenProvider.getEmailFromToken(fallbackToken);
+        }
+
+        return null;
     }
 
     @DeleteMapping("/{id}")

@@ -1,4 +1,5 @@
 import api from './axios';
+import { useAuthStore } from '../store/authStore';
 import type {
   DashboardStats,
   SaasSyncAlert,
@@ -33,8 +34,21 @@ export const employeeApi = {
     api.put<Employee>(`/employees/${id}`, data).then((r) => r.data),
   resign: (id: string) =>
     api.put<{ message: string; offboardingResultId: string }>(`/employees/${id}/resign`).then((r) => r.data),
-  analyze: (id: string) =>
-    api.post<{ message: string; offboardingResultId: string }>(`/employees/${id}/analyze`).then((r) => r.data),
+  analyze: (id: string) => {
+    const token = useAuthStore.getState().token;
+    return api.post<{ message: string; offboardingResultId: string }>(
+      `/employees/${id}/analyze`,
+      {},
+      token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-ORAM-Auth-Token': token,
+            },
+          }
+        : undefined
+    ).then((r) => r.data);
+  },
   delete: (id: string) => api.delete(`/employees/${id}`),
   deleteAll: () => api.post<{ message: string; deletedCount: number }>('/employees/delete-all').then((r) => r.data),
   csvImport: (file: File) => {
