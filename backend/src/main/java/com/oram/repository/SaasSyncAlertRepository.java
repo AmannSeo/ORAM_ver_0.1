@@ -19,6 +19,13 @@ public interface SaasSyncAlertRepository extends JpaRepository<SaasSyncAlert, UU
             SaasSyncAlertStatus status
     );
 
+    Optional<SaasSyncAlert> findBySaasTypeAndExternalUserIdAndReasonAndStatus(
+            SaasType saasType,
+            String externalUserId,
+            String reason,
+            SaasSyncAlertStatus status
+    );
+
     List<SaasSyncAlert> findByStatusOrderByCreatedAtDesc(SaasSyncAlertStatus status, Pageable pageable);
 
     long countByStatus(SaasSyncAlertStatus status);

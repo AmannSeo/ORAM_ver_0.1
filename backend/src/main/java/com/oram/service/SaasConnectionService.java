@@ -277,6 +277,8 @@ public class SaasConnectionService {
             List<String> warnings = new ArrayList<>();
             int created = 0;
             int mapped = 0;
+            int inactiveCount = 0;
+            int resolvedAlertCount = 0;
 
             for (SaaSConnector.SyncedUser user : users) {
                 String email = normalizeEmail(user.email());
@@ -313,14 +315,23 @@ public class SaasConnectionService {
                 saasIdentityRepository.save(identity);
 
                 if (employee != null && !user.active()) {
+                    inactiveCount++;
                     employee.setStatus(EmployeeStatus.RESIGNED);
                     employeeRepository.save(employee);
                     UUID resultId = offboardingService.autoAnalyzeOffboarding(
                             employee,
                             saasType + "_SYNC_INACTIVE_ACCOUNT"
                     );
+                    upsertOpenSyncAlert(
+                            identity,
+                            "INACTIVE_FROM_LATEST_SYNC",
+                            "The latest " + saasType + " sync returned this account as inactive. ORAM marked the mapped employee as resigned and started risk analysis."
+                    );
                     warnings.add("Auto risk analysis created for inactive " + saasType
                             + " account: " + employee.getEmail() + " (" + resultId + ")");
+                } else {
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "MISSING_FROM_LATEST_SYNC");
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "INACTIVE_FROM_LATEST_SYNC");
                 }
             }
 
@@ -339,15 +350,25 @@ public class SaasConnectionService {
                         "Detected missing identities from " + saasType + ": missing=" + missingCount);
             }
 
+            if (inactiveCount > 0) {
+                warnings.add(saasType + "에서 비활성 상태로 반환된 계정 " + inactiveCount + "개를 퇴사/점검 대상으로 표시했습니다.");
+            }
+
+            if (resolvedAlertCount > 0) {
+                warnings.add("이전 SaaS 동기화 알림 " + resolvedAlertCount + "개를 자동 해제했습니다.");
+            }
+
             if (users.isEmpty()) {
                 warnings.add(saasType + "에서 동기화할 사용자를 찾지 못했습니다. 토큰 scope 또는 접근 가능한 조직/저장소 권한을 확인하세요.");
             }
 
             return SaasConnectionDto.SyncUsersResponse.builder()
-                    .message(buildSyncMessage(saasType, users.size(), created, mapped, warnings))
+                    .message(buildSyncMessage(saasType, users.size(), created, mapped, inactiveCount, missingCount, resolvedAlertCount, warnings))
                     .syncedCount(created)
                     .totalFound(users.size())
                     .missingCount(missingCount)
+                    .inactiveCount(inactiveCount)
+                    .resolvedAlertCount(resolvedAlertCount)
                     .warnings(warnings)
                     .build();
         } catch (Exception e) {
@@ -356,11 +377,23 @@ public class SaasConnectionService {
         }
     }
 
-    private String buildSyncMessage(SaasType saasType, int totalFound, int created, int mapped, List<String> warnings) {
+    private String buildSyncMessage(
+            SaasType saasType,
+            int totalFound,
+            int created,
+            int mapped,
+            int inactiveCount,
+            int missingCount,
+            int resolvedAlertCount,
+            List<String> warnings
+    ) {
         if (totalFound == 0) {
             return saasType + " 연결은 되어 있지만 조회된 사용자가 없습니다.";
         }
         String message = saasType + " 사용자 " + totalFound + "명을 확인했고 신규 " + created + "명, 매핑 " + mapped + "명을 반영했습니다.";
+        if (inactiveCount > 0 || missingCount > 0 || resolvedAlertCount > 0) {
+            message += " 비활성 " + inactiveCount + "개, 누락 " + missingCount + "개, 해제 알림 " + resolvedAlertCount + "개를 처리했습니다.";
+        }
         if (!warnings.isEmpty()) {
             return message + " 일부 항목은 확인이 필요합니다.";
         }
@@ -404,25 +437,62 @@ public class SaasConnectionService {
             }
 
             saasSyncAlertRepository
-                    .findBySaasTypeAndExternalUserIdAndStatus(
+                    .findBySaasTypeAndExternalUserIdAndReasonAndStatus(
                             saasType,
                             identity.getExternalUserId(),
+                            "MISSING_FROM_LATEST_SYNC",
                             SaasSyncAlertStatus.OPEN
                     )
-                    .orElseGet(() -> saasSyncAlertRepository.save(SaasSyncAlert.builder()
-                            .saasType(saasType)
-                            .employee(identity.getEmployee())
-                            .externalUserId(identity.getExternalUserId())
-                            .externalUsername(identity.getExternalUsername())
-                            .externalEmail(identity.getExternalEmail())
-                            .displayName(identity.getDisplayName())
-                            .reason("MISSING_FROM_LATEST_SYNC")
-                            .detail("This account existed in ORAM, but was not returned by the latest " + saasType + " user sync.")
-                            .status(SaasSyncAlertStatus.OPEN)
-                            .build()));
+                    .orElseGet(() -> saasSyncAlertRepository.save(buildSyncAlert(
+                            identity,
+                            "MISSING_FROM_LATEST_SYNC",
+                            "This account existed in ORAM, but was not returned by the latest " + saasType + " user sync."
+                    )));
             missingCount++;
         }
         return missingCount;
+    }
+
+    private SaasSyncAlert buildSyncAlert(SaasIdentity identity, String reason, String detail) {
+        return SaasSyncAlert.builder()
+                .saasType(identity.getSaasType())
+                .employee(identity.getEmployee())
+                .externalUserId(identity.getExternalUserId())
+                .externalUsername(identity.getExternalUsername())
+                .externalEmail(identity.getExternalEmail())
+                .displayName(identity.getDisplayName())
+                .reason(reason)
+                .detail(detail)
+                .status(SaasSyncAlertStatus.OPEN)
+                .build();
+    }
+
+    private void upsertOpenSyncAlert(SaasIdentity identity, String reason, String detail) {
+        saasSyncAlertRepository
+                .findBySaasTypeAndExternalUserIdAndReasonAndStatus(
+                        identity.getSaasType(),
+                        identity.getExternalUserId(),
+                        reason,
+                        SaasSyncAlertStatus.OPEN
+                )
+                .orElseGet(() -> saasSyncAlertRepository.save(buildSyncAlert(identity, reason, detail)));
+    }
+
+    private int resolveOpenAlert(SaasType saasType, String externalId, String reason) {
+        return saasSyncAlertRepository
+                .findBySaasTypeAndExternalUserIdAndReasonAndStatus(
+                        saasType,
+                        externalId,
+                        reason,
+                        SaasSyncAlertStatus.OPEN
+                )
+                .map(alert -> {
+                    alert.setStatus(SaasSyncAlertStatus.RESOLVED);
+                    alert.setResolvedAt(LocalDateTime.now());
+                    saasSyncAlertRepository.save(alert);
+                    return 1;
+                })
+                .orElse(0);
     }
 
     private String normalizeEmail(String email) {

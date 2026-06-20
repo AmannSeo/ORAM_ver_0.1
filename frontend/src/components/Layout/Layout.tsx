@@ -82,7 +82,8 @@ export default function Layout() {
             borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
-            bgcolor: '#2563eb',
+            bgcolor: '#334155',
+            border: '1px solid rgba(255,255,255,0.1)',
             mr: 1.5,
           }}
         >
@@ -151,7 +152,9 @@ export default function Layout() {
         position="fixed"
         elevation={0}
         sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          zIndex: (theme) => theme.zIndex.drawer - 1,
+          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { sm: `${DRAWER_WIDTH}px` },
           bgcolor: '#ffffff',
           color: '#0f172a',
           borderBottom: '1px solid #e2e8f0',

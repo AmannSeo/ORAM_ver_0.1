@@ -45,6 +45,8 @@ public class SaasConnectionDto {
         private int syncedCount;
         private int totalFound;
         private int missingCount;
+        private int inactiveCount;
+        private int resolvedAlertCount;
         private List<String> warnings;
     }
 
