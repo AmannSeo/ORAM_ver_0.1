@@ -61,7 +61,7 @@ public class OffboardingResult {
 
     @Column(name = "false_positive")
     @Builder.Default
-    private boolean falsePositive = false;
+    private Boolean falsePositive = false;
 
     @Column(name = "false_positive_reason", length = 500)
     private String falsePositiveReason;
@@ -80,4 +80,8 @@ public class OffboardingResult {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public boolean isFalsePositive() {
+        return Boolean.TRUE.equals(falsePositive);
+    }
 }
