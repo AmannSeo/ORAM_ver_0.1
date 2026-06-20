@@ -48,6 +48,11 @@ public class OffboardingService {
     }
 
     @Transactional
+    public UUID analyzeEmployee(Employee employee) {
+        return createAndAnalyzeOffboarding(employee, "MANUAL_ANALYSIS_REQUEST", true);
+    }
+
+    @Transactional
     public UUID autoAnalyzeOffboarding(Employee employee, String triggerReason) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
         if (latest.isPresent() && !latest.get().isRevokedAll()) {

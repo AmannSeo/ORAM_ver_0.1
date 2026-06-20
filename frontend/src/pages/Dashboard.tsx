@@ -1,279 +1,262 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography, CardActionArea,
-  Alert, LinearProgress, Tooltip, Chip, Stack, Divider,
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  Divider,
+  Grid,
+  LinearProgress,
+  Stack,
+  Typography,
 } from '@mui/material';
 import {
-  People as PeopleIcon,
+  Assessment as ReportIcon,
   CheckCircle as CheckIcon,
-  PersonOff as ResignedIcon,
   Cloud as CloudIcon,
-  Warning as WarningIcon,
-  Pending as PendingIcon,
   History as HistoryIcon,
+  People as PeopleIcon,
+  Pending as PendingIcon,
+  Security as SecurityIcon,
+  Sensors as LiveIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
-  RadialBar, RadialBarChart, ResponsiveContainer, Tooltip as ChartTooltip,
-  XAxis, YAxis,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as ChartTooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { dashboardApi } from '../api';
 import type { DashboardStats, SaasSyncAlert } from '../types';
-import { useNavigate } from 'react-router-dom';
+
+type Severity = 'error' | 'warning' | 'info' | 'success';
 
 interface StatCardProps {
   title: string;
   value: number;
+  description: string;
   icon: React.ReactNode;
-  color: string;
-  bgColor: string;
-  subtitle?: string;
+  tone: Severity;
   onClick?: () => void;
-  hint?: string;
 }
 
-function StatCard({ title, value, icon, color, bgColor, subtitle, onClick, hint }: StatCardProps) {
-  const inner = (
-    <CardContent
-      sx={{
-        width: '100%',
-        minHeight: 178,
-        p: 2,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        '&:last-child': { pb: 2 },
-      }}
-    >
-      <Stack alignItems="center" spacing={1.25} textAlign="center" minWidth={0} width="100%">
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: 2,
-            display: 'grid',
-            placeItems: 'center',
-            color: '#fff',
-            bgcolor: color,
-            boxShadow: '0 10px 22px rgba(15, 23, 42, 0.14)',
-            '& .MuiSvgIcon-root': { fontSize: 26 },
-          }}
-        >
-          {icon}
-        </Box>
-        <Box minWidth={0} width="100%">
-          <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
+const TONE: Record<Severity, { color: string; bg: string; border: string }> = {
+  error: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  warning: { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  info: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+};
+
+function formatDateTime(value?: string | Date) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function saasAlertReasonLabel(reason: string) {
+  switch (reason) {
+    case 'MISSING_FROM_LATEST_SYNC':
+      return '동기화 누락';
+    case 'INACTIVE_FROM_LATEST_SYNC':
+      return '비활성 계정';
+    default:
+      return '계정 점검';
+  }
+}
+
+function saasAlertDescription(alert: SaasSyncAlert) {
+  const account = alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '미매핑 계정';
+  if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
+    return `${account} 계정이 최근 ${alert.saasType} 동기화에서 비활성 상태로 확인됐습니다.`;
+  }
+  if (alert.reason === 'MISSING_FROM_LATEST_SYNC') {
+    return `${account} 계정이 이전 동기화에는 있었지만 최근 ${alert.saasType} 결과에서 사라졌습니다.`;
+  }
+  return alert.detail || `${account} 계정 상태 확인이 필요합니다.`;
+}
+
+function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[]) {
+  const createdAt = new Date();
+  const lines = [
+    '# ORAM 접근 권한 점검 보고서',
+    '',
+    `생성 시각: ${formatDateTime(createdAt)}`,
+    '',
+    '## 핵심 지표',
+    `- 전체 직원: ${stats.totalEmployees}명`,
+    `- 퇴사자: ${stats.resignedEmployees}명`,
+    `- 최고 위험 분석 결과: ${stats.criticalRiskCount}건`,
+    `- 진행 중 오프보딩: ${stats.pendingOffboardings}건`,
+    `- 열린 SaaS 동기화 알림: ${stats.openSaasSyncAlerts || 0}건`,
+    '',
+    '## 최근 감지 알림',
+    ...(alerts.length > 0
+      ? alerts.map((alert) => `- [${alert.saasType}] ${saasAlertReasonLabel(alert.reason)} / ${saasAlertDescription(alert)} / ${formatDateTime(alert.createdAt)}`)
+      : ['- 열린 감지 알림이 없습니다.']),
+    '',
+    '## 우선순위',
+    stats.criticalRiskCount > 0
+      ? '1. 최고 위험 분석 결과의 권한 회수 가능 여부를 먼저 확인합니다.'
+      : '1. 현재 최고 위험 계정은 없습니다.',
+    (stats.openSaasSyncAlerts || 0) > 0
+      ? '2. SaaS 동기화에서 비활성 또는 누락된 계정의 퇴사 여부를 확인합니다.'
+      : '2. 열린 SaaS 동기화 알림은 없습니다.',
+    stats.pendingOffboardings > 0
+      ? '3. 진행 중 오프보딩의 권한 회수 상태를 확인합니다.'
+      : '3. 대기 중인 오프보딩 작업은 없습니다.',
+    '',
+  ];
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `oram-access-report-${createdAt.toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function StatCard({ title, value, description, icon, tone, onClick }: StatCardProps) {
+  const style = TONE[tone];
+  const content = (
+    <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+        <Box minWidth={0}>
+          <Typography variant="body2" fontWeight={800} color="#64748b">
             {title}
           </Typography>
-          <Typography
-            fontWeight={800}
-            color="text.primary"
-            lineHeight={1.05}
-            mt={0.75}
-            sx={{ fontSize: { xs: 30, lg: 27, xl: 32 } }}
-          >
+          <Typography variant="h4" fontWeight={900} color="#0f172a" mt={1}>
             {value.toLocaleString()}
           </Typography>
-          {subtitle && (
-            <Typography variant="caption" color="text.secondary" noWrap display="block" mt={0.5}>
-              {subtitle}
-            </Typography>
-          )}
+          <Typography variant="caption" color="#64748b" display="block" mt={0.75}>
+            {description}
+          </Typography>
         </Box>
-        <Box
-          sx={{
-            px: 1.5,
-            py: 0.75,
-            borderRadius: 1,
-            bgcolor: '#fff',
-            color: 'text.secondary',
-            fontSize: 12,
-            fontWeight: 700,
-            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-          }}
-        >
-          보기
+        <Box sx={{ width: 44, height: 44, borderRadius: 2, display: 'grid', placeItems: 'center', color: style.color, bgcolor: style.bg, border: `1px solid ${style.border}`, flexShrink: 0 }}>
+          {icon}
         </Box>
       </Stack>
     </CardContent>
   );
 
-  const cardSx = {
-    height: '100%',
-    bgcolor: bgColor,
-    border: '1px solid rgba(255, 255, 255, 0.72)',
-    borderRadius: 3,
-    cursor: onClick ? 'pointer' : 'default',
-    minHeight: 178,
-    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
-    overflow: 'hidden',
-    '&:hover': onClick ? { transform: 'translateY(-3px)', transition: 'all 0.2s' } : undefined,
-  };
-
-  if (onClick) {
-    return (
-      <Tooltip title={hint || '목록 보기'} placement="top">
-        <Card elevation={1} sx={cardSx}>
-          <CardActionArea
-            onClick={onClick}
-            sx={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'stretch',
-            }}
-          >
-            {inner}
-          </CardActionArea>
-        </Card>
-      </Tooltip>
-    );
-  }
-
-  return <Card elevation={1} sx={cardSx}>{inner}</Card>;
-}
-
-interface ChartCardProps {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  height?: number;
-}
-
-function ChartCard({ title, subtitle, children, height = 270 }: ChartCardProps) {
   return (
-    <Card
-      elevation={1}
-      sx={{
-        height: '100%',
-        borderRadius: 3,
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
-      }}
-    >
+    <Card elevation={0} sx={{ height: '100%', border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+      {onClick ? <CardActionArea onClick={onClick} sx={{ height: '100%' }}>{content}</CardActionArea> : content}
+    </Card>
+  );
+}
+
+function AnalysisScopeCard() {
+  const rows = [
+    ['분석 대상', '직원에게 매핑된 Slack, GitHub, Notion 계정'],
+    ['주요 특징값', '관리자/소유자 권한, API 토큰, 최근 로그인, 저장소·워크스페이스 범위'],
+    ['실행 시점', 'SaaS 동기화에서 비활성·누락 감지 또는 직원 목록의 분석 버튼'],
+    ['결과 위치', '오프보딩 분석 상세 화면'],
+  ];
+
+  return (
+    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Typography variant="h6" fontWeight={700}>
-          {title}
+        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+          <SecurityIcon color="primary" />
+          <Typography variant="h6" fontWeight={900}>AI 분석 범위</Typography>
+        </Stack>
+        <Stack divider={<Divider flexItem />} spacing={1.5}>
+          {rows.map(([label, value]) => (
+            <Box key={label}>
+              <Typography variant="caption" color="#64748b" fontWeight={800}>{label}</Typography>
+              <Typography variant="body2" color="#0f172a" mt={0.25}>{value}</Typography>
+            </Box>
+          ))}
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ActionQueueChart({ stats }: { stats: DashboardStats }) {
+  const data = [
+    { name: 'SaaS 알림', value: stats.openSaasSyncAlerts || 0, fill: '#2563eb' },
+    { name: '위험 분석', value: stats.criticalRiskCount, fill: '#dc2626' },
+    { name: '오프보딩', value: stats.pendingOffboardings, fill: '#d97706' },
+  ];
+
+  return (
+    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+        <Typography variant="h6" fontWeight={900}>조치 큐</Typography>
+        <Typography variant="body2" color="#64748b" mt={0.5} mb={2}>
+          지금 관리자가 확인해야 하는 항목만 표시합니다.
         </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            {subtitle}
-          </Typography>
-        )}
-        <Box sx={{ width: '100%', height }}>
-          {children}
+        <Box sx={{ width: '100%', height: 250 }}>
+          <ResponsiveContainer>
+            <BarChart data={data} margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {data.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </Box>
       </CardContent>
     </Card>
   );
 }
 
-type ActivitySeverity = 'error' | 'warning' | 'info' | 'success';
-
-interface ActivityLogItem {
-  severity: ActivitySeverity;
-  title: string;
-  status: string;
-  meta: string;
-  description: string;
-  icon: React.ReactNode;
-}
-
-const LOG_STYLE: Record<ActivitySeverity, { color: 'error' | 'warning' | 'info' | 'success'; bg: string }> = {
-  error: { color: 'error', bg: '#ffebee' },
-  warning: { color: 'warning', bg: '#fff3e0' },
-  info: { color: 'info', bg: '#e3f2fd' },
-  success: { color: 'success', bg: '#e8f5e9' },
-};
-
-function ActivityLog({ logs }: { logs: ActivityLogItem[] }) {
+function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
   return (
-    <Box
-      sx={{
-        height: '100%',
-        minHeight: { lg: 'calc(100vh - 128px)' },
-        bgcolor: '#fafafa',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3,
-        p: 3.5,
-        position: { lg: 'sticky' },
-        top: { lg: 88 },
-      }}
-    >
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <HistoryIcon color="primary" />
-          <Typography variant="h6" fontWeight={800}>
-            Activity Log
-          </Typography>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Today
-        </Typography>
-      </Box>
-
-      <Stack divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />} spacing={0}>
-        {logs.map((log) => {
-          const style = LOG_STYLE[log.severity];
-          return (
-            <Box key={log.title} display="flex" gap={1.5} py={1.75}>
-              <Box
-                sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 1.5,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: style.bg,
-                  color: `${style.color}.main`,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                {log.icon}
-              </Box>
-              <Box minWidth={0} flex={1}>
-                <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
-                  <Typography variant="body2" fontWeight={800} noWrap>
-                    {log.title}
+    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <LiveIcon color="primary" />
+            <Typography variant="h6" fontWeight={900}>최근 SaaS 감지</Typography>
+          </Stack>
+          <Chip label="30초 자동 갱신" size="small" variant="outlined" color="primary" />
+        </Stack>
+        {alerts.length === 0 ? (
+          <Alert severity="success" icon={<CheckIcon />}>열린 SaaS 감지 알림이 없습니다.</Alert>
+        ) : (
+          <Stack divider={<Divider flexItem />} spacing={0}>
+            {alerts.map((alert) => (
+              <Box key={alert.id} py={1.5}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                  <Typography variant="body2" fontWeight={900} noWrap>
+                    {alert.saasType} · {saasAlertReasonLabel(alert.reason)}
                   </Typography>
-                  <Chip label={log.status} size="small" color={style.color} variant="outlined" />
-                </Box>
-                <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
-                  {log.meta}
+                  <Chip label="확인 필요" size="small" color={alert.reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning'} variant="outlined" />
+                </Stack>
+                <Typography variant="body2" color="#475569" mt={0.75}>
+                  {saasAlertDescription(alert)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" mt={0.75}>
-                  {log.description}
+                <Typography variant="caption" color="#94a3b8" display="block" mt={0.5}>
+                  {formatDateTime(alert.createdAt)}
                 </Typography>
               </Box>
-            </Box>
-          );
-        })}
-      </Stack>
-    </Box>
+            ))}
+          </Stack>
+        )}
+      </CardContent>
+    </Card>
   );
-}
-
-function saasAlertReasonLabel(reason: string) {
-  switch (reason) {
-    case 'MISSING_FROM_LATEST_SYNC':
-      return '계정 누락 감지';
-    case 'INACTIVE_FROM_LATEST_SYNC':
-      return '비활성 계정 감지';
-    default:
-      return 'SaaS 계정 점검';
-  }
-}
-
-function saasAlertDescription(alert: SaasSyncAlert) {
-  const account = alert.displayName || alert.externalUsername || alert.externalEmail || '계정';
-  if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
-    return `${account}이 최근 ${alert.saasType} 동기화에서 비활성 상태로 반환됐습니다. ORAM이 퇴사/점검 대상으로 표시하고 자동 분석을 생성했습니다.`;
-  }
-  if (alert.reason === 'MISSING_FROM_LATEST_SYNC') {
-    return `${account}이 이전에는 존재했지만 최근 ${alert.saasType} 동기화 결과에서 사라졌습니다. 퇴사 또는 권한 변경 여부를 확인하세요.`;
-  }
-  return alert.detail || `${account}의 SaaS 계정 상태 확인이 필요합니다.`;
 }
 
 export default function Dashboard() {
@@ -289,7 +272,7 @@ export default function Dashboard() {
     const loadDashboard = () => {
       Promise.all([
         dashboardApi.getStats(),
-        dashboardApi.getSaasSyncAlerts(5),
+        dashboardApi.getSaasSyncAlerts(8),
       ])
         .then(([statsData, alertData]) => {
           if (!active) return;
@@ -298,7 +281,7 @@ export default function Dashboard() {
           setError(null);
         })
         .catch(() => {
-          if (active) setError('대시보드 정보를 불러오지 못했습니다');
+          if (active) setError('대시보드 정보를 불러오지 못했습니다.');
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -318,299 +301,76 @@ export default function Dashboard() {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!stats) return null;
 
-  const activeRate = stats.totalEmployees > 0
-    ? Math.round((stats.activeEmployees / stats.totalEmployees) * 100)
-    : 0;
-  const resignedRate = stats.totalEmployees > 0
-    ? Math.round((stats.resignedEmployees / stats.totalEmployees) * 100)
-    : 0;
-  const saasRate = Math.round((stats.connectedSaasCount / 3) * 100);
-  const openActionCount = stats.criticalRiskCount + stats.pendingOffboardings + (stats.openSaasSyncAlerts || 0);
-
-  const employeeStatusData = [
-    { name: '재직 중', value: stats.activeEmployees, color: '#2e7d32' },
-    { name: '퇴사자', value: stats.resignedEmployees, color: '#546e7a' },
-  ].filter((item) => item.value > 0);
-
-  const saasConnectionData = [
-    { name: '연결됨', value: stats.connectedSaasCount, fill: '#0288d1' },
-    { name: '미연결', value: Math.max(3 - stats.connectedSaasCount, 0), fill: '#cfd8dc' },
-  ].filter((item) => item.value > 0);
-
-  const actionData = [
-    { name: '최고 위험', value: stats.criticalRiskCount, fill: '#d32f2f' },
-    { name: '진행 중', value: stats.pendingOffboardings, fill: '#ed6c02' },
-    { name: 'SaaS 알림', value: stats.openSaasSyncAlerts || 0, fill: '#7b1fa2' },
-  ];
-
-  const overviewData = [
-    { name: '전체 직원', value: stats.totalEmployees, fill: '#1565c0' },
-    { name: '재직 중', value: stats.activeEmployees, fill: '#2e7d32' },
-    { name: '퇴사자', value: stats.resignedEmployees, fill: '#546e7a' },
-    { name: '연결 SaaS', value: stats.connectedSaasCount, fill: '#0288d1' },
-  ];
-
-  const saasAlertLogs: ActivityLogItem[] = saasAlerts.map(alert => ({
-    severity: alert.reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning',
-    title: `${alert.saasType} ${saasAlertReasonLabel(alert.reason)}`,
-    status: '확인 필요',
-    meta: alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '미매핑 계정',
-    description: saasAlertDescription(alert),
-    icon: <WarningIcon fontSize="small" />,
-  }));
-
-  const activityLogs: ActivityLogItem[] = [
-    ...saasAlertLogs,
-    stats.criticalRiskCount > 0
-      ? {
-          severity: 'error',
-          title: '위험 계정',
-          status: `${stats.criticalRiskCount}건`,
-          meta: 'AI 리스크 분석',
-          description: '오프보딩 결과에서 접근 권한 회수 필요 여부를 우선 확인하세요.',
-          icon: <WarningIcon fontSize="small" />,
-        }
-      : {
-          severity: 'success',
-          title: '위험 계정',
-          status: '정상',
-          meta: 'AI 리스크 분석',
-          description: '현재 최고 위험 계정은 감지되지 않았습니다.',
-          icon: <CheckIcon fontSize="small" />,
-        },
-    stats.pendingOffboardings > 0
-      ? {
-          severity: 'warning',
-          title: '오프보딩 대기',
-          status: `${stats.pendingOffboardings}건`,
-          meta: '처리 상태',
-          description: '오프보딩 관리 페이지에서 처리 상태를 확인하세요.',
-          icon: <PendingIcon fontSize="small" />,
-        }
-      : {
-          severity: 'success',
-          title: '오프보딩 대기',
-          status: '없음',
-          meta: '처리 상태',
-          description: '대기 중이거나 처리 중인 오프보딩 작업이 없습니다.',
-          icon: <CheckIcon fontSize="small" />,
-        },
-    stats.connectedSaasCount < 3
-      ? {
-          severity: 'info',
-          title: 'SaaS 연결',
-          status: `${3 - stats.connectedSaasCount}개 남음`,
-          meta: 'Slack · GitHub · Notion',
-          description: '연결 관리에서 각 SaaS 연동 상태를 확인하세요.',
-          icon: <CloudIcon fontSize="small" />,
-        }
-      : {
-          severity: 'success',
-          title: 'SaaS 연결',
-          status: '완료',
-          meta: 'Slack · GitHub · Notion',
-          description: '지원 SaaS 3개가 모두 연결된 상태입니다.',
-          icon: <CloudIcon fontSize="small" />,
-        },
-  ];
+  const actionCount = stats.criticalRiskCount + stats.pendingOffboardings + (stats.openSaasSyncAlerts || 0);
 
   return (
-    <Box sx={{ pb: 4 }}>
-      <Grid container columnSpacing={{ xs: 3, lg: 5 }} rowSpacing={4} alignItems="stretch">
-        <Grid item xs={12} lg={9}>
-          <Stack spacing={3}>
-            <Box>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>
-                대시보드
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                직원 접근 권한, SaaS 연결, 오프보딩 위험 지표를 한눈에 확인합니다.
-              </Typography>
-            </Box>
+    <Box sx={{ width: '100%', pb: 4 }}>
+      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={3}>
+        <Box>
+          <Typography variant="h4" fontWeight={900} color="#0f172a">
+            대시보드
+          </Typography>
+          <Typography variant="body2" color="#64748b" mt={0.75}>
+            퇴사자 잔여 접근권한, SaaS 동기화 이상, AI 위험 분석 결과를 조치 우선순위 기준으로 확인합니다.
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Chip icon={<HistoryIcon />} label="SaaS 동기화 기반 자동 감지" color="primary" variant="outlined" />
+          <Button variant="contained" startIcon={<ReportIcon />} onClick={() => downloadDashboardReport(stats, saasAlerts)} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>
+            보고서 다운로드
+          </Button>
+        </Stack>
+      </Stack>
 
-            <Grid
-              container
-              spacing={3}
-              sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
-            >
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="전체 직원"
-                  value={stats.totalEmployees}
-                  icon={<PeopleIcon />}
-                  color="#4d63e6"
-                  bgColor="#f0f3ff"
-                  onClick={() => navigate('/employees')}
-                  hint="전체 직원 목록"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="재직 중"
-                  value={stats.activeEmployees}
-                  icon={<CheckIcon />}
-                  color="#4b9b4f"
-                  bgColor="#eef8ef"
-                  subtitle={`${activeRate}% active`}
-                  onClick={() => navigate('/employees?status=ACTIVE')}
-                  hint="재직 중 직원 목록"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="퇴사자"
-                  value={stats.resignedEmployees}
-                  icon={<ResignedIcon />}
-                  color="#6b7280"
-                  bgColor="#f4f5f7"
-                  subtitle={`${resignedRate}% resigned`}
-                  onClick={() => navigate('/employees?status=RESIGNED')}
-                  hint="퇴사자 목록"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="연결 SaaS"
-                  value={stats.connectedSaasCount}
-                  icon={<CloudIcon />}
-                  color="#3f8cd6"
-                  bgColor="#edf7ff"
-                  subtitle={`${saasRate}% connected`}
-                  onClick={() => navigate('/saas-connections')}
-                  hint="SaaS 연결 관리"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="최고 위험"
-                  value={stats.criticalRiskCount}
-                  icon={<WarningIcon />}
-                  color="#d34a4a"
-                  bgColor="#fff0f0"
-                  subtitle="즉시 확인"
-                  onClick={() => navigate('/offboarding')}
-                  hint="CRITICAL 위험 확인"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <StatCard
-                  title="진행 중"
-                  value={stats.pendingOffboardings}
-                  icon={<PendingIcon />}
-                  color="#d9782d"
-                  bgColor="#fff4e8"
-                  subtitle="오프보딩"
-                  onClick={() => navigate('/offboarding')}
-                  hint="오프보딩 목록"
-                />
-              </Grid>
-            </Grid>
-
-            <Grid
-              container
-              spacing={2.5}
-              sx={{ '& > .MuiGrid-item:first-of-type': { pl: 0 } }}
-            >
-              <Grid item xs={12} md={6}>
-                <ChartCard title="직원 상태 비율" subtitle={`재직 ${activeRate}% · 퇴사 ${resignedRate}%`}>
-                  {employeeStatusData.length > 0 ? (
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie
-                          data={employeeStatusData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={58}
-                          outerRadius={92}
-                          paddingAngle={4}
-                          label
-                        >
-                          {employeeStatusData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <Box height="100%" display="flex" alignItems="center" justifyContent="center">
-                      <Typography color="text.secondary">직원 데이터가 없습니다</Typography>
-                    </Box>
-                  )}
-                </ChartCard>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <ChartCard title="SaaS 연결 현황" subtitle={`${stats.connectedSaasCount}/3개 플랫폼 연결`}>
-                  <ResponsiveContainer>
-                    <RadialBarChart
-                      cx="50%"
-                      cy="50%"
-                      innerRadius="62%"
-                      outerRadius="92%"
-                      barSize={18}
-                      data={saasConnectionData}
-                      startAngle={90}
-                      endAngle={-270}
-                    >
-                      <RadialBar dataKey="value" background cornerRadius={10} />
-                      <ChartTooltip />
-                      <Legend />
-                      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" fontSize={32} fontWeight={700} fill="#263238">
-                        {saasRate}%
-                      </text>
-                      <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#607d8b">
-                        연결률
-                      </text>
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-              </Grid>
-
-              <Grid item xs={12} md={5}>
-                <ChartCard title="조치 필요 항목" subtitle={`${openActionCount}개 항목 확인 필요`}>
-                  <ResponsiveContainer>
-                    <BarChart data={actionData} margin={{ top: 16, right: 12, left: -20, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <ChartTooltip />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                        {actionData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-              </Grid>
-
-              <Grid item xs={12} md={7}>
-                <ChartCard title="운영 지표 비교" subtitle="직원, SaaS, 오프보딩 지표를 한눈에 비교합니다.">
-                  <ResponsiveContainer>
-                    <BarChart data={overviewData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <ChartTooltip />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                        {overviewData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-              </Grid>
-            </Grid>
-          </Stack>
+      <Grid container spacing={2} mb={2.5}>
+        <Grid item xs={12} sm={6} xl={3}>
+          <StatCard title="조치 필요" value={actionCount} description="알림 + 위험 분석 + 진행 중 오프보딩" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
+        <Grid item xs={12} sm={6} xl={3}>
+          <StatCard title="퇴사자" value={stats.resignedEmployees} description="권한 회수 검토 대상" icon={<PeopleIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
+        </Grid>
+        <Grid item xs={12} sm={6} xl={3}>
+          <StatCard title="SaaS 감지 알림" value={stats.openSaasSyncAlerts || 0} description="비활성 또는 누락 계정" icon={<CloudIcon />} tone={(stats.openSaasSyncAlerts || 0) > 0 ? 'info' : 'success'} onClick={() => navigate('/saas-connections')} />
+        </Grid>
+        <Grid item xs={12} sm={6} xl={3}>
+          <StatCard title="최고 위험" value={stats.criticalRiskCount} description="XGBoost 분석 결과" icon={<SecurityIcon />} tone={stats.criticalRiskCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
+        </Grid>
+      </Grid>
 
+      <Grid container spacing={2.5} alignItems="stretch">
+        <Grid item xs={12} lg={5}>
+          <ActionQueueChart stats={stats} />
+        </Grid>
         <Grid item xs={12} lg={3}>
-          <ActivityLog logs={activityLogs} />
+          <AnalysisScopeCard />
+        </Grid>
+        <Grid item xs={12} lg={4}>
+          <DetectionLog alerts={saasAlerts} />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2.5} mt={0}>
+        <Grid item xs={12} md={6}>
+          <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+              <Typography variant="h6" fontWeight={900}>운영 기준</Typography>
+              <Typography variant="body2" color="#64748b" mt={1}>
+                대시보드는 전체 인원 비율을 보여주기 위한 화면이 아니라, 지금 관리자가 확인해야 할 잔여 접근권한과 오프보딩 조치를 모으는 화면입니다.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+              <Typography variant="h6" fontWeight={900}>다음 확인 위치</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mt={1.5}>
+                <Button size="small" variant="outlined" onClick={() => navigate('/saas-connections')}>SaaS 수집 계정</Button>
+                <Button size="small" variant="outlined" onClick={() => navigate('/employees')}>직원 권한 목록</Button>
+                <Button size="small" variant="outlined" onClick={() => navigate('/offboarding')}>오프보딩 결과</Button>
+              </Stack>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </Box>

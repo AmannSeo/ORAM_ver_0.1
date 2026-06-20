@@ -70,6 +70,16 @@ public class EmployeeController {
         ));
     }
 
+    @PostMapping("/{id}/analyze")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
+    public ResponseEntity<Map<String, Object>> analyzeEmployee(@PathVariable UUID id) {
+        UUID offboardingResultId = employeeService.analyzeEmployee(id);
+        return ResponseEntity.ok(Map.of(
+                "message", "Employee risk analysis completed.",
+                "offboardingResultId", offboardingResultId.toString()
+        ));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEmployee(@PathVariable UUID id) {

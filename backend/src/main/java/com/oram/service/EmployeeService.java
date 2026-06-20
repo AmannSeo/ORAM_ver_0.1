@@ -107,6 +107,12 @@ public class EmployeeService {
     }
 
     @Transactional
+    public UUID analyzeEmployee(UUID id) {
+        Employee employee = findById(id);
+        return offboardingService.analyzeEmployee(employee);
+    }
+
+    @Transactional
     public void deleteEmployee(UUID id) {
         Employee employee = findById(id);
         saasIdentityRepository.deleteByEmployeeId(employee.getId());

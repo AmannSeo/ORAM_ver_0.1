@@ -48,8 +48,8 @@ import {
   Upload as UploadIcon,
   WarningAmber as PriorityIcon,
 } from '@mui/icons-material';
-import { employeeApi } from '../api';
-import type { Employee, EmployeeSaasAccount, EmployeeStatus, SaasType } from '../types';
+import { dashboardApi, employeeApi } from '../api';
+import type { DashboardStats, Employee, EmployeeSaasAccount, EmployeeStatus, SaasType } from '../types';
 import StatusChip from '../components/common/StatusChip';
 
 const SAAS_BADGE: Record<SaasType, { short: string; label: string; color: string; bg: string; border: string }> = {
@@ -71,14 +71,12 @@ const compactButtonSx = {
   '& .MuiButton-startIcon': { mr: 0.5 },
 };
 
-function getRoleLabel(employee: Employee) {
-  const department = (employee.department || '').toLowerCase();
-  if (department.includes('보안') || department.includes('security')) return '보안 분석가';
-  if (department.includes('infra') || department.includes('sre') || department.includes('인프라')) return 'SRE';
-  if (department.includes('개발') || department.includes('engineering')) return '개발자';
-  if (department.includes('data') || department.includes('데이터')) return '데이터 분석가';
-  if (department.includes('product') || department.includes('프로덕트')) return '프로덕트 매니저';
-  return 'Employee';
+function getEmployeeSourceLabel(employee: Employee) {
+  if (employee.employeeId.startsWith('SLACK-')) return 'Slack 동기화';
+  if (employee.employeeId.startsWith('GITHUB-')) return 'GitHub 동기화';
+  if (employee.employeeId.startsWith('NOTION-')) return 'Notion 동기화';
+  if (employee.employeeId.startsWith('CSV-')) return 'CSV 자동 생성';
+  return '직접 등록/HR';
 }
 
 function isPriorityTarget(employee: Employee) {
@@ -97,6 +95,7 @@ export default function Employees() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'employees' | 'hr'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -107,6 +106,7 @@ export default function Employees() {
   const [filterDept, setFilterDept] = useState('');
   const [filterSaas, setFilterSaas] = useState<SaasType | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [analyzingEmployeeId, setAnalyzingEmployeeId] = useState<string | null>(null);
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
   const [resigningEmployeeId, setResigningEmployeeId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
@@ -137,10 +137,7 @@ export default function Employees() {
   const [csvUploading, setCsvUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activeCount = useMemo(() => employees.filter((employee) => employee.status === 'ACTIVE').length, [employees]);
-  const resignedCount = useMemo(() => employees.filter((employee) => employee.status === 'RESIGNED').length, [employees]);
-  const saasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
-  const priorityCount = useMemo(() => employees.filter(isPriorityTarget).length, [employees]);
+  const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
 
   const load = () => {
     setLoading(true);
@@ -166,6 +163,12 @@ export default function Employees() {
   useEffect(load, [page, filterStatus, filterSaas]);
 
   useEffect(() => {
+    dashboardApi.getStats()
+      .then(setDashboardStats)
+      .catch(() => setDashboardStats(null));
+  }, []);
+
+  useEffect(() => {
     if (!successMessage) return;
     const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
     return () => window.clearTimeout(timer);
@@ -179,6 +182,24 @@ export default function Employees() {
   const openEditDialog = (employee: Employee) => {
     setEditDialog(employee);
     setEditEmployee({ name: employee.name, department: employee.department, status: employee.status });
+  };
+
+  const handleAnalyze = async (employee: Employee) => {
+    setAnalyzingEmployeeId(employee.id);
+    setError(null);
+    try {
+      const result = await employeeApi.analyze(employee.id);
+      setSuccessMessage(`${employee.name}님의 SaaS 권한 리스크 분석이 완료되었습니다.`);
+      navigate(`/offboarding/${result.offboardingResultId}`);
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('분석 권한이 없습니다. 관리자 또는 보안 관리자 계정으로 실행해야 합니다.');
+      } else {
+        setError(err?.response?.data?.error || 'SaaS 권한 분석 요청에 실패했습니다.');
+      }
+    } finally {
+      setAnalyzingEmployeeId(null);
+    }
   };
 
   const handleResign = async () => {
@@ -203,10 +224,10 @@ export default function Employees() {
       await employeeApi.create(newEmployee);
       setAddDialog(false);
       setNewEmployee({ employeeId: '', name: '', email: '', department: '', status: 'ACTIVE' });
-      setSuccessMessage('직원이 등록되었습니다.');
+      setSuccessMessage('직원을 등록했습니다.');
       load();
-    } catch {
-      setError('직원 등록에 실패했습니다.');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || '직원 등록에 실패했습니다.');
     }
   };
 
@@ -215,7 +236,7 @@ export default function Employees() {
     try {
       await employeeApi.update(editDialog.id, editEmployee);
       setEditDialog(null);
-      setSuccessMessage('직원 정보가 수정되었습니다.');
+      setSuccessMessage('직원 정보를 수정했습니다.');
       load();
     } catch (err: any) {
       setError(err?.response?.data?.error || '직원 수정에 실패했습니다.');
@@ -227,7 +248,7 @@ export default function Employees() {
     try {
       await employeeApi.delete(deleteDialog.id);
       setDeleteDialog(null);
-      setSuccessMessage('직원이 삭제되었습니다.');
+      setSuccessMessage('직원을 삭제했습니다.');
       load();
     } catch (err: any) {
       setError(err?.response?.data?.error || '직원 삭제에 실패했습니다.');
@@ -239,7 +260,7 @@ export default function Employees() {
       const result = await employeeApi.deleteAll();
       setDeleteAllDialog(false);
       setPage(0);
-      setSuccessMessage(`${result.deletedCount}명의 직원이 삭제되었습니다.`);
+      setSuccessMessage(`${result.deletedCount}명의 직원을 삭제했습니다.`);
       load();
     } catch (err: any) {
       setError(err?.response?.data?.error || '전체 직원 삭제에 실패했습니다.');
@@ -302,10 +323,10 @@ export default function Employees() {
       {tab === 'employees' && (
         <>
           <Grid container spacing={2} mb={2.5}>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="재직자" value={activeCount} sub="활성 계정 보유" color="#2563eb" bg="#eff6ff" accent="#3b82f6" icon={<PeopleIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="퇴사자" value={resignedCount} sub="오프보딩 대상" color="#475569" bg="#f1f5f9" accent="#94a3b8" icon={<ResignIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="SaaS 연결 직원" value={saasLinkedCount} sub="1개 이상 연동" color="#059669" bg="#ecfdf5" accent="#10b981" icon={<CloudIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="우선 점검 대상" value={priorityCount} sub="즉시 조치 필요" color="#dc2626" bg="#fef2f2" accent="#ef4444" icon={<PriorityIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="전체 직원" value={dashboardStats?.totalEmployees ?? totalElements} sub="대시보드와 동일 기준" color="#2563eb" bg="#eff6ff" accent="#3b82f6" icon={<PeopleIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="재직자" value={dashboardStats?.activeEmployees ?? 0} sub="전체 직원 기준" color="#059669" bg="#ecfdf5" accent="#10b981" icon={<PeopleIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="퇴사자" value={dashboardStats?.resignedEmployees ?? 0} sub="오프보딩 대상" color="#475569" bg="#f1f5f9" accent="#94a3b8" icon={<ResignIcon fontSize="small" />} /></Grid>
+            <Grid item xs={12} sm={6} xl={3}><MetricCard label="현재 조회 결과" value={totalElements} sub={`현재 페이지 SaaS 보유 ${currentPageSaasLinkedCount}명`} color="#dc2626" bg="#fef2f2" accent="#ef4444" icon={<PriorityIcon fontSize="small" />} /></Grid>
           </Grid>
 
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
@@ -337,7 +358,8 @@ export default function Employees() {
               openDeleteDialog={setDeleteDialog}
               openResignDialog={setResignDialog}
               resigningEmployeeId={resigningEmployeeId}
-              navigate={navigate}
+              analyzingEmployeeId={analyzingEmployeeId}
+              analyzeEmployee={handleAnalyze}
             />
           )}
         </>
@@ -503,7 +525,8 @@ function EmployeeTable(props: {
   openDeleteDialog: (employee: Employee) => void;
   openResignDialog: (employee: Employee) => void;
   resigningEmployeeId: string | null;
-  navigate: (path: string) => void;
+  analyzingEmployeeId: string | null;
+  analyzeEmployee: (employee: Employee) => void;
 }) {
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
@@ -512,8 +535,8 @@ function EmployeeTable(props: {
           <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
             <HeaderCell width="24%">ID / EMAIL</HeaderCell>
             <HeaderCell width="14%">사번 / 상태</HeaderCell>
-            <HeaderCell width="18%">부서 / 직책</HeaderCell>
-            <HeaderCell width="15%">CONNECTED SAAS</HeaderCell>
+            <HeaderCell width="18%">부서 / 등록 원천</HeaderCell>
+            <HeaderCell width="15%">연동 SaaS</HeaderCell>
             <HeaderCell width="14%">계정 상태</HeaderCell>
             <HeaderCell width="15%" align="right">권한 제어</HeaderCell>
           </TableRow>
@@ -545,15 +568,28 @@ function EmployeeTable(props: {
                 <Box mt={0.75}><StatusChip status={employee.status} /></Box>
               </TableCell>
               <TableCell>
-                <Typography fontWeight={800} noWrap>{employee.department || 'UNKNOWN'}</Typography>
-                <Typography variant="body2" color="#64748b" noWrap>{getRoleLabel(employee)}</Typography>
+                <Typography fontWeight={800} noWrap>{employee.department || '부서 미수집'}</Typography>
+                <Typography variant="body2" color="#64748b" noWrap>{getEmployeeSourceLabel(employee)}</Typography>
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
               <TableCell><AccountState employee={employee} /></TableCell>
               <TableCell align="right">
                 <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
                   <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>
-                  <Button size="small" variant="outlined" startIcon={<AnalyzeIcon />} onClick={() => props.navigate('/risk-analysis')} sx={{ ...compactButtonSx, borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}>분석</Button>
+                  <Tooltip title={(employee.connectedSaas?.length ?? 0) === 0 ? '분석할 SaaS 계정이 없습니다.' : '수집된 SaaS 권한을 기준으로 리스크를 계산합니다.'}>
+                    <span>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={props.analyzingEmployeeId === employee.id ? <CircularProgress size={14} /> : <AnalyzeIcon />}
+                        onClick={() => props.analyzeEmployee(employee)}
+                        disabled={props.analyzingEmployeeId === employee.id || (employee.connectedSaas?.length ?? 0) === 0}
+                        sx={{ ...compactButtonSx, borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}
+                      >
+                        {props.analyzingEmployeeId === employee.id ? '분석 중' : '분석'}
+                      </Button>
+                    </span>
+                  </Tooltip>
                   {employee.status === 'ACTIVE' ? (
                     <Button size="small" variant="outlined" color="warning" startIcon={props.resigningEmployeeId === employee.id ? <CircularProgress size={14} /> : <ResignIcon />} onClick={() => props.openResignDialog(employee)} disabled={props.resigningEmployeeId === employee.id} sx={compactButtonSx}>퇴사</Button>
                   ) : (
