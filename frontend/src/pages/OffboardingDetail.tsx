@@ -55,7 +55,8 @@ function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 동기화에서 비활성 계정을 감지했습니다.';
   if (trigger.includes('SYNC_MISSING_ACCOUNT')) return '이전 동기화에 있던 SaaS 계정이 최신 동기화에서 사라졌습니다.';
-  if (trigger === 'MANUAL_TRIGGER') return '관리자가 퇴사 처리 또는 분석을 직접 요청했습니다.';
+  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 시 자동으로 잔여 접근 권한 분석이 실행됐습니다.';
+  if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자가 기존 권한 회수 대상을 재분석했습니다.';
   return trigger;
 }
 
@@ -105,7 +106,7 @@ export default function OffboardingDetailPage() {
       setDetail(detailRes);
       setPlan(planRes);
     } catch {
-      setError('오프보딩 상세 정보를 불러오지 못했습니다.');
+      setError('권한 회수 상세 정보를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -164,10 +165,10 @@ export default function OffboardingDetailPage() {
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} mb={3}>
         <Box>
           <Typography variant="h4" fontWeight="bold">
-            오프보딩 분석 상세
+            권한 회수 상세
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
-            SaaS 권한 수집 결과, AI 분석 근거, 권한 회수 가능 여부를 확인합니다.
+            잔여 SaaS 권한, 위험도 산정 근거, 권한 회수 가능 여부를 확인합니다.
           </Typography>
         </Box>
         {!detail.revokedAll ? (
@@ -207,13 +208,13 @@ export default function OffboardingDetailPage() {
                 <InfoRow label="이메일" value={detail.employee.email} />
                 <InfoRow label="부서" value={detail.employee.department} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">AI 위험도</Typography>
+                  <Typography variant="caption" color="text.secondary">잔여 접근 위험도</Typography>
                   <Box mt={0.5}>
                     <RiskBadge level={detail.riskLevel} score={detail.riskScore} />
                   </Box>
                 </Box>
                 <InfoRow
-                  label="분석 시각"
+                  label="생성/갱신 시각"
                   value={detail.startedAt ? new Date(detail.startedAt).toLocaleString('ko-KR') : '-'}
                 />
               </Stack>
@@ -223,13 +224,13 @@ export default function OffboardingDetailPage() {
           <Card elevation={1} sx={{ mt: 2, borderRadius: 2 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
-                분석 출처
+                대상 생성 방식
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Stack spacing={1.25}>
                 <Chip
                   icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                  label={automatic ? '자동 분석' : '수동 분석'}
+                  label={automatic ? '자동 감지' : '재분석'}
                   color={automatic ? 'primary' : 'default'}
                   sx={{ alignSelf: 'flex-start' }}
                 />

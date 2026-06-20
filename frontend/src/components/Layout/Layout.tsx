@@ -39,7 +39,7 @@ const NAV_ITEMS = [
   { label: '직원 권한 관리', path: '/employees', icon: <PeopleIcon /> },
   { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
   { label: 'AI 리스크 분석', path: '/risk-analysis', icon: <SecurityIcon /> },
-  { label: '오프보딩 결과', path: '/offboarding', icon: <AssignmentIcon /> },
+  { label: '권한 회수 대상', path: '/offboarding', icon: <AssignmentIcon /> },
   { label: '도움말 & 가이드', path: '/help', icon: <HelpIcon /> },
 ];
 

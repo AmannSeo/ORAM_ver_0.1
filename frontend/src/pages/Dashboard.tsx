@@ -370,7 +370,7 @@ export default function Dashboard() {
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mt={1.5}>
                 <Button size="small" variant="outlined" onClick={() => navigate('/saas-connections')}>SaaS 수집 계정</Button>
                 <Button size="small" variant="outlined" onClick={() => navigate('/employees')}>직원 권한 목록</Button>
-                <Button size="small" variant="outlined" onClick={() => navigate('/offboarding')}>오프보딩 결과</Button>
+                <Button size="small" variant="outlined" onClick={() => navigate('/offboarding')}>권한 회수 대상</Button>
               </Stack>
             </CardContent>
           </Card>

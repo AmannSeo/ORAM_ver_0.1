@@ -196,7 +196,7 @@ export default function Employees() {
     setError(null);
     try {
       const result = await employeeApi.analyze(employee.id);
-      setSuccessMessage(`${employee.name}님의 SaaS 권한 리스크 분석이 완료되었습니다.`);
+      setSuccessMessage(`${employee.name}님의 오프보딩 권한 재분석이 완료되었습니다.`);
       navigate(`/offboarding/${result.offboardingResultId}`);
     } catch (err: any) {
       if (err?.response?.status === 403) {
@@ -204,7 +204,7 @@ export default function Employees() {
         const role = err?.response?.data?.role;
         setError(`분석 권한이 없습니다. 화면 로그인: ${user?.email || '확인 불가'} / ${user?.role || '확인 불가'}, 서버 인식: ${email || '확인 불가'} / ${role || '확인 불가'}`);
       } else {
-        setError(err?.response?.data?.error || 'SaaS 권한 분석 요청에 실패했습니다.');
+        setError(err?.response?.data?.error || '오프보딩 권한 재분석 요청에 실패했습니다.');
       }
     } finally {
       setAnalyzingEmployeeId(null);
@@ -218,7 +218,7 @@ export default function Employees() {
     try {
       const result = await employeeApi.resign(resignDialog.id);
       setResignDialog(null);
-      setSuccessMessage('퇴사 처리와 AI 오프보딩 분석이 완료되었습니다.');
+      setSuccessMessage('퇴사 처리와 SaaS 권한 자동 분석이 완료되었습니다.');
       load();
       navigate(`/offboarding/${result.offboardingResultId}`);
     } catch {
@@ -548,7 +548,7 @@ function EmployeeTable(props: {
             <HeaderCell width="18%">부서 / 등록 원천</HeaderCell>
             <HeaderCell width="15%">연동 SaaS</HeaderCell>
             <HeaderCell width="14%">계정 상태</HeaderCell>
-            <HeaderCell width="11%" align="right">권한 제어</HeaderCell>
+            <HeaderCell width="11%" align="right">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -591,24 +591,26 @@ function EmployeeTable(props: {
               <TableCell align="right">
                 <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
                   <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>
-                  <Tooltip title={(employee.connectedSaas?.length ?? 0) === 0 ? '분석할 SaaS 계정이 없습니다.' : '수집된 SaaS 권한을 기준으로 리스크를 계산합니다.'}>
-                    <span>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={props.analyzingEmployeeId === employee.id ? <CircularProgress size={14} /> : <AnalyzeIcon />}
-                        onClick={() => props.analyzeEmployee(employee)}
-                        disabled={props.analyzingEmployeeId === employee.id || (employee.connectedSaas?.length ?? 0) === 0}
-                        sx={{ ...compactButtonSx, borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}
-                      >
-                        {props.analyzingEmployeeId === employee.id ? '분석 중' : '분석'}
-                      </Button>
-                    </span>
-                  </Tooltip>
                   {employee.status === 'ACTIVE' ? (
                     <Button size="small" variant="outlined" color="warning" startIcon={props.resigningEmployeeId === employee.id ? <CircularProgress size={14} /> : <ResignIcon />} onClick={() => props.openResignDialog(employee)} disabled={props.resigningEmployeeId === employee.id} sx={compactButtonSx}>퇴사</Button>
                   ) : (
-                    <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)} sx={compactButtonSx}>삭제</Button>
+                    <>
+                      <Tooltip title={(employee.connectedSaas?.length ?? 0) === 0 ? '재분석할 SaaS 계정이 없습니다.' : '기존 오프보딩 결과를 새로 수집한 SaaS 권한 기준으로 갱신합니다.'}>
+                        <span>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={props.analyzingEmployeeId === employee.id ? <CircularProgress size={14} /> : <AnalyzeIcon />}
+                            onClick={() => props.analyzeEmployee(employee)}
+                            disabled={props.analyzingEmployeeId === employee.id || (employee.connectedSaas?.length ?? 0) === 0}
+                            sx={{ ...compactButtonSx, borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff' }}
+                          >
+                            {props.analyzingEmployeeId === employee.id ? '갱신 중' : '재분석'}
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)} sx={compactButtonSx}>삭제</Button>
+                    </>
                   )}
                 </Stack>
               </TableCell>
@@ -693,14 +695,14 @@ function EmployeeDialogs(props: any) {
   return (
     <>
       <Dialog open={Boolean(resignDialog)} onClose={() => !resigningEmployeeId && setResignDialog(null)}>
-        <DialogTitle>퇴사 처리 및 자동 분석</DialogTitle>
+        <DialogTitle>퇴사 처리 및 자동 권한 분석</DialogTitle>
         <DialogContent>
-          <Typography><strong>{resignDialog?.name}</strong> 계정을 퇴사자로 변경하고 SaaS 권한 수집 및 AI 분석을 실행합니다.</Typography>
-          {resigningEmployeeId && <Alert severity="info" sx={{ mt: 2 }}>SaaS 권한을 조회하고 XGBoost 위험도를 계산하는 중입니다.</Alert>}
+          <Typography><strong>{resignDialog?.name}</strong> 계정을 퇴사자로 변경하면 ORAM이 연결된 SaaS 권한을 자동 수집하고 잔여 접근 위험도를 계산합니다.</Typography>
+          {resigningEmployeeId && <Alert severity="info" sx={{ mt: 2 }}>연결된 SaaS 권한을 수집하고 오프보딩 위험도를 계산하는 중입니다.</Alert>}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setResignDialog(null)} disabled={Boolean(resigningEmployeeId)}>취소</Button>
-          <Button variant="contained" color="error" onClick={handleResign} disabled={Boolean(resigningEmployeeId)}>{resigningEmployeeId ? '분석 중...' : '퇴사 처리'}</Button>
+          <Button variant="contained" color="error" onClick={handleResign} disabled={Boolean(resigningEmployeeId)}>{resigningEmployeeId ? '자동 분석 중...' : '퇴사 처리'}</Button>
         </DialogActions>
       </Dialog>
 

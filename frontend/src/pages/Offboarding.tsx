@@ -49,7 +49,8 @@ function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 비활성 계정 감지';
   if (trigger.includes('SYNC_MISSING_ACCOUNT')) return 'SaaS 계정 누락 감지';
-  if (trigger === 'MANUAL_TRIGGER') return '관리자 수동 요청';
+  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 시 자동 분석';
+  if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자 재분석';
   return trigger;
 }
 
@@ -62,7 +63,7 @@ export default function Offboarding() {
   useEffect(() => {
     offboardingApi.getAll()
       .then(setResults)
-      .catch(() => setError('오프보딩 결과를 불러오지 못했습니다.'))
+      .catch(() => setError('권한 회수 대상을 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -79,14 +80,14 @@ export default function Offboarding() {
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} mb={3}>
         <Box>
           <Typography variant="h4" fontWeight="bold">
-            오프보딩 분석 결과
+            권한 회수 대상
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
-            SaaS 동기화와 퇴사 이벤트에서 자동 생성된 AI 리스크 분석 결과를 확인합니다.
+            퇴사 처리 또는 SaaS 동기화 이상 감지로 생성된 잔여 접근 권한 회수 대상을 확인합니다.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Chip icon={<AutoIcon />} label={`자동 분석 ${autoCount}건`} color="primary" variant="outlined" />
+          <Chip icon={<AutoIcon />} label={`자동 감지 ${autoCount}건`} color="primary" variant="outlined" />
           <Chip label={`전체 ${results.length}건`} variant="outlined" />
         </Stack>
       </Stack>
@@ -95,9 +96,9 @@ export default function Offboarding() {
         <Grid item xs={12} md={4}>
           <StatusCard
             icon={<CheckIcon color="success" />}
-            title="자동 분석 파이프라인"
+            title="자동 감지 파이프라인"
             value="활성"
-            description="SaaS 동기화에서 비활성 또는 누락 계정이 감지되면 자동으로 AI 분석 결과가 생성됩니다."
+            description="퇴사 처리, SaaS 비활성 계정, 동기화 누락 계정이 확인되면 자동으로 잔여 접근 위험도를 계산합니다."
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -111,9 +112,9 @@ export default function Offboarding() {
         <Grid item xs={12} md={4}>
           <StatusCard
             icon={<AutoIcon color="primary" />}
-            title="분석 결과"
-            value={`${autoCount} 자동 / ${manualCount} 수동`}
-            description="분석 목록에서 자동 감지 사유와 권한 회수 여부를 함께 확인할 수 있습니다."
+            title="대상 생성 방식"
+            value={`${autoCount} 자동 / ${manualCount} 재분석`}
+            description="목록에서 감지 사유, 위험도, 권한 회수 여부를 함께 확인할 수 있습니다."
           />
         </Grid>
       </Grid>
@@ -125,12 +126,12 @@ export default function Offboarding() {
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.100' }}>
               <TableCell><strong>직원</strong></TableCell>
-              <TableCell><strong>분석 방식</strong></TableCell>
+              <TableCell><strong>생성 방식</strong></TableCell>
               <TableCell><strong>감지 사유</strong></TableCell>
               <TableCell><strong>상태</strong></TableCell>
-              <TableCell><strong>AI 위험도</strong></TableCell>
+              <TableCell><strong>잔여 접근 위험도</strong></TableCell>
               <TableCell><strong>권한 회수</strong></TableCell>
-              <TableCell><strong>분석 시각</strong></TableCell>
+              <TableCell><strong>생성/갱신 시각</strong></TableCell>
               <TableCell align="center"><strong>상세</strong></TableCell>
             </TableRow>
           </TableHead>
@@ -138,7 +139,7 @@ export default function Offboarding() {
             {results.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                  아직 분석 결과가 없습니다. SaaS 동기화에서 비활성 또는 누락 계정이 감지되면 이곳에 표시됩니다.
+                  아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
             )}
@@ -153,7 +154,7 @@ export default function Offboarding() {
                   <TableCell>
                     <Chip
                       icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                      label={automatic ? '자동 분석' : '수동 분석'}
+                      label={automatic ? '자동 감지' : '재분석'}
                       color={automatic ? 'primary' : 'default'}
                       size="small"
                       variant={automatic ? 'filled' : 'outlined'}
