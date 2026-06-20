@@ -25,7 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -276,7 +279,25 @@ public class OffboardingService {
 
     @Transactional(readOnly = true)
     public List<OffboardingDto.Summary> getAllResults() {
-        return resultRepository.findAll().stream().map(this::toSummary).toList();
+        return getLatestResultPerEmployee().stream().map(this::toSummary).toList();
+    }
+
+    private List<OffboardingResult> getLatestResultPerEmployee() {
+        Map<UUID, OffboardingResult> latestByEmployee = new LinkedHashMap<>();
+
+        resultRepository.findAll().stream()
+                .sorted(Comparator.comparing(
+                        OffboardingResult::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .forEach(result -> {
+                    Employee employee = result.getEmployee();
+                    if (employee != null && employee.getId() != null) {
+                        latestByEmployee.putIfAbsent(employee.getId(), result);
+                    }
+                });
+
+        return new ArrayList<>(latestByEmployee.values());
     }
 
     @Transactional(readOnly = true)

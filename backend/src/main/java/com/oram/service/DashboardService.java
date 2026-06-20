@@ -1,6 +1,7 @@
 package com.oram.service;
 
 import com.oram.dto.DashboardDto;
+import com.oram.entity.OffboardingResult;
 import com.oram.entity.SaasSyncAlert;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.OffboardingStatus;
@@ -15,7 +16,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +38,14 @@ public class DashboardService {
         long active = employeeRepository.countByStatus(EmployeeStatus.ACTIVE);
         long resigned = employeeRepository.countByStatus(EmployeeStatus.RESIGNED);
         long connectedSaas = connectionRepository.countByConnectedTrue();
-        long criticalRisk = offboardingResultRepository.countByRiskLevel(RiskLevel.CRITICAL);
-        long pending = offboardingResultRepository.countByStatus(OffboardingStatus.PENDING)
-                     + offboardingResultRepository.countByStatus(OffboardingStatus.IN_PROGRESS);
+        List<OffboardingResult> currentResults = getLatestResultPerEmployee();
+        long criticalRisk = currentResults.stream()
+                .filter(result -> result.getRiskLevel() == RiskLevel.CRITICAL)
+                .count();
+        long pending = currentResults.stream()
+                .filter(result -> result.getStatus() == OffboardingStatus.PENDING
+                        || result.getStatus() == OffboardingStatus.IN_PROGRESS)
+                .count();
         long openSaasAlerts = saasSyncAlertRepository.countByStatus(SaasSyncAlertStatus.OPEN);
 
         return DashboardDto.Stats.builder()
@@ -46,6 +57,24 @@ public class DashboardService {
                 .pendingOffboardings(pending)
                 .openSaasSyncAlerts(openSaasAlerts)
                 .build();
+    }
+
+    private List<OffboardingResult> getLatestResultPerEmployee() {
+        Map<UUID, OffboardingResult> latestByEmployee = new LinkedHashMap<>();
+
+        offboardingResultRepository.findAll().stream()
+                .sorted(Comparator.comparing(
+                        OffboardingResult::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .forEach(result -> {
+                    var employee = result.getEmployee();
+                    if (employee != null && employee.getId() != null) {
+                        latestByEmployee.putIfAbsent(employee.getId(), result);
+                    }
+                });
+
+        return new ArrayList<>(latestByEmployee.values());
     }
 
     @Transactional(readOnly = true)
