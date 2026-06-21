@@ -21,6 +21,8 @@ public class SaasConnectionDto {
         private UUID id;
         private SaasType saasType;
         private String workspaceName;
+        private String accountScope;
+        private boolean enterpriseAccount;
         @JsonProperty("isConnected")
         private boolean isConnected;
         private LocalDateTime connectedAt;

@@ -4,6 +4,7 @@ import {
   Chip, LinearProgress, Alert, Dialog, DialogTitle, DialogContent,
   DialogActions, Divider, TextField, Paper, InputAdornment,
   IconButton, Collapse, Stack,
+  MenuItem,
   CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
@@ -104,6 +105,19 @@ const DEFAULT_CONNECTIONS: SaasConnection[] = (Object.keys(SAAS_INFO) as SaasTyp
   isConnected: false,
 }));
 
+const GITHUB_ACCOUNT_SCOPES = [
+  { value: 'PERSONAL', label: '개인 계정', description: '개인 저장소와 본인이 접근 가능한 저장소 중심으로 수집합니다.' },
+  { value: 'ORGANIZATION', label: '조직 계정', description: 'GitHub Organization 멤버와 저장소 collaborator를 수집합니다.' },
+  { value: 'ENTERPRISE', label: '기업 계정', description: 'Enterprise 소속 조직으로 관리되는 GitHub 계정으로 표시합니다. Enterprise API 직접 연동은 확장 범위입니다.' },
+];
+
+function accountScopeLabel(saasType: SaasType, scope?: string, enterpriseAccount?: boolean) {
+  if (saasType !== 'GITHUB') return '워크스페이스';
+  if (enterpriseAccount || scope === 'ENTERPRISE') return '기업 계정';
+  if (scope === 'PERSONAL') return '개인 계정';
+  return '조직 계정';
+}
+
 function formatDateTime(value?: string) {
   if (!value) return '아직 없음';
   return new Date(value).toLocaleString('ko-KR', {
@@ -123,6 +137,7 @@ export default function SaasConnections() {
   // 연결 다이얼로그
   const [connectDialog, setConnectDialog] = useState<SaasType | null>(null);
   const [token, setToken] = useState('');
+  const [accountScope, setAccountScope] = useState('ORGANIZATION');
   const [showToken, setShowToken] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -145,6 +160,7 @@ export default function SaasConnections() {
 
   const openConnect = (saasType: SaasType) => {
     setToken('');
+    setAccountScope(saasType === 'GITHUB' ? 'ORGANIZATION' : 'WORKSPACE');
     setShowToken(false);
     setShowGuide(true);
     setConnectDialog(saasType);
@@ -156,7 +172,7 @@ export default function SaasConnections() {
     setError(null);
     const normalizedToken = token.replace(/\s+/g, '');
     try {
-      await saasApi.tokenConnect(connectDialog, normalizedToken);
+      await saasApi.tokenConnect(connectDialog, normalizedToken, undefined, accountScope);
       setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 연결 가능한 사용자 동기화를 실행했습니다.`);
       setConnectDialog(null);
       load();
@@ -332,6 +348,15 @@ export default function SaasConnections() {
                         label={conn.isConnected ? '연결됨' : '미연결'}
                         color={conn.isConnected ? 'success' : 'default'} size="small"
                       />
+                      {conn.saasType === 'GITHUB' && (
+                        <Chip
+                          label={accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
+                          color={conn.enterpriseAccount ? 'primary' : 'default'}
+                          size="small"
+                          variant="outlined"
+                          sx={{ ml: 0.75 }}
+                        />
+                      )}
                     </Box>
                   </Box>
 
@@ -364,6 +389,11 @@ export default function SaasConnections() {
                       <Typography variant="body2" color="success.dark">
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
+                      {conn.saasType === 'GITHUB' && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          계정 범위: {accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
+                        </Typography>
+                      )}
                       <Typography variant="caption" color="text.secondary" display="block">
                         수집 계정: {conn.identityCount ?? 0}명
                       </Typography>
@@ -497,6 +527,25 @@ export default function SaasConnections() {
               </Collapse>
 
               {/* 토큰 입력 */}
+              {connectDialog === 'GITHUB' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="GitHub 계정 범위"
+                  value={accountScope}
+                  onChange={(event) => setAccountScope(event.target.value)}
+                  size="small"
+                  sx={{ mb: 2 }}
+                  helperText={GITHUB_ACCOUNT_SCOPES.find((item) => item.value === accountScope)?.description}
+                >
+                  {GITHUB_ACCOUNT_SCOPES.map((item) => (
+                    <MenuItem key={item.value} value={item.value}>
+                      {item.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+
               <TextField
                 fullWidth label={info.tokenLabel}
                 placeholder={info.tokenPlaceholder}
