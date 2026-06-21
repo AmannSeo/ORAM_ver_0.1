@@ -31,7 +31,6 @@ import {
   Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
   DeleteSweep as RevokeIcon,
-  FactCheck as QueueIcon,
   PersonSearch as ManualIcon,
   Visibility as ViewIcon,
   Warning as WarningIcon,
@@ -206,10 +205,7 @@ export default function Offboarding() {
     <Box sx={{ width: '100%', pb: 4 }}>
       <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={2.5}>
         <Box>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <QueueIcon color="primary" />
-            <Typography variant="h4" fontWeight={700}>권한 회수 대상</Typography>
-          </Stack>
+          <Typography variant="h4" fontWeight={700}>권한 회수 대상</Typography>
           <Typography variant="body2" color="#64748b" mt={0.75}>
             분석된 잔여 접근 권한을 승인, 회수, 오탐 처리하고 처리 결과를 기록합니다.
           </Typography>

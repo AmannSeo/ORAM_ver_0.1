@@ -17,7 +17,6 @@ import {
   PeopleAlt as PeopleIcon,
   NotificationsActive as AlertIcon,
   Schedule as ScheduleIcon,
-  ManageSearch as DetectionIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import type { SaasConnection, SaasIdentity, SaasType } from '../types';
@@ -326,16 +325,11 @@ export default function SaasConnections() {
       </Grid>
 
       <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#f8fafc', borderColor: '#e2e8f0', borderRadius: 2.5 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
-          <DetectionIcon color="primary" />
-          <Box>
-            <Typography variant="subtitle2" fontWeight={700}>관리자 감지 기준</Typography>
-            <Typography variant="body2" color="#475569" mt={0.25}>
-              SaaS 동기화는 단순 계정 수집이 아니라 이전 동기화 대비 비활성/누락 계정을 감지해 권한 회수 대상과 대시보드 알림으로 연결합니다.
-              같은 이메일은 직원으로 통합하고, SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong>에서 확인합니다.
-            </Typography>
-          </Box>
-        </Stack>
+        <Typography variant="subtitle2" fontWeight={700}>관리자 감지 기준</Typography>
+        <Typography variant="body2" color="#475569" mt={0.25}>
+          SaaS 동기화는 단순 계정 수집이 아니라 이전 동기화 대비 비활성/누락 계정을 감지해 권한 회수 대상과 대시보드 알림으로 연결합니다.
+          같은 이메일은 직원으로 통합하고, SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong>에서 확인합니다.
+        </Typography>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}

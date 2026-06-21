@@ -36,7 +36,6 @@ import {
   CheckCircle as CheckIcon,
   DeleteSweep as RevokeIcon,
   ErrorOutline as ErrorIcon,
-  FactCheck as DecisionIcon,
   PersonSearch as ManualIcon,
   Security as SecurityIcon,
   VpnKey as TokenIcon,
@@ -388,10 +387,7 @@ export default function OffboardingDetailPage() {
           <Stack spacing={2.5}>
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <DecisionIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>관리자 판단 요약</Typography>
-                </Stack>
+                <Typography variant="h6" fontWeight={700}>관리자 판단 요약</Typography>
                 <Divider sx={{ my: 2 }} />
                 <Stack spacing={1.75}>
                   <Box>

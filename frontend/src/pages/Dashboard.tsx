@@ -26,7 +26,6 @@ import {
   Groups as GroupsIcon,
   People as PeopleIcon,
   Security as SecurityIcon,
-  Sensors as LiveIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -266,13 +265,10 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
   return (
     <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
-          <LiveIcon color="primary" />
-          <Box>
-            <Typography variant="h6" fontWeight={700}>SaaS 감지 알림</Typography>
-            <Typography variant="caption" color="#64748b">동기화 중 발견된 비활성/누락 계정</Typography>
-          </Box>
-        </Stack>
+        <Box mb={1.5}>
+          <Typography variant="h6" fontWeight={700}>SaaS 감지 알림</Typography>
+          <Typography variant="caption" color="#64748b">동기화 중 발견된 비활성/누락 계정</Typography>
+        </Box>
         {alerts.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>열린 SaaS 감지 알림이 없습니다.</Alert>
         ) : (

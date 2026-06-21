@@ -434,10 +434,7 @@ export default function RiskAnalysis() {
     <Box sx={{ width: '100%', pb: 4 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} gap={1.5} mb={2.5}>
         <Box>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <AIIcon color="primary" />
-            <Typography variant="h4" fontWeight={700}>AI 리스크 분석</Typography>
-          </Stack>
+          <Typography variant="h4" fontWeight={700}>AI 리스크 분석</Typography>
           <Typography variant="body2" color="#64748b" mt={0.75}>
             SaaS에서 감지된 잔여 접근 권한을 점수화하고, 관리자가 승인해야 할 회수 판단을 정리합니다.
           </Typography>
