@@ -4,6 +4,8 @@ import {
   Chip, LinearProgress, Alert, Dialog, DialogTitle, DialogContent,
   DialogActions, Divider, TextField, Paper, InputAdornment,
   IconButton, Collapse, Stack,
+  CircularProgress,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import {
   CheckCircle as ConnectedIcon, Cancel as NotConnectedIcon,
@@ -11,9 +13,12 @@ import {
   Visibility as ShowIcon, VisibilityOff as HideIcon,
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
   Link as ConnectIcon, OpenInNew as OpenIcon,
+  PeopleAlt as PeopleIcon,
+  NotificationsActive as AlertIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
-import type { SaasConnection, SaasType } from '../types';
+import type { SaasConnection, SaasIdentity, SaasType } from '../types';
 
 // 각 SaaS별 토큰 발급 방법 안내
 const SAAS_INFO: Record<SaasType, {
@@ -32,7 +37,7 @@ const SAAS_INFO: Record<SaasType, {
       'Slack API Apps 페이지 접속 → 앱 선택 또는 "Create New App"',
       '"OAuth & Permissions" 메뉴로 이동',
       'Bot Token Scopes: users:read, users:read.email 추가',
-      'User Token Scopes: admin.users:write 추가\n  ※ admin.users:write는 Bot Token Scopes가 아니라 User Token Scopes에 있습니다.',
+      '권한 해제까지 하려면 User Token Scopes: admin.users:write 추가\n  ※ admin.users:write는 Enterprise 워크스페이스에서만 동작합니다.',
       '"Install to Workspace" 또는 "Reinstall to Workspace" 클릭 → 관리자 계정으로 승인',
       '"OAuth Tokens" 섹션에서 Bot User OAuth Token(xoxb-) 또는 User OAuth Token(xoxp-) 복사',
       '복사한 토큰을 아래에 붙여넣기',
@@ -45,7 +50,7 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'admin.users API', url: 'https://api.slack.com/methods/admin.users.remove' },
     ],
     detectItems: ['워크스페이스 멤버', '관리자(Admin)', '소유자(Owner)'],
-    revokeNote: '계정 비활성화 (Slack Business+ 이상 필요)',
+    revokeNote: 'Enterprise + User Token(admin.users:write)일 때 제거 가능',
   },
   GITHUB: {
     label: 'GitHub', color: '#181717', emoji: '🐙',
@@ -55,7 +60,7 @@ const SAAS_INFO: Record<SaasType, {
     steps: [
       'GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)',
       '"Generate new token (classic)" 클릭',
-      'Scopes 선택: read:org, admin:org (조직 멤버 관리용)',
+      'Scopes 선택: read:org, admin:org, repo (조직 멤버와 저장소 collaborator 조회/제거용)',
       '"Generate token" 클릭 → 토큰 복사 (한 번만 표시됨)',
       '복사한 토큰을 아래에 붙여넣기',
     ],
@@ -66,8 +71,8 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'GitHub 토큰 문서', url: 'https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens' },
       { label: '조직 설정', url: 'https://github.com/settings/organizations' },
     ],
-    detectItems: ['Organization 멤버십', 'Owner 권한', '저장소 접근', 'PAT 존재 여부'],
-    revokeNote: 'Organization에서 멤버 제거',
+    detectItems: ['Organization 멤버십', '저장소 Collaborator', '저장소 접근 권한'],
+    revokeNote: '조직 멤버 또는 저장소 collaborator 제거 가능',
   },
   NOTION: {
     label: 'Notion', color: '#000000', emoji: '📝',
@@ -89,9 +94,24 @@ const SAAS_INFO: Record<SaasType, {
       { label: 'Notion API 참조', url: 'https://developers.notion.com/reference/intro' },
     ],
     detectItems: ['워크스페이스 멤버', '페이지 접근 권한'],
-    revokeNote: '⚠️ Notion API 제한으로 자동 제거 불가 — 수동 처리 필요',
+    revokeNote: '⚠️ 사용자 목록 조회 가능, 멤버 제거는 Notion API 제한으로 수동 처리',
   },
 };
+
+const DEFAULT_CONNECTIONS: SaasConnection[] = (Object.keys(SAAS_INFO) as SaasType[]).map((saasType) => ({
+  saasType,
+  isConnected: false,
+}));
+
+function formatDateTime(value?: string) {
+  if (!value) return '아직 없음';
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function SaasConnections() {
   const [connections, setConnections] = useState<SaasConnection[]>([]);
@@ -105,9 +125,13 @@ export default function SaasConnections() {
   const [showToken, setShowToken] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [syncingSaas, setSyncingSaas] = useState<SaasType | null>(null);
 
   // 해제 다이얼로그
   const [disconnectDialog, setDisconnectDialog] = useState<SaasType | null>(null);
+  const [identityDialog, setIdentityDialog] = useState<SaasType | null>(null);
+  const [identityRows, setIdentityRows] = useState<SaasIdentity[]>([]);
+  const [identityLoading, setIdentityLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -129,13 +153,22 @@ export default function SaasConnections() {
     if (!connectDialog || !token.trim()) return;
     setConnecting(true);
     setError(null);
+    const normalizedToken = token.replace(/\s+/g, '');
     try {
-      await saasApi.tokenConnect(connectDialog, token.trim());
-      setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 이제 오프보딩 시 권한을 탐지합니다.`);
+      await saasApi.tokenConnect(connectDialog, normalizedToken);
+      setSuccess(`${SAAS_INFO[connectDialog].label} 연결 완료! 연결 가능한 사용자 동기화를 실행했습니다.`);
       setConnectDialog(null);
       load();
     } catch (err: any) {
-      const msg = err?.response?.data?.error || '토큰 연결에 실패했습니다. 토큰이 올바른지 확인하세요.';
+      const status = err?.response?.status;
+      const serverMessage = err?.response?.data?.error;
+      const serverEmail = err?.response?.data?.email;
+      const serverRole = err?.response?.data?.role;
+      const msg = status === 401
+        ? '로그인 세션이 만료되었습니다. 다시 로그인한 뒤 연결하세요.'
+        : status === 403
+          ? `관리자 또는 보안 담당자 계정만 SaaS를 연결할 수 있습니다. 서버 인식: ${serverEmail || '확인 불가'} / ${serverRole || '확인 불가'}`
+          : serverMessage || '토큰 연결에 실패했습니다. 토큰 값과 GitHub 권한(scope)을 확인하세요.';
       setError(msg);
     } finally {
       setConnecting(false);
@@ -155,6 +188,29 @@ export default function SaasConnections() {
     }
   };
 
+  const handleSyncUsers = async (saasType: SaasType) => {
+    setSyncingSaas(saasType);
+    setError(null);
+    try {
+      const result = await saasApi.syncUsers(saasType);
+      const details = [
+        `확인 ${result.totalFound}명`,
+        `신규 ${result.syncedCount}명`,
+        result.inactiveCount ? `비활성 ${result.inactiveCount}명` : null,
+        result.missingCount ? `누락 ${result.missingCount}명` : null,
+        result.resolvedAlertCount ? `해제 알림 ${result.resolvedAlertCount}건` : null,
+      ].filter(Boolean).join(', ');
+      const warningText = result.warnings?.length ? `\n확인 필요: ${result.warnings.join(' / ')}` : '';
+      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: ${details}${warningText}`);
+      load();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';
+      setError(msg);
+    } finally {
+      setSyncingSaas(null);
+    }
+  };
+
   const handleDisconnect = async () => {
     if (!disconnectDialog) return;
     try {
@@ -167,9 +223,30 @@ export default function SaasConnections() {
     }
   };
 
+  const openIdentityDialog = async (saasType: SaasType) => {
+    setIdentityDialog(saasType);
+    setIdentityLoading(true);
+    setError(null);
+    try {
+      const rows = await saasApi.getIdentities(saasType);
+      setIdentityRows(rows);
+    } catch (err: any) {
+      setIdentityRows([]);
+      const status = err?.response?.status;
+      setError(
+        status === 403
+          ? '수집 계정 목록 조회 권한이 거부되었습니다. 다시 로그인하거나 백엔드 서버를 재시작해 최신 코드가 반영됐는지 확인하세요.'
+          : err?.response?.data?.error || 'SaaS 수집 계정 목록을 불러오지 못했습니다.'
+      );
+    } finally {
+      setIdentityLoading(false);
+    }
+  };
+
   if (loading) return <LinearProgress />;
 
   const info = connectDialog ? SAAS_INFO[connectDialog] : null;
+  const visibleConnections = connections.length > 0 ? connections : DEFAULT_CONNECTIONS;
 
   return (
     <Box>
@@ -182,13 +259,17 @@ export default function SaasConnections() {
           <br />
           ORAM은 이 토큰으로 직원 권한 조회·해제 API를 대신 호출합니다. 토큰은 AES-256으로 암호화 저장됩니다.
         </Typography>
+        <Typography variant="body2" color="info.dark" mt={1}>
+          <strong>직원 목록:</strong> 같은 이메일은 하나의 직원으로 통합됩니다.
+          SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong> 버튼에서 따로 확인할 수 있습니다.
+        </Typography>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
 
       <Grid container spacing={3}>
-        {connections.map((conn) => {
+        {visibleConnections.map((conn) => {
           const meta = SAAS_INFO[conn.saasType];
           return (
             <Grid item xs={12} sm={6} md={4} key={conn.saasType}>
@@ -236,6 +317,24 @@ export default function SaasConnections() {
                       <Typography variant="body2" color="success.dark">
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        수집 계정: {conn.identityCount ?? 0}명
+                      </Typography>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
+                        <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                          마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
+                        <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
+                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'}>
+                          열린 알림: {conn.openAlertCount ?? 0}건
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        동기화 시 비활성/누락 계정은 대시보드 알림으로 표시됩니다.
+                      </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
                           연결일: {new Date(conn.connectedAt).toLocaleDateString('ko-KR')}
@@ -246,12 +345,31 @@ export default function SaasConnections() {
                 </CardContent>
 
                 <Divider />
-                <CardActions sx={{ px: 2, py: 1.5, gap: 1 }}>
+                <CardActions sx={{ px: 2, py: 1.5, gap: 1, flexWrap: 'wrap' }}>
                   {conn.isConnected ? (
-                    <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
-                      onClick={() => setDisconnectDialog(conn.saasType)}>
-                      연결 해제
-                    </Button>
+                    <>
+                      <Button
+                        variant="contained"
+                        startIcon={syncingSaas === conn.saasType ? <CircularProgress size={16} color="inherit" /> : <ConnectIcon />}
+                        size="small"
+                        onClick={() => handleSyncUsers(conn.saasType)}
+                        disabled={syncingSaas === conn.saasType}
+                      >
+                        {syncingSaas === conn.saasType ? '동기화 중...' : '동기화'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PeopleIcon />}
+                        size="small"
+                        onClick={() => openIdentityDialog(conn.saasType)}
+                      >
+                        수집 계정
+                      </Button>
+                      <Button variant="outlined" color="error" startIcon={<LinkOffIcon />} size="small"
+                        onClick={() => setDisconnectDialog(conn.saasType)}>
+                        연결 해제
+                      </Button>
+                    </>
                   ) : (
                     <>
                       <Button variant="contained" startIcon={<ConnectIcon />} size="small"
@@ -354,8 +472,8 @@ export default function SaasConnections() {
               {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
               <Alert severity="info" sx={{ mt: 2 }}>
-                토큰이 입력되면 ORAM이 실제 {info.label} API를 호출해 토큰 유효성을 검증합니다.
-                검증 성공 시 AES-256 암호화 후 저장됩니다.
+                토큰이 입력되면 ORAM이 실제 {info.label} API를 호출해 토큰 유효성을 검증하고,
+                가능한 사용자 목록을 자동 동기화합니다. 검증 성공 시 AES-256 암호화 후 저장됩니다.
               </Alert>
             </DialogContent>
             <DialogActions>
@@ -383,6 +501,82 @@ export default function SaasConnections() {
         <DialogActions>
           <Button onClick={() => setDisconnectDialog(null)}>취소</Button>
           <Button color="error" variant="contained" onClick={handleDisconnect}>연결 해제</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(identityDialog)} onClose={() => setIdentityDialog(null)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {identityDialog && `${SAAS_INFO[identityDialog].label} 수집 계정 목록 (${identityRows.length}명)`}
+        </DialogTitle>
+        <DialogContent>
+          {identityLoading ? (
+            <Box display="flex" alignItems="center" gap={1} py={3}>
+              <CircularProgress size={22} />
+              <Typography variant="body2">수집 계정을 불러오는 중...</Typography>
+            </Box>
+          ) : identityRows.length === 0 ? (
+            <Alert severity="info">
+              수집된 계정이 없습니다. 먼저 해당 SaaS 동기화를 실행해 주세요.
+            </Alert>
+          ) : (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                같은 이메일을 가진 계정은 하나의 직원으로 자동 매핑됩니다. GitHub 비공개 이메일처럼 실제 이메일을 알 수 없는 경우
+                <strong> @github.local</strong> 계정으로 분리될 수 있습니다.
+              </Alert>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>SaaS 계정</strong></TableCell>
+                      <TableCell><strong>이메일</strong></TableCell>
+                      <TableCell><strong>매핑된 직원</strong></TableCell>
+                      <TableCell><strong>상태</strong></TableCell>
+                      <TableCell><strong>동기화 시각</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {identityRows.map(row => (
+                      <TableRow key={row.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            {row.displayName || row.externalUsername || row.externalUserId}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {row.externalUsername || row.externalUserId}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{row.externalEmail || '-'}</TableCell>
+                        <TableCell>
+                          {row.employeeName ? (
+                            <>
+                              <Typography variant="body2">{row.employeeName}</Typography>
+                              <Typography variant="caption" color="text.secondary">{row.employeeEmail}</Typography>
+                            </>
+                          ) : (
+                            <Chip size="small" label="미매핑" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            color={row.accessRevoked ? 'default' : row.status === 'ACTIVE' ? 'success' : 'warning'}
+                            label={row.accessRevoked ? '회수됨' : row.status === 'ACTIVE' ? '활성' : '비활성'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {row.lastSyncedAt ? new Date(row.lastSyncedAt).toLocaleString('ko-KR') : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIdentityDialog(null)}>닫기</Button>
         </DialogActions>
       </Dialog>
     </Box>

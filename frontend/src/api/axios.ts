@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
@@ -14,7 +14,15 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers && typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`);
+      config.headers.set('X-ORAM-Auth-Token', token);
+    } else {
+      const headers = AxiosHeaders.from(config.headers);
+      headers.set('Authorization', `Bearer ${token}`);
+      headers.set('X-ORAM-Auth-Token', token);
+      config.headers = headers;
+    }
   }
   return config;
 });

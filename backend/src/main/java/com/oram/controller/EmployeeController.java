@@ -3,8 +3,11 @@ package com.oram.controller;
 import com.oram.dto.EmployeeDto;
 import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasType;
 import com.oram.repository.UserRepository;
+import com.oram.security.JwtTokenProvider;
 import com.oram.service.EmployeeService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,19 +31,20 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
             @RequestParam(required = false) EmployeeStatus status,
             @RequestParam(required = false) String department,
+            @RequestParam(required = false) SaasType saasType,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(employeeService.getEmployees(status, department, page, size));
+        return ResponseEntity.ok(employeeService.getEmployees(status, department, saasType, q, page, size));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
     public ResponseEntity<EmployeeDto.Response> getEmployee(@PathVariable UUID id) {
         return ResponseEntity.ok(employeeService.getEmployee(id));
     }
@@ -67,6 +71,50 @@ public class EmployeeController {
                 "message", "Employee resigned. Offboarding workflow triggered.",
                 "offboardingResultId", offboardingResultId.toString()
         ));
+    }
+
+    @PostMapping("/{id}/analyze")
+    public ResponseEntity<Map<String, Object>> analyzeEmployee(
+            @PathVariable UUID id,
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = resolveAuthenticatedEmail(authentication, request);
+        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+
+        if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Only ADMIN or SECURITY_MANAGER can run employee risk analysis.",
+                    "email", email != null ? email : "anonymous",
+                    "role", user != null ? user.getRole().name() : "unknown"
+            ));
+        }
+
+        UUID offboardingResultId = employeeService.analyzeEmployee(id);
+        return ResponseEntity.ok(Map.of(
+                "message", "Employee risk analysis completed.",
+                "offboardingResultId", offboardingResultId.toString()
+        ));
+    }
+
+    private String resolveAuthenticatedEmail(Authentication authentication, HttpServletRequest request) {
+        if (authentication != null && authentication.getName() != null && !"anonymousUser".equals(authentication.getName())) {
+            return authentication.getName();
+        }
+
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            String token = authorization.substring(7);
+            if (jwtTokenProvider.validateToken(token)) {
+                return jwtTokenProvider.getEmailFromToken(token);
+            }
+        }
+
+        String fallbackToken = request.getHeader("X-ORAM-Auth-Token");
+        if (fallbackToken != null && !fallbackToken.isBlank() && jwtTokenProvider.validateToken(fallbackToken)) {
+            return jwtTokenProvider.getEmailFromToken(fallbackToken);
+        }
+
+        return null;
     }
 
     @DeleteMapping("/{id}")

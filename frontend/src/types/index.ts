@@ -31,6 +31,22 @@ export interface DashboardStats {
   connectedSaasCount: number;
   criticalRiskCount: number;
   pendingOffboardings: number;
+  openSaasSyncAlerts: number;
+}
+
+export interface SaasSyncAlert {
+  id: string;
+  saasType: SaasType;
+  status: 'OPEN' | 'RESOLVED';
+  reason: string;
+  detail: string;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  employeeEmail?: string;
+  createdAt: string;
 }
 
 // Employee
@@ -42,6 +58,19 @@ export interface Employee {
   department: string;
   status: EmployeeStatus;
   createdAt: string;
+  connectedSaas?: EmployeeSaasAccount[];
+}
+
+export interface EmployeeSaasAccount {
+  id: string;
+  saasType: SaasType;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  status?: EmployeeStatus;
+  accessRevoked: boolean;
+  hasRevokePermission: boolean;
+  lastSyncedAt?: string;
 }
 
 export interface EmployeePageResponse {
@@ -68,6 +97,35 @@ export interface SaasConnection {
   isConnected: boolean;
   connectedAt?: string;
   connectedBy?: string;
+  identityCount?: number;
+  lastSyncedAt?: string;
+  openAlertCount?: number;
+}
+
+export interface SaasSyncUsersResponse {
+  message: string;
+  syncedCount: number;
+  totalFound: number;
+  missingCount: number;
+  inactiveCount: number;
+  resolvedAlertCount: number;
+  warnings: string[];
+}
+
+export interface SaasIdentity {
+  id: string;
+  saasType: SaasType;
+  externalUserId: string;
+  externalUsername?: string;
+  externalEmail?: string;
+  displayName?: string;
+  department?: string;
+  status?: EmployeeStatus;
+  accessRevoked: boolean;
+  lastSyncedAt?: string;
+  employeeId?: string;
+  employeeName?: string;
+  employeeEmail?: string;
 }
 
 // Offboarding
@@ -82,8 +140,14 @@ export interface OffboardingSummary {
   status: OffboardingStatus;
   riskScore?: number;
   riskLevel?: RiskLevel;
+  analysisSource?: 'MANUAL' | 'AUTOMATIC' | string;
+  analysisTrigger?: string;
+  analysisEngine?: string;
   startedAt?: string;
   revokedAll: boolean;
+  falsePositive: boolean;
+  falsePositiveReason?: string;
+  falsePositiveAt?: string;
 }
 
 export interface PermissionInfo {
@@ -99,9 +163,32 @@ export interface PermissionInfo {
 }
 
 export interface OffboardingDetail extends OffboardingSummary {
+  anomalyScore?: number;
+  riskBreakdown?: RiskScoreResponse['breakdown'];
+  riskExplanations?: RiskScoreResponse['explanations'];
   permissions: PermissionInfo[];
   recommendedActions: string[];
   completedAt?: string;
+}
+
+export interface RevokePlanItem {
+  saasType: SaasType;
+  status: 'READY' | 'MANUAL' | 'NO_ACCOUNT' | 'REVOKED' | 'FAILED' | string;
+  canRevoke: boolean;
+  accountMatched: boolean;
+  resourceCount: number;
+  action: string;
+  reason: string;
+  resources?: string[];
+}
+
+export interface RevokePlanResponse {
+  resultId: string;
+  employee: OffboardingSummary['employee'];
+  readyCount: number;
+  manualCount: number;
+  blockedCount: number;
+  items: RevokePlanItem[];
 }
 
 // Risk
@@ -117,6 +204,8 @@ export interface RiskScoreRequest {
 export interface RiskScoreResponse {
   score: number;
   level: RiskLevel;
+  engine?: string;
+  anomalyScore?: number;
   breakdown: {
     adminWeight: number;
     ownerWeight: number;
@@ -124,5 +213,16 @@ export interface RiskScoreResponse {
     recentLoginWeight: number;
     repoWeight: number;
     workspaceWeight: number;
+    threatIpWeight?: number;
+    automationWeight?: number;
+    blastRadiusWeight?: number;
+    privilegeSpreadWeight?: number;
+    contextualAnomalyWeight?: number;
+    largeDataExportWeight?: number;
   };
+  explanations?: {
+    feature: string;
+    contribution: number;
+    description: string;
+  }[];
 }

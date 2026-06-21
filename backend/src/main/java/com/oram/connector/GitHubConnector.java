@@ -6,17 +6,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * GitHub REST API 커넥터
- * 
- * GitHub OAuth App을 생성하고 client-id/secret을 환경변수에 설정해야 합니다.
- * PoC 모드: API 호출 실패 시 Mock 데이터를 반환합니다.
- */
 @Slf4j
 @Component
 public class GitHubConnector implements SaaSConnector {
@@ -24,6 +20,7 @@ public class GitHubConnector implements SaaSConnector {
     private static final String GITHUB_API_BASE = "https://api.github.com";
     private static final String GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize";
     private static final String GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
+    private static final String GITHUB_API_VERSION = "2022-11-28";
 
     @Value("${oram.oauth.github.client-id}")
     private String clientId;
@@ -79,15 +76,14 @@ public class GitHubConnector implements SaaSConnector {
                 return new TokenInfo(accessToken, null, "github-org", "GitHub Organization", 0L);
             }
         } catch (Exception e) {
-            log.warn("GitHub OAuth exchange failed (PoC mock mode): {}", e.getMessage());
+            log.warn("GitHub OAuth exchange failed: {}", e.getMessage());
         }
-        // PoC Mock fallback
+
         return new TokenInfo("mock-github-token", null, "mock-org", "Mock GitHub Org", 0L);
     }
 
     @Override
     public void disconnect(String accessToken) {
-        // GitHub tokens don't expire; in production, call DELETE /applications/{client_id}/token
         log.info("[GITHUB] Token disconnect requested");
     }
 
@@ -95,47 +91,72 @@ public class GitHubConnector implements SaaSConnector {
     public List<DiscoveredPermission> getPermissions(String email, String accessToken) {
         List<DiscoveredPermission> permissions = new ArrayList<>();
         try {
-            // Search user by email via user search API
-            Map<?, ?> searchResponse = webClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/search/users")
-                            .queryParam("q", email + " in:email")
-                            .build())
-                    .header("Authorization", "token " + accessToken)
-                    .header("Accept", "application/vnd.github+json")
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+            String login = resolveLogin(email, accessToken);
+            if (login == null) return permissions;
 
-            if (searchResponse != null) {
-                List<?> items = (List<?>) searchResponse.get("items");
-                if (items != null && !items.isEmpty()) {
-                    Map<?, ?> user = (Map<?, ?>) items.getFirst();
-                    String login = (String) user.get("login");
+            List<Map<?, ?>> orgs = getUserOrgs(login, accessToken);
+            for (Map<?, ?> org : orgs) {
+                String orgLogin = stringValue(org.get("login"));
+                if (orgLogin == null || orgLogin.isBlank()) continue;
 
-                    // Get organization membership
-                    List<?> orgs = webClient.get()
-                            .uri("/users/" + login + "/orgs")
-                            .header("Authorization", "token " + accessToken)
-                            .retrieve()
-                            .bodyToFlux(Map.class)
-                            .collectList()
-                            .block();
+                String role = getOrgMembershipRole(orgLogin, login, accessToken);
+                boolean isAdmin = "admin".equalsIgnoreCase(role);
+                permissions.add(new DiscoveredPermission(
+                        isAdmin ? "ORG_ADMIN" : "ORG_MEMBER",
+                        orgLogin,
+                        isAdmin,
+                        false,
+                        false,
+                        true,
+                        0,
+                        1
+                ));
+            }
 
-                    int orgCount = orgs != null ? orgs.size() : 0;
+            int visibleRepoCount = 0;
+            for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+                String fullName = stringValue(repo.get("full_name"));
+                if (fullName == null || !fullName.contains("/")) continue;
 
+                String[] parts = fullName.split("/", 2);
+                String permission = getRepoCollaboratorPermission(parts[0], parts[1], login, accessToken);
+                if (permission == null || permission.isBlank()) continue;
+
+                visibleRepoCount++;
+                boolean isAdmin = "admin".equalsIgnoreCase(permission);
+                boolean isOwner = Boolean.TRUE.equals(repo.get("fork")) ? false : isAdmin && parts[0].equalsIgnoreCase(login);
+
+                permissions.add(new DiscoveredPermission(
+                        "REPO_" + permission.toUpperCase(),
+                        fullName,
+                        isAdmin,
+                        isOwner,
+                        false,
+                        true,
+                        1,
+                        0
+                ));
+            }
+
+            if (permissions.isEmpty()) {
+                int repoCount = countReposForUser(login, accessToken);
+                if (repoCount > 0 || !orgs.isEmpty()) {
                     permissions.add(new DiscoveredPermission(
-                            "MEMBER", "GitHub Organization",
-                            false, false, false, true, 0, orgCount
+                            orgs.isEmpty() ? "COLLABORATOR" : "MEMBER",
+                            orgs.isEmpty() ? "GitHub Repository" : "GitHub Organization",
+                            false,
+                            false,
+                            false,
+                            true,
+                            repoCount,
+                            orgs.size()
                     ));
                 }
+            } else if (visibleRepoCount > 0) {
+                log.info("Discovered {} GitHub repo permissions for {}", visibleRepoCount, login);
             }
         } catch (Exception e) {
-            log.warn("GitHub getPermissions failed, returning mock data: {}", e.getMessage());
-            // PoC Mock data with high-risk profile
-            permissions.add(new DiscoveredPermission(
-                    "OWNER", "company-org",
-                    true, true, true, true, 42, 1
-            ));
+            log.warn("GitHub getPermissions failed: {}", e.getMessage());
         }
         return permissions;
     }
@@ -143,45 +164,111 @@ public class GitHubConnector implements SaaSConnector {
     @Override
     public RevokeResult revokeAccess(String email, String accessToken) {
         log.info("[GITHUB] Revoking access for: {}", email);
-        // In production: remove user from org, revoke PATs
-        return new RevokeResult(true, "GitHub access revoked for " + email,
-                List.of("Organization Owner", "Repository Access", "PAT Token"));
+
+        String login = resolveLogin(email, accessToken);
+        if (login == null || login.isBlank()) {
+            return new RevokeResult(false,
+                    "GitHub user could not be matched from email. Store the GitHub login or use a public GitHub email.",
+                    List.of());
+        }
+
+        List<String> revokedResources = new ArrayList<>();
+        List<String> blockedResources = new ArrayList<>();
+
+        for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+            String fullName = stringValue(repo.get("full_name"));
+            if (fullName == null || !fullName.contains("/")) continue;
+
+            String[] parts = fullName.split("/", 2);
+            int status = deleteRepoCollaborator(parts[0], parts[1], login, accessToken);
+            if (status == 204) {
+                revokedResources.add("Repository collaborator: " + fullName);
+            } else if (status == 404) {
+                blockedResources.add("Repository collaborator not found or not visible: " + fullName);
+            } else if (status != 204) {
+                blockedResources.add("Repository " + fullName + " remove failed: " + githubStatusReason(status));
+            }
+        }
+
+        for (Map<?, ?> org : getAuthenticatedUserOrgs(accessToken)) {
+            String orgLogin = stringValue(org.get("login"));
+            if (orgLogin == null || orgLogin.isBlank()) continue;
+
+            int status = deleteOrgMember(orgLogin, login, accessToken);
+            if (status == 204) {
+                revokedResources.add("Organization member: " + orgLogin);
+            } else if (status == 404) {
+                blockedResources.add("Organization member not found or not visible: " + orgLogin);
+            } else if (status != 204) {
+                blockedResources.add("Organization " + orgLogin + " remove failed: " + githubStatusReason(status));
+            }
+        }
+
+        if (revokedResources.isEmpty()) {
+            String message = blockedResources.isEmpty()
+                    ? "No removable GitHub access found. Access may be inherited through a team/org role, or the token cannot see that account."
+                    : "GitHub revoke could not complete. Check token scopes, organization role, and whether the target account is still visible to the token.";
+            return new RevokeResult(false, message, blockedResources);
+        }
+
+        revokedResources.addAll(blockedResources);
+        return new RevokeResult(true, "GitHub access revoked for " + login, revokedResources);
+    }
+
+    @Override
+    public List<SyncedUser> listUsers(String accessToken) {
+        Map<String, SyncedUser> users = new LinkedHashMap<>();
+
+        for (Map<?, ?> org : getAuthenticatedUserOrgs(accessToken)) {
+            String orgLogin = stringValue(org.get("login"));
+            if (orgLogin == null || orgLogin.isBlank()) continue;
+
+            for (Map<?, ?> member : getOrgMembers(orgLogin, accessToken)) {
+                String login = stringValue(member.get("login"));
+                if (login == null || login.isBlank()) continue;
+                users.putIfAbsent(login, toSyncedUser(login, "GitHub: " + orgLogin, accessToken));
+            }
+        }
+
+        for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+            String fullName = stringValue(repo.get("full_name"));
+            if (fullName == null || !fullName.contains("/")) continue;
+
+            String[] parts = fullName.split("/", 2);
+            for (Map<?, ?> collaborator : getRepoCollaborators(parts[0], parts[1], accessToken)) {
+                String login = stringValue(collaborator.get("login"));
+                if (login == null || login.isBlank()) continue;
+                users.putIfAbsent(login, toSyncedUser(login, "GitHub Repo: " + fullName, accessToken));
+            }
+        }
+
+        if (users.isEmpty()) {
+            Map<?, ?> currentUser = getCurrentUser(accessToken);
+            String login = currentUser != null ? stringValue(currentUser.get("login")) : null;
+            if (login != null && !login.isBlank()) {
+                users.put(login, toSyncedUser(login, "GitHub", accessToken));
+            }
+        }
+
+        return new ArrayList<>(users.values());
     }
 
     @Override
     public boolean validateToken(String accessToken) {
-        try {
-            // GitHub는 Bearer 또는 token prefix 모두 지원
-            String authHeader = accessToken.startsWith("ghp_") || accessToken.startsWith("github_pat_")
-                    ? "Bearer " + accessToken
-                    : "token " + accessToken;
-            Map<?, ?> resp = webClient.get()
-                    .uri("/user")
-                    .header("Authorization", authHeader)
-                    .header("Accept", "application/vnd.github+json")
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-            return resp != null && resp.get("login") != null;
-        } catch (Exception e) {
-            log.warn("GitHub validateToken failed: {}", e.getMessage());
-            return false;
-        }
+        String token = sanitizeToken(accessToken);
+        if (token.isBlank()) return false;
+
+        if (validateTokenWithHeader("Bearer " + token)) return true;
+        return validateTokenWithHeader("token " + token);
     }
 
-    /**
-     * 토큰으로 사용자/조직 정보를 조회
-     * GitHub PAT: /user API 사용
-     */
     public String getWorkspaceName(String accessToken) {
         try {
-            String authHeader = accessToken.startsWith("ghp_") || accessToken.startsWith("github_pat_")
-                    ? "Bearer " + accessToken
-                    : "token " + accessToken;
             Map<?, ?> resp = webClient.get()
                     .uri("/user")
-                    .header("Authorization", authHeader)
+                    .header("Authorization", authHeader(accessToken))
                     .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
@@ -194,5 +281,318 @@ public class GitHubConnector implements SaaSConnector {
             log.warn("GitHub getWorkspaceName failed: {}", e.getMessage());
         }
         return "GitHub";
+    }
+
+    private String resolveLogin(String email, String accessToken) {
+        if (email == null || email.isBlank()) return null;
+        String value = email.trim();
+        if (!value.contains("@")) return value;
+        if (value.endsWith("@github.local")) {
+            return value.substring(0, value.indexOf('@')).trim();
+        }
+
+        try {
+            Map<?, ?> searchResponse = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/search/users")
+                            .queryParam("q", value + " in:email")
+                            .build())
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (searchResponse == null) return null;
+            List<?> items = (List<?>) searchResponse.get("items");
+            if (items == null || items.isEmpty()) return null;
+            Map<?, ?> user = (Map<?, ?>) items.getFirst();
+            return stringValue(user.get("login"));
+        } catch (Exception e) {
+            log.warn("GitHub user lookup failed for {}: {}", email, e.getMessage());
+            return null;
+        }
+    }
+
+    private int countReposForUser(String login, String accessToken) {
+        int count = 0;
+        for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+            String fullName = stringValue(repo.get("full_name"));
+            if (fullName == null || !fullName.contains("/")) continue;
+
+            String[] parts = fullName.split("/", 2);
+            int status = checkRepoCollaborator(parts[0], parts[1], login, accessToken);
+            if (status == 204) count++;
+        }
+        return count;
+    }
+
+    private List<Map<?, ?>> getUserOrgs(String login, String accessToken) {
+        try {
+            List<Map> orgs = webClient.get()
+                    .uri("/users/{login}/orgs", login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(orgs);
+        } catch (Exception e) {
+            log.warn("GitHub user org listing failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<?, ?>> getAccessibleRepos(String accessToken) {
+        try {
+            List<Map> repos = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/user/repos")
+                            .queryParam("affiliation", "owner,collaborator,organization_member")
+                            .queryParam("per_page", 100)
+                            .build())
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(repos);
+        } catch (Exception e) {
+            log.warn("GitHub repository listing failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<?, ?>> getAuthenticatedUserOrgs(String accessToken) {
+        try {
+            List<Map> orgs = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/user/orgs")
+                            .queryParam("per_page", 100)
+                            .build())
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(orgs);
+        } catch (Exception e) {
+            log.warn("GitHub organization listing failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<?, ?>> getOrgMembers(String org, String accessToken) {
+        try {
+            List<Map> members = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/orgs/{org}/members")
+                            .queryParam("per_page", 100)
+                            .build(org))
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(members);
+        } catch (Exception e) {
+            log.warn("GitHub org member listing failed for {}: {}", org, e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<?, ?>> getRepoCollaborators(String owner, String repo, String accessToken) {
+        try {
+            List<Map> collaborators = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/repos/{owner}/{repo}/collaborators")
+                            .queryParam("affiliation", "all")
+                            .queryParam("per_page", 100)
+                            .build(owner, repo))
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToFlux(Map.class)
+                    .collectList()
+                    .block();
+            return toWildcardMaps(collaborators);
+        } catch (Exception e) {
+            log.warn("GitHub repo collaborator listing failed for {}/{}: {}", owner, repo, e.getMessage());
+            return List.of();
+        }
+    }
+
+    private String getRepoCollaboratorPermission(String owner, String repo, String login, String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri("/repos/{owner}/{repo}/collaborators/{login}/permission", owner, repo, login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return response != null ? stringValue(response.get("permission")) : null;
+        } catch (Exception e) {
+            log.debug("GitHub repo permission lookup failed for {}/{} {}: {}", owner, repo, login, e.getMessage());
+            return null;
+        }
+    }
+
+    private String getOrgMembershipRole(String org, String login, String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri("/orgs/{org}/memberships/{username}", org, login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return response != null ? stringValue(response.get("role")) : "member";
+        } catch (Exception e) {
+            log.debug("GitHub org membership role lookup failed for {}/{}: {}", org, login, e.getMessage());
+            return "member";
+        }
+    }
+
+    private SyncedUser toSyncedUser(String login, String department, String accessToken) {
+        Map<?, ?> profile = getUserProfile(login, accessToken);
+        String name = profile != null && profile.get("name") != null
+                ? profile.get("name").toString()
+                : login;
+        String email = profile != null && profile.get("email") != null
+                ? profile.get("email").toString()
+                : login + "@github.local";
+
+        return new SyncedUser(
+                "github:" + login,
+                name,
+                email.toLowerCase(),
+                department,
+                true
+        );
+    }
+
+    private Map<?, ?> getCurrentUser(String accessToken) {
+        try {
+            return webClient.get()
+                    .uri("/user")
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (Exception e) {
+            log.warn("GitHub current user lookup failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Map<?, ?> getUserProfile(String login, String accessToken) {
+        try {
+            return webClient.get()
+                    .uri("/users/{login}", login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (Exception e) {
+            log.warn("GitHub user profile lookup failed for {}: {}", login, e.getMessage());
+            return null;
+        }
+    }
+
+    private int checkRepoCollaborator(String owner, String repo, String login, String accessToken) {
+        return webClient.get()
+                .uri("/repos/{owner}/{repo}/collaborators/{login}", owner, repo, login)
+                .header("Authorization", authHeader(accessToken))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                .exchangeToMono(response -> Mono.just(response.statusCode().value()))
+                .block();
+    }
+
+    private int deleteRepoCollaborator(String owner, String repo, String login, String accessToken) {
+        return webClient.delete()
+                .uri("/repos/{owner}/{repo}/collaborators/{login}", owner, repo, login)
+                .header("Authorization", authHeader(accessToken))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                .exchangeToMono(response -> Mono.just(response.statusCode().value()))
+                .block();
+    }
+
+    private int deleteOrgMember(String org, String login, String accessToken) {
+        return webClient.delete()
+                .uri("/orgs/{org}/members/{login}", org, login)
+                .header("Authorization", authHeader(accessToken))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                .exchangeToMono(response -> Mono.just(response.statusCode().value()))
+                .block();
+    }
+
+    private String githubStatusReason(int status) {
+        return switch (status) {
+            case 401 -> "401 Unauthorized - token is invalid or expired";
+            case 403 -> "403 Forbidden - token lacks admin permission or required scope";
+            case 404 -> "404 Not Found - account/resource is not visible to the token or already removed";
+            case 422 -> "422 Unprocessable Entity - GitHub rejected the removal request";
+            default -> status + " response from GitHub API";
+        };
+    }
+
+    private String authHeader(String accessToken) {
+        String token = sanitizeToken(accessToken);
+        return token.startsWith("github_pat_")
+                ? "Bearer " + token
+                : "token " + token;
+    }
+
+    private boolean validateTokenWithHeader(String authHeader) {
+        try {
+            Map<?, ?> resp = webClient.get()
+                    .uri("/user")
+                    .header("Authorization", authHeader)
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return resp != null && resp.get("login") != null;
+        } catch (Exception e) {
+            log.warn("GitHub validateToken failed with {} auth: {}",
+                    authHeader.startsWith("Bearer ") ? "Bearer" : "token",
+                    e.getMessage());
+            return false;
+        }
+    }
+
+    private String sanitizeToken(String accessToken) {
+        return accessToken == null
+                ? ""
+                : accessToken.replaceAll("\\s+", "");
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private List<Map<?, ?>> toWildcardMaps(List<Map> rows) {
+        if (rows == null) return List.of();
+        List<Map<?, ?>> result = new ArrayList<>();
+        for (Map row : rows) {
+            result.add(row);
+        }
+        return result;
     }
 }

@@ -31,6 +31,9 @@ public class RiskDto {
         private int score;
         private RiskLevel level;
         private Breakdown breakdown;
+        private String engine;
+        private double anomalyScore;
+        private java.util.List<Explanation> explanations;
     }
 
     @Data
@@ -44,5 +47,21 @@ public class RiskDto {
         private int recentLoginWeight;
         private int repoWeight;
         private int workspaceWeight;
+        private int threatIpWeight;
+        private int automationWeight;
+        private int blastRadiusWeight;
+        private int privilegeSpreadWeight;
+        private int contextualAnomalyWeight;
+        private int largeDataExportWeight;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Explanation {
+        private String feature;
+        private int contribution;
+        private String description;
     }
 }

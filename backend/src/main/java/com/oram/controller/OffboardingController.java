@@ -33,6 +33,12 @@ public class OffboardingController {
         return ResponseEntity.ok(offboardingService.getDetail(resultId));
     }
 
+    @GetMapping("/{resultId}/revoke-plan")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER','AUDITOR')")
+    public ResponseEntity<OffboardingDto.RevokePlanResponse> getRevokePlan(@PathVariable UUID resultId) {
+        return ResponseEntity.ok(offboardingService.getRevokePlan(resultId));
+    }
+
     @PostMapping("/{resultId}/revoke-all")
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
     public ResponseEntity<OffboardingDto.RevokeResponse> revokeAll(
@@ -40,5 +46,16 @@ public class OffboardingController {
             Authentication authentication) {
         User reviewer = userRepository.findByEmail(authentication.getName()).orElse(null);
         return ResponseEntity.ok(offboardingService.revokeAll(resultId, reviewer));
+    }
+
+    @PostMapping("/{resultId}/false-positive")
+    @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
+    public ResponseEntity<OffboardingDto.FalsePositiveResponse> markFalsePositive(
+            @PathVariable UUID resultId,
+            @RequestBody(required = false) OffboardingDto.FalsePositiveRequest request,
+            Authentication authentication) {
+        User reviewer = userRepository.findByEmail(authentication.getName()).orElse(null);
+        String reason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(offboardingService.markFalsePositive(resultId, reviewer, reason));
     }
 }

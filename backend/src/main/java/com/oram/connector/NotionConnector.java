@@ -8,16 +8,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Notion API 커넥터
- * 
- * Notion OAuth Integration을 설정하고
- * client-id/secret을 환경변수에 설정해야 합니다.
- * PoC 모드: API 호출 실패 시 Mock 데이터를 반환합니다.
- */
 @Slf4j
 @Component
 public class NotionConnector implements SaaSConnector {
@@ -60,41 +54,35 @@ public class NotionConnector implements SaaSConnector {
 
     @Override
     public TokenInfo exchangeCodeForToken(String code) {
-        try {
-            String credentials = java.util.Base64.getEncoder()
-                    .encodeToString((clientId + ":" + clientSecret).getBytes());
+        String credentials = Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes());
 
-            Map<?, ?> response = WebClient.create(NOTION_TOKEN_URL)
-                    .post()
-                    .header("Authorization", "Basic " + credentials)
-                    .header("Content-Type", "application/json")
-                    .header("Notion-Version", NOTION_API_VERSION)
-                    .bodyValue(Map.of(
-                            "grant_type", "authorization_code",
-                            "code", code,
-                            "redirect_uri", redirectUri
-                    ))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+        Map<?, ?> response = WebClient.create(NOTION_TOKEN_URL)
+                .post()
+                .header("Authorization", "Basic " + credentials)
+                .header("Content-Type", "application/json")
+                .header("Notion-Version", NOTION_API_VERSION)
+                .bodyValue(Map.of(
+                        "grant_type", "authorization_code",
+                        "code", code,
+                        "redirect_uri", redirectUri
+                ))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
 
-            if (response != null && response.get("access_token") != null) {
-                Map<?, ?> workspace = (Map<?, ?>) response.get("workspace_icon");
-                String workspaceId = (String) response.get("workspace_id");
-                String workspaceName = (String) response.get("workspace_name");
-                return new TokenInfo(
-                        (String) response.get("access_token"),
-                        null,
-                        workspaceId != null ? workspaceId : "notion-workspace",
-                        workspaceName != null ? workspaceName : "Notion Workspace",
-                        0L
-                );
-            }
-        } catch (Exception e) {
-            log.warn("Notion OAuth exchange failed (PoC mock mode): {}", e.getMessage());
+        if (response != null && response.get("access_token") != null) {
+            String workspaceId = stringValue(response.get("workspace_id"));
+            String workspaceName = stringValue(response.get("workspace_name"));
+            return new TokenInfo(
+                    stringValue(response.get("access_token")),
+                    null,
+                    workspaceId != null ? workspaceId : "notion-workspace",
+                    workspaceName != null ? workspaceName : "Notion Workspace",
+                    0L
+            );
         }
-        // PoC Mock fallback
-        return new TokenInfo("mock-notion-token", null, "mock-ws-id", "Mock Notion Workspace", 0L);
+
+        throw new IllegalArgumentException("Notion OAuth token exchange failed.");
     }
 
     @Override
@@ -105,49 +93,51 @@ public class NotionConnector implements SaaSConnector {
     @Override
     public List<DiscoveredPermission> getPermissions(String email, String accessToken) {
         List<DiscoveredPermission> permissions = new ArrayList<>();
-        try {
-            // Search users in workspace
-            Map<?, ?> response = webClient.post()
-                    .uri("/users/list")
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("Notion-Version", NOTION_API_VERSION)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-
-            if (response != null) {
-                List<?> results = (List<?>) response.get("results");
-                if (results != null) {
-                    for (Object obj : results) {
-                        Map<?, ?> user = (Map<?, ?>) obj;
-                        Map<?, ?> person = (Map<?, ?>) user.get("person");
-                        if (person != null && email.equalsIgnoreCase((String) person.get("email"))) {
-                            String role = (String) user.get("type");
-                            permissions.add(new DiscoveredPermission(
-                                    "person".equals(role) ? "MEMBER" : "BOT",
-                                    "Notion Workspace",
-                                    false, false, false, true, 0, 1
-                            ));
-                        }
-                    }
-                }
+        for (Map<?, ?> user : fetchUsers(accessToken)) {
+            Map<?, ?> person = (Map<?, ?>) user.get("person");
+            String userEmail = person != null ? stringValue(person.get("email")) : null;
+            if (userEmail != null && email.equalsIgnoreCase(userEmail)) {
+                permissions.add(new DiscoveredPermission(
+                        "MEMBER",
+                        "Notion Workspace",
+                        false,
+                        false,
+                        false,
+                        true,
+                        0,
+                        1
+                ));
             }
-        } catch (Exception e) {
-            log.warn("Notion getPermissions failed, returning mock data: {}", e.getMessage());
-            // PoC Mock data
-            permissions.add(new DiscoveredPermission(
-                    "MEMBER", "Mock Notion Workspace", false, false, false, true, 0, 1
-            ));
         }
         return permissions;
     }
 
     @Override
+    public List<SyncedUser> listUsers(String accessToken) {
+        List<SyncedUser> users = new ArrayList<>();
+        for (Map<?, ?> user : fetchUsers(accessToken)) {
+            Map<?, ?> person = (Map<?, ?>) user.get("person");
+            String email = person != null ? stringValue(person.get("email")) : null;
+            String id = stringValue(user.get("id"));
+            if (email == null || email.isBlank() || id == null || id.isBlank()) continue;
+
+            users.add(new SyncedUser(
+                    "notion:" + id,
+                    firstNonBlank(stringValue(user.get("name")), email),
+                    email.toLowerCase(),
+                    "Notion",
+                    true
+            ));
+        }
+        return users;
+    }
+
+    @Override
     public RevokeResult revokeAccess(String email, String accessToken) {
-        log.info("[NOTION] Revoking access for: {}", email);
-        // In production: remove user from workspace via Notion API
-        return new RevokeResult(true, "Notion access revoked for " + email,
-                List.of("Workspace Member"));
+        log.info("[NOTION] Revoke requested for: {}", email);
+        return new RevokeResult(false,
+                "Notion API does not provide workspace member removal. Remove this user manually in Notion.",
+                List.of());
     }
 
     @Override
@@ -155,7 +145,7 @@ public class NotionConnector implements SaaSConnector {
         try {
             Map<?, ?> resp = webClient.get()
                     .uri("/users/me")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .header("Notion-Version", NOTION_API_VERSION)
                     .retrieve()
                     .bodyToMono(Map.class)
@@ -167,33 +157,82 @@ public class NotionConnector implements SaaSConnector {
         }
     }
 
-    /**
-     * 토큰으로 워크스페이스 이름 조회
-     * Notion Internal Integration Token: /users/me API 사용
-     */
     public String getWorkspaceName(String accessToken) {
         try {
-            // Notion은 bot 정보에서 workspace_name을 가져올 수 있음
             Map<?, ?> resp = webClient.get()
                     .uri("/users/me")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + sanitizeToken(accessToken))
                     .header("Notion-Version", NOTION_API_VERSION)
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
             if (resp != null) {
-                // bot 타입이면 workspace_name 포함
                 Object bot = resp.get("bot");
-                if (bot instanceof java.util.Map<?,?> botMap) {
+                if (bot instanceof Map<?, ?> botMap) {
                     Object ws = botMap.get("workspace_name");
                     if (ws != null) return ws.toString();
                 }
                 Object name = resp.get("name");
-                if (name != null) return name.toString() + " (Notion)";
+                if (name != null) return name + " (Notion)";
             }
         } catch (Exception e) {
             log.warn("Notion getWorkspaceName failed: {}", e.getMessage());
         }
         return "Notion Workspace";
+    }
+
+    private List<Map<?, ?>> fetchUsers(String accessToken) {
+        List<Map<?, ?>> users = new ArrayList<>();
+        String cursor = null;
+
+        do {
+            try {
+                String pageCursor = cursor;
+                Map<?, ?> response = webClient.get()
+                        .uri(uriBuilder -> {
+                            var builder = uriBuilder.path("/users").queryParam("page_size", 100);
+                            if (pageCursor != null && !pageCursor.isBlank()) {
+                                builder.queryParam("start_cursor", pageCursor);
+                            }
+                            return builder.build();
+                        })
+                        .header("Authorization", "Bearer " + sanitizeToken(accessToken))
+                        .header("Notion-Version", NOTION_API_VERSION)
+                        .retrieve()
+                        .bodyToMono(Map.class)
+                        .block();
+
+                if (response == null) break;
+                List<?> results = (List<?>) response.get("results");
+                if (results != null) {
+                    for (Object row : results) {
+                        users.add((Map<?, ?>) row);
+                    }
+                }
+
+                Boolean hasMore = (Boolean) response.get("has_more");
+                cursor = Boolean.TRUE.equals(hasMore) ? stringValue(response.get("next_cursor")) : null;
+            } catch (Exception e) {
+                log.warn("Notion user listing failed: {}", e.getMessage());
+                break;
+            }
+        } while (cursor != null && !cursor.isBlank());
+
+        return users;
+    }
+
+    private String sanitizeToken(String accessToken) {
+        return accessToken == null ? "" : accessToken.replaceAll("\\s+", "");
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return "-";
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
     }
 }

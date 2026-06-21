@@ -25,6 +25,11 @@ public class RiskAnalysisController {
                 .recentLogin(request.isRecentLogin())
                 .repoCount(request.getRepoCount())
                 .workspaceCount(request.getWorkspaceCount())
+                .primarySaas("GITHUB")
+                .department("Development")
+                .hourOfDay(14)
+                .trafficMb((request.getRepoCount() * 35.0) + (request.getWorkspaceCount() * 80.0))
+                .apiCount(request.getRepoCount() * 3)
                 .build();
         return ResponseEntity.ok(riskAnalyzer.analyze(features));
     }

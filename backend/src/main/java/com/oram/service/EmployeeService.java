@@ -2,18 +2,24 @@ package com.oram.service;
 
 import com.oram.dto.EmployeeDto;
 import com.oram.entity.Employee;
+import com.oram.entity.SaasIdentity;
 import com.oram.enums.EmployeeStatus;
+import com.oram.enums.SaasType;
 import com.oram.repository.EmployeeRepository;
 import com.oram.repository.OffboardingResultRepository;
 import com.oram.repository.PermissionRecordRepository;
+import com.oram.repository.SaasIdentityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Predicate;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -36,20 +42,15 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final OffboardingResultRepository offboardingResultRepository;
     private final PermissionRecordRepository permissionRecordRepository;
+    private final SaasIdentityRepository saasIdentityRepository;
     private final OffboardingService offboardingService;
 
     @Transactional(readOnly = true)
-    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, int page, int size) {
+    public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, SaasType saasType, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Employee> result;
-
-        if (status != null && department != null) {
-            result = employeeRepository.findByStatusAndDepartment(status, department, pageable);
-        } else if (status != null) {
-            result = employeeRepository.findByStatus(status, pageable);
-        } else {
-            result = employeeRepository.findAll(pageable);
-        }
+        String normalizedDepartment = normalizeFilter(department);
+        String normalizedQuery = normalizeFilter(query);
+        Page<Employee> result = employeeRepository.findAll(buildEmployeeSearchSpec(status, normalizedDepartment, saasType, normalizedQuery), pageable);
 
         return EmployeeDto.PageResponse.builder()
                 .content(result.getContent().stream().map(this::toResponse).toList())
@@ -106,9 +107,62 @@ public class EmployeeService {
     }
 
     @Transactional
+    public UUID analyzeEmployee(UUID id) {
+        Employee employee = findById(id);
+        return offboardingService.analyzeEmployee(employee);
+    }
+
+    @Transactional
     public void deleteEmployee(UUID id) {
         Employee employee = findById(id);
+        saasIdentityRepository.deleteByEmployeeId(employee.getId());
         employeeRepository.delete(employee);
+    }
+
+    private String normalizeFilter(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
+    }
+
+    private Specification<Employee> buildEmployeeSearchSpec(EmployeeStatus status, String department, SaasType saasType, String query) {
+        return (root, criteriaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            if (department != null) {
+                predicates.add(cb.like(cb.lower(root.get("department")), "%" + department.toLowerCase() + "%"));
+            }
+
+            if (saasType != null) {
+                List<UUID> employeeIds = saasIdentityRepository.findBySaasTypeOrderByUpdatedAtDesc(saasType).stream()
+                        .map(SaasIdentity::getEmployee)
+                        .filter(employee -> employee != null && employee.getId() != null)
+                        .map(Employee::getId)
+                        .distinct()
+                        .toList();
+
+                predicates.add(employeeIds.isEmpty()
+                        ? cb.disjunction()
+                        : root.get("id").in(employeeIds));
+            }
+
+            if (query != null) {
+                String like = "%" + query.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("employeeId")), like),
+                        cb.like(cb.lower(root.get("name")), like),
+                        cb.like(cb.lower(root.get("email")), like),
+                        cb.like(cb.lower(root.get("department")), like)
+                ));
+            }
+
+            return predicates.isEmpty()
+                    ? cb.conjunction()
+                    : cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     @Transactional
@@ -116,6 +170,7 @@ public class EmployeeService {
         long count = employeeRepository.count();
         permissionRecordRepository.deleteAllInBatch();
         offboardingResultRepository.deleteAllInBatch();
+        saasIdentityRepository.deleteAllInBatch();
         employeeRepository.deleteAllInBatch();
         return count;
     }
@@ -310,6 +365,20 @@ public class EmployeeService {
     }
 
     private EmployeeDto.Response toResponse(Employee e) {
+        List<EmployeeDto.SaasAccount> connectedSaas = saasIdentityRepository.findByEmployeeId(e.getId()).stream()
+                .map(identity -> EmployeeDto.SaasAccount.builder()
+                        .id(identity.getId())
+                        .saasType(identity.getSaasType())
+                        .externalUsername(identity.getExternalUsername())
+                        .externalEmail(identity.getExternalEmail())
+                        .displayName(identity.getDisplayName())
+                        .status(identity.getStatus())
+                        .accessRevoked(identity.isAccessRevoked())
+                        .hasRevokePermission(identity.isHasRevokePermission())
+                        .lastSyncedAt(identity.getLastSyncedAt())
+                        .build())
+                .toList();
+
         return EmployeeDto.Response.builder()
                 .id(e.getId())
                 .employeeId(e.getEmployeeId())
@@ -318,6 +387,7 @@ public class EmployeeService {
                 .department(e.getDepartment())
                 .status(e.getStatus())
                 .createdAt(e.getCreatedAt())
+                .connectedSaas(connectedSaas)
                 .build();
     }
 }

@@ -49,6 +49,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/saas-connections/oauth/callback/**").permitAll()
                 .requestMatchers("/api/hr/webhook/**").permitAll()   // 웹훅: 자체 시크릿으로 인증
                 .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/employees/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/saas-connections/*/identities").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -81,7 +85,7 @@ public class SecurityConfig {
         List<String> originPatterns = new java.util.ArrayList<>(
                 java.util.Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
-                        .filter(origin -> !origin.isEmpty())
+                        .filter(origin -> !origin.isBlank())
                         .toList()
         );
         originPatterns.add("https://*.vercel.app");

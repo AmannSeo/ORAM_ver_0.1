@@ -25,8 +25,14 @@ public class OffboardingDto {
         private OffboardingStatus status;
         private Integer riskScore;
         private RiskLevel riskLevel;
+        private String analysisSource;
+        private String analysisTrigger;
+        private String analysisEngine;
         private LocalDateTime startedAt;
         private boolean revokedAll;
+        private boolean falsePositive;
+        private String falsePositiveReason;
+        private LocalDateTime falsePositiveAt;
     }
 
     @Data
@@ -39,9 +45,18 @@ public class OffboardingDto {
         private OffboardingStatus status;
         private Integer riskScore;
         private RiskLevel riskLevel;
+        private String analysisSource;
+        private String analysisTrigger;
+        private String analysisEngine;
+        private Double anomalyScore;
+        private RiskDto.Breakdown riskBreakdown;
+        private List<RiskDto.Explanation> riskExplanations;
         private List<PermissionInfo> permissions;
         private List<String> recommendedActions;
         private boolean revokedAll;
+        private boolean falsePositive;
+        private String falsePositiveReason;
+        private LocalDateTime falsePositiveAt;
         private LocalDateTime startedAt;
         private LocalDateTime completedAt;
     }
@@ -83,5 +98,51 @@ public class OffboardingDto {
         private String message;
         private LocalDateTime revokedAt;
         private List<SaasType> revokedSaas;
+        private List<RevokePlanItem> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FalsePositiveRequest {
+        private String reason;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FalsePositiveResponse {
+        private String message;
+        private UUID resultId;
+        private LocalDateTime falsePositiveAt;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RevokePlanResponse {
+        private UUID resultId;
+        private EmployeeInfo employee;
+        private int readyCount;
+        private int manualCount;
+        private int blockedCount;
+        private List<RevokePlanItem> items;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RevokePlanItem {
+        private SaasType saasType;
+        private String status;
+        private boolean canRevoke;
+        private boolean accountMatched;
+        private int resourceCount;
+        private String action;
+        private String reason;
+        private List<String> resources;
     }
 }
