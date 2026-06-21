@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import {
   Alert,
   Box,
@@ -15,7 +14,6 @@ import {
   Grid,
   IconButton,
   LinearProgress,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -32,21 +30,21 @@ import {
   Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
   DeleteSweep as RevokeIcon,
+  FactCheck as QueueIcon,
   PersonSearch as ManualIcon,
-  Sync as SyncIcon,
   Visibility as ViewIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
-import RiskCriteriaHelp, { RiskLevelLegend } from '../components/common/RiskCriteriaHelp';
-import type { OffboardingSummary } from '../types';
+import type { OffboardingSummary, RiskLevel } from '../types';
 
-const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success' | 'error' | 'default'> = {
-  PENDING: 'warning',
-  IN_PROGRESS: 'info',
-  COMPLETED: 'success',
-  FAILED: 'error',
+const RISK_ORDER: Record<RiskLevel, number> = {
+  CRITICAL: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -56,13 +54,73 @@ const STATUS_LABEL: Record<string, string> = {
   FAILED: '실패',
 };
 
+const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success' | 'error' | 'default'> = {
+  PENDING: 'warning',
+  IN_PROGRESS: 'info',
+  COMPLETED: 'success',
+  FAILED: 'error',
+};
+
 function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 비활성 계정 감지';
   if (trigger.includes('SYNC_MISSING_ACCOUNT')) return 'SaaS 계정 누락 감지';
-  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 후 자동 분석';
+  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 기반 자동 분석';
   if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자 재분석';
   return trigger;
+}
+
+function actionGuide(result: OffboardingSummary) {
+  if (result.revokedAll) return '조치 완료';
+  if (result.riskLevel === 'CRITICAL') return '즉시 권한 회수';
+  if (result.riskLevel === 'HIGH') return '24시간 내 회수';
+  if (result.riskLevel === 'MEDIUM') return '담당자 검토 후 회수';
+  return '표준 오프보딩 절차';
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function QueueMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'error' | 'warning' | 'info' | 'success';
+}) {
+  const color = {
+    error: '#dc2626',
+    warning: '#d97706',
+    info: '#2563eb',
+    success: '#059669',
+  }[tone];
+  const bg = {
+    error: '#fef2f2',
+    warning: '#fffbeb',
+    info: '#eff6ff',
+    success: '#ecfdf5',
+  }[tone];
+
+  return (
+    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: bg }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Typography variant="body2" color="#64748b">{label}</Typography>
+        <Typography variant="h4" fontWeight={700} color={color} mt={0.75}>{value}</Typography>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function Offboarding() {
@@ -81,7 +139,13 @@ export default function Offboarding() {
     setError(null);
     try {
       const data = await offboardingApi.getAll();
-      setResults(data);
+      const sorted = [...data].sort((a, b) => {
+        const aRisk = a.riskLevel ? RISK_ORDER[a.riskLevel] : 9;
+        const bRisk = b.riskLevel ? RISK_ORDER[b.riskLevel] : 9;
+        if (aRisk !== bRisk) return aRisk - bRisk;
+        return (b.riskScore ?? 0) - (a.riskScore ?? 0);
+      });
+      setResults(sorted);
     } catch {
       setError('권한 회수 대상을 불러오지 못했습니다.');
     } finally {
@@ -93,11 +157,15 @@ export default function Offboarding() {
     loadResults();
   }, []);
 
-  const autoCount = useMemo(
-    () => results.filter((result) => result.analysisSource === 'AUTOMATIC').length,
-    [results],
-  );
-  const manualCount = results.length - autoCount;
+  const metrics = useMemo(() => {
+    const pending = results.filter((result) => !result.revokedAll);
+    return {
+      total: results.length,
+      pending: pending.length,
+      urgent: pending.filter((result) => result.riskLevel === 'CRITICAL' || result.riskLevel === 'HIGH').length,
+      automatic: results.filter((result) => result.analysisSource === 'AUTOMATIC').length,
+    };
+  }, [results]);
 
   const handleRevoke = async (result: OffboardingSummary) => {
     setRevokeLoadingId(result.id);
@@ -112,13 +180,6 @@ export default function Offboarding() {
     } finally {
       setRevokeLoadingId(null);
     }
-  };
-
-  const openFalsePositiveDialog = (result: OffboardingSummary) => {
-    setFalsePositiveTarget(result);
-    setFalsePositiveReason('');
-    setError(null);
-    setSuccess(null);
   };
 
   const handleFalsePositive = async () => {
@@ -142,131 +203,104 @@ export default function Offboarding() {
   if (loading) return <LinearProgress />;
 
   return (
-    <Box>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} mb={3}>
+    <Box sx={{ width: '100%', pb: 4 }}>
+      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={3}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
-            권한 회수 대상
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            퇴사 처리 또는 SaaS 동기화 이상 감지로 생성된 잔여 접근 권한 회수 대상을 확인합니다.
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <QueueIcon color="primary" />
+            <Typography variant="h4" fontWeight={700}>권한 회수 큐</Typography>
+          </Stack>
+          <Typography variant="body2" color="#64748b" mt={0.75}>
+            직원 전체 목록이 아니라, AI 분석과 SaaS 동기화 결과로 조치가 필요한 대상만 모아 처리합니다.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Chip icon={<AutoIcon />} label={`자동 감지 ${autoCount}건`} color="primary" variant="outlined" />
-          <Chip label={`전체 ${results.length}건`} variant="outlined" />
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Chip icon={<AutoIcon />} label={`자동 감지 ${metrics.automatic}건`} color="primary" variant="outlined" />
+          <Chip icon={<WarningIcon />} label={`긴급 ${metrics.urgent}건`} color={metrics.urgent > 0 ? 'error' : 'default'} variant="outlined" />
         </Stack>
       </Stack>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <StatusCard
-            icon={<CheckIcon color="success" />}
-            title="자동 감지 파이프라인"
-            value="활성"
-            description="퇴사 처리, SaaS 비활성 계정, 동기화 누락 계정을 확인하면 자동으로 잔여 접근 위험도를 계산합니다."
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StatusCard
-            icon={<SyncIcon color="primary" />}
-            title="감지 방식"
-            value="주기 동기화"
-            description="GitHub, Slack, Notion 계정 목록을 다시 조회하고 이전 상태와 비교합니다."
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StatusCard
-            icon={<AutoIcon color="primary" />}
-            title="대상 생성 방식"
-            value={`${autoCount} 자동 / ${manualCount} 수동`}
-            description="목록에서 감지 사유, 위험도, 권한 회수 여부를 함께 확인할 수 있습니다."
-          />
-        </Grid>
+      <Grid container spacing={2} mb={2.5}>
+        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="전체 큐" value={metrics.total} tone="info" /></Grid>
+        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="미회수" value={metrics.pending} tone="warning" /></Grid>
+        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="긴급 조치" value={metrics.urgent} tone={metrics.urgent > 0 ? 'error' : 'success'} /></Grid>
+        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
       </Grid>
 
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ mb: 2 }}>
-        <RiskLevelLegend />
-      </Box>
 
-      <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
-        <Table>
+      <TableContainer component={Card} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+        <Table sx={{ minWidth: 1120 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: 'grey.100' }}>
-              <TableCell width={72}><strong>No.</strong></TableCell>
-              <TableCell><strong>직원</strong></TableCell>
-              <TableCell><strong>생성 방식</strong></TableCell>
-              <TableCell><strong>감지 사유</strong></TableCell>
-              <TableCell><strong>상태</strong></TableCell>
-              <TableCell>
-                <Stack direction="row" alignItems="center" spacing={0.25}>
-                  <strong>잔여 접근 위험도</strong>
-                  <RiskCriteriaHelp />
-                </Stack>
-              </TableCell>
-              <TableCell><strong>권한 회수</strong></TableCell>
-              <TableCell><strong>생성/갱신 시각</strong></TableCell>
-              <TableCell align="center"><strong>처리</strong></TableCell>
-              <TableCell align="center"><strong>상세</strong></TableCell>
+            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              <TableCell width={72}>우선순위</TableCell>
+              <TableCell>대상</TableCell>
+              <TableCell>AI 판단</TableCell>
+              <TableCell>감지 근거</TableCell>
+              <TableCell>회수 상태</TableCell>
+              <TableCell>권장 조치</TableCell>
+              <TableCell>생성 시각</TableCell>
+              <TableCell align="right">처리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#64748b' }}>
                   아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
             )}
             {results.map((result, index) => {
-              const automatic = result.analysisSource === 'AUTOMATIC';
               const revoking = revokeLoadingId === result.id;
+              const automatic = result.analysisSource === 'AUTOMATIC';
               return (
-                <TableRow key={result.id} hover>
+                <TableRow key={result.id} hover sx={{ '& td': { borderColor: '#f1f5f9' } }}>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={800} color="text.secondary">
-                      {index + 1}
-                    </Typography>
+                    <Typography variant="body2" fontWeight={700} color="#64748b">#{index + 1}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography fontWeight="bold">{result.employee.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{result.employee.email}</Typography>
+                    <Typography fontWeight={700}>{result.employee.name}</Typography>
+                    <Typography variant="caption" color="#64748b">{result.employee.email}</Typography>
+                    <Typography variant="caption" color="#94a3b8" display="block">{result.employee.department || '-'}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                      label={automatic ? '자동 감지' : '수동'}
-                      color={automatic ? 'primary' : 'default'}
-                      size="small"
-                      variant={automatic ? 'filled' : 'outlined'}
-                    />
-                  </TableCell>
-                  <TableCell>{triggerLabel(result.analysisTrigger)}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={STATUS_LABEL[result.status] ?? result.status}
-                      color={STATUS_COLOR[result.status]}
-                      size="small"
-                    />
+                    <Stack spacing={0.75} alignItems="flex-start">
+                      <RiskBadge level={result.riskLevel} score={result.riskScore} />
+                      <Chip
+                        icon={automatic ? <AutoIcon /> : <ManualIcon />}
+                        label={automatic ? '자동 분석' : '수동 분석'}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Stack>
                   </TableCell>
                   <TableCell>
-                    <RiskBadge level={result.riskLevel} score={result.riskScore} />
+                    <Typography variant="body2">{triggerLabel(result.analysisTrigger)}</Typography>
+                    <Typography variant="caption" color="#64748b">{result.analysisEngine || '-'}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={result.revokedAll ? '회수 완료' : '미회수'}
-                      color={result.revokedAll ? 'success' : 'warning'}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Stack spacing={0.75} alignItems="flex-start">
+                      <Chip
+                        label={result.revokedAll ? '회수 완료' : '미회수'}
+                        color={result.revokedAll ? 'success' : 'warning'}
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={STATUS_LABEL[result.status] ?? result.status}
+                        color={STATUS_COLOR[result.status] ?? 'default'}
+                        size="small"
+                      />
+                    </Stack>
                   </TableCell>
                   <TableCell>
-                    {result.startedAt ? new Date(result.startedAt).toLocaleString('ko-KR') : '-'}
+                    <Typography variant="body2" fontWeight={600}>{actionGuide(result)}</Typography>
                   </TableCell>
-                  <TableCell align="center">
-                    <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="wrap" useFlexGap>
+                  <TableCell>{formatDateTime(result.startedAt)}</TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
                       <Tooltip title={result.revokedAll ? '이미 권한 회수가 완료되었습니다.' : '연결된 SaaS 권한 회수를 실행합니다.'}>
                         <span>
                           <Button
@@ -278,7 +312,7 @@ export default function Offboarding() {
                             onClick={() => handleRevoke(result)}
                             sx={{ whiteSpace: 'nowrap' }}
                           >
-                            권한 회수
+                            회수
                           </Button>
                         </span>
                       </Tooltip>
@@ -290,21 +324,22 @@ export default function Offboarding() {
                             color="inherit"
                             startIcon={<FalsePositiveIcon />}
                             disabled={result.revokedAll || revoking}
-                            onClick={() => openFalsePositiveDialog(result)}
+                            onClick={() => {
+                              setFalsePositiveTarget(result);
+                              setFalsePositiveReason('');
+                            }}
                             sx={{ whiteSpace: 'nowrap' }}
                           >
-                            오탐 처리
+                            오탐
                           </Button>
                         </span>
                       </Tooltip>
+                      <Tooltip title="상세 보기">
+                        <IconButton size="small" color="primary" onClick={() => navigate(`/offboarding/${result.id}`)}>
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Stack>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="상세 보기">
-                      <IconButton size="small" color="primary" onClick={() => navigate(`/offboarding/${result.id}`)}>
-                        <ViewIcon />
-                      </IconButton>
-                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
@@ -313,31 +348,26 @@ export default function Offboarding() {
         </Table>
       </TableContainer>
 
-      <Dialog
-        open={Boolean(falsePositiveTarget)}
-        onClose={() => setFalsePositiveTarget(null)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={Boolean(falsePositiveTarget)} onClose={() => setFalsePositiveTarget(null)} maxWidth="sm" fullWidth>
         <DialogTitle>오탐 처리</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
             <Typography>
-              <strong>{falsePositiveTarget?.employee.name}</strong> 직원의 AI 리스크 분석 결과를 오탐으로 처리합니다.
-              처리 후 권한 회수 대상과 AI 리스크 목록에서 제외되며, 감사 로그에는 기록됩니다.
+              <strong>{falsePositiveTarget?.employee.name}</strong> 직원의 AI 분석 결과를 오탐으로 처리합니다.
+              처리 후 권한 회수 큐와 AI 리스크 목록에서 제외되며, 감사 로그에는 기록됩니다.
             </Typography>
             <TextField
               label="오탐 처리 사유"
               value={falsePositiveReason}
               onChange={(event) => setFalsePositiveReason(event.target.value)}
-              placeholder="예: 이미 별도 관리자 검토로 정상 권한임을 확인"
+              placeholder="예: 담당자 검토 결과 정상 권한으로 확인"
               fullWidth
               multiline
               minRows={3}
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setFalsePositiveTarget(null)} disabled={falsePositiveLoading}>
             취소
           </Button>
@@ -353,36 +383,5 @@ export default function Offboarding() {
         </DialogActions>
       </Dialog>
     </Box>
-  );
-}
-
-function StatusCard({
-  icon,
-  title,
-  value,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <CardContent>
-        <Stack direction="row" spacing={1.25} alignItems="center" mb={1}>
-          {icon}
-          <Typography variant="body2" fontWeight="bold" color="text.secondary">
-            {title}
-          </Typography>
-        </Stack>
-        <Typography variant="h6" fontWeight="bold">
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mt={0.5}>
-          {description}
-        </Typography>
-      </CardContent>
-    </Card>
   );
 }

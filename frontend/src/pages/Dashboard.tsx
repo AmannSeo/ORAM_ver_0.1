@@ -29,20 +29,10 @@ import {
   Sensors as LiveIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as ChartTooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { dashboardApi, employeeApi, offboardingApi } from '../api';
+import { dashboardApi, offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
-import type { DashboardStats, Employee, OffboardingSummary, SaasSyncAlert } from '../types';
+import type { DashboardStats, OffboardingSummary, RiskLevel, SaasSyncAlert } from '../types';
 
 type Severity = 'error' | 'warning' | 'info' | 'success';
 
@@ -51,6 +41,15 @@ const TONE: Record<Severity, { color: string; bg: string; border: string }> = {
   warning: { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
   info: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
   success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+};
+
+const RISK_LEVELS: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+
+const RISK_META: Record<RiskLevel, { label: string; description: string }> = {
+  CRITICAL: { label: '매우 위험', description: '즉시 회수 필요' },
+  HIGH: { label: '높음', description: '24시간 내 조치' },
+  MEDIUM: { label: '보통', description: '검토 후 조치' },
+  LOW: { label: '낮음', description: '표준 절차' },
 };
 
 function formatDateTime(value?: string | Date) {
@@ -65,10 +64,10 @@ function formatDateTime(value?: string | Date) {
   });
 }
 
-function statusLabel(status: string) {
-  if (status === 'ACTIVE') return '재직 중';
-  if (status === 'RESIGNED') return '퇴사';
-  return status || '-';
+function analysisSourceLabel(source?: string) {
+  if (source === 'AUTOMATIC') return '자동 분석';
+  if (source === 'MANUAL') return '수동 분석';
+  return source || '-';
 }
 
 function saasAlertReasonLabel(reason: string) {
@@ -97,28 +96,46 @@ function addCsvRow(rows: string[], values: unknown[]) {
   rows.push(values.map(escapeCsv).join(','));
 }
 
-function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[], offboardingTargets: OffboardingSummary[]) {
+function getRiskLevelCounts(items: OffboardingSummary[]) {
+  return items.reduce<Record<RiskLevel, number>>(
+    (acc, item) => {
+      if (item.riskLevel) acc[item.riskLevel] += 1;
+      return acc;
+    },
+    { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
+  );
+}
+
+function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[], targets: OffboardingSummary[]) {
   const createdAt = new Date();
+  const levelCounts = getRiskLevelCounts(targets);
   const rows: string[] = [];
 
   addCsvRow(rows, ['ORAM 접근 권한 점검 보고서']);
   addCsvRow(rows, ['생성 시각', formatDateTime(createdAt)]);
   rows.push('');
 
-  addCsvRow(rows, ['핵심 지표']);
+  addCsvRow(rows, ['요약']);
   addCsvRow(rows, ['항목', '값', '설명']);
-  addCsvRow(rows, ['전체 직원', stats.totalEmployees, 'ORAM에 등록된 전체 직원']);
+  addCsvRow(rows, ['전체 직원', stats.totalEmployees, 'ORAM에 등록 또는 동기화된 직원']);
   addCsvRow(rows, ['퇴사자', stats.resignedEmployees, '권한 회수 검토 대상']);
-  addCsvRow(rows, ['권한 회수 대상', offboardingTargets.length, '미회수 및 오탐 제외 대상']);
+  addCsvRow(rows, ['권한 회수 대상', targets.length, '미회수 및 오탐 제외 대상']);
   addCsvRow(rows, ['SaaS 감지 알림', stats.openSaasSyncAlerts || 0, '비활성 또는 누락 계정']);
   rows.push('');
 
+  addCsvRow(rows, ['위험도 분포']);
+  addCsvRow(rows, ['위험도', '건수', '조치 기준']);
+  RISK_LEVELS.forEach((level) => {
+    addCsvRow(rows, [RISK_META[level].label, levelCounts[level], RISK_META[level].description]);
+  });
+  rows.push('');
+
   addCsvRow(rows, ['권한 회수 대상']);
-  addCsvRow(rows, ['No', '이름', '이메일', '부서', '위험도', '점수', '회수 상태']);
-  if (offboardingTargets.length === 0) {
-    addCsvRow(rows, ['-', '현재 권한 회수 대상이 없습니다.', '', '', '', '', '']);
+  addCsvRow(rows, ['No', '이름', '이메일', '부서', '위험도', '점수', '분석 방식', '회수 상태']);
+  if (targets.length === 0) {
+    addCsvRow(rows, ['-', '현재 권한 회수 대상이 없습니다.', '', '', '', '', '', '']);
   } else {
-    offboardingTargets.forEach((target, index) => {
+    targets.forEach((target, index) => {
       addCsvRow(rows, [
         index + 1,
         target.employee.name,
@@ -126,6 +143,7 @@ function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[],
         target.employee.department || '-',
         target.riskLevel || '-',
         target.riskScore ?? '-',
+        analysisSourceLabel(target.analysisSource),
         target.revokedAll ? '회수 완료' : '미회수',
       ]);
     });
@@ -174,17 +192,17 @@ function StatCard({
 }) {
   const style = TONE[tone];
   const content = (
-    <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+    <CardContent sx={{ p: 2.25, '&:last-child': { pb: 2.25 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
         <Box minWidth={0}>
-          <Typography variant="body2" fontWeight={800} color="#64748b">{title}</Typography>
-          <Typography variant="h4" fontWeight={900} color="#0f172a" mt={1}>{value.toLocaleString()}</Typography>
+          <Typography variant="body2" fontWeight={600} color="#64748b">{title}</Typography>
+          <Typography variant="h4" fontWeight={700} color="#0f172a" mt={0.75}>{value.toLocaleString()}</Typography>
           <Typography variant="caption" color="#64748b" display="block" mt={0.75}>{description}</Typography>
         </Box>
         <Box
           sx={{
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 42,
             borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
@@ -201,53 +219,32 @@ function StatCard({
   );
 
   return (
-    <Card elevation={0} sx={{ height: '100%', border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+    <Card elevation={0} sx={{ height: '100%', border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white' }}>
       {onClick ? <CardActionArea onClick={onClick} sx={{ height: '100%' }}>{content}</CardActionArea> : content}
     </Card>
   );
 }
 
-function ActionQueueChart({ stats, offboardingCount }: { stats: DashboardStats; offboardingCount: number }) {
-  const data = [
-    { name: 'SaaS 알림', value: stats.openSaasSyncAlerts || 0, fill: '#2563eb' },
-    { name: '최고 위험', value: stats.criticalRiskCount, fill: '#dc2626' },
-    { name: '권한 회수', value: offboardingCount, fill: '#d97706' },
-  ];
-
-  return (
-    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Typography variant="h6" fontWeight={900}>조치 대기 현황</Typography>
-        <Typography variant="body2" color="#64748b" mt={0.5} mb={2}>관리자가 우선 확인해야 하는 항목입니다.</Typography>
-        <Box sx={{ width: '100%', height: 240 }}>
-          <ResponsiveContainer>
-            <BarChart data={data} margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <ChartTooltip />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {data.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-}
-
-function OffboardingQueue({ items }: { items: OffboardingSummary[] }) {
+function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
   const navigate = useNavigate();
-  const visible = items.slice(0, 5);
+  const visible = items.slice(0, 8);
 
   return (
     <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-          <Typography variant="h6" fontWeight={900}>권한 회수 대상</Typography>
-          <Button size="small" variant="outlined" onClick={() => navigate('/offboarding')}>전체 보기</Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1.5} mb={1.5}>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>권한 회수 대상</Typography>
+            <Typography variant="caption" color="#64748b">
+              퇴사/비활성 감지 후 아직 권한 회수가 끝나지 않은 대상입니다.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button size="small" variant="outlined" onClick={() => navigate('/risk-analysis')}>AI 분석 보기</Button>
+            <Button size="small" variant="contained" onClick={() => navigate('/offboarding')}>전체 관리</Button>
+          </Stack>
         </Stack>
+
         {visible.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>현재 권한 회수 대상이 없습니다.</Alert>
         ) : (
@@ -255,75 +252,27 @@ function OffboardingQueue({ items }: { items: OffboardingSummary[] }) {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell width={56}>No.</TableCell>
-                  <TableCell>직원</TableCell>
+                  <TableCell width={52}>No.</TableCell>
+                  <TableCell>대상</TableCell>
                   <TableCell>위험도</TableCell>
+                  <TableCell>분석</TableCell>
                   <TableCell>상태</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {visible.map((item, index) => (
                   <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/offboarding/${item.id}`)}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={800} color="text.secondary">{index + 1}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={800}>{item.employee.name}</Typography>
+                      <Typography variant="body2" fontWeight={600}>{item.employee.name}</Typography>
                       <Typography variant="caption" color="#64748b">{item.employee.email}</Typography>
                     </TableCell>
                     <TableCell><RiskBadge level={item.riskLevel} score={item.riskScore} /></TableCell>
                     <TableCell>
+                      <Chip size="small" label={analysisSourceLabel(item.analysisSource)} variant="outlined" />
+                    </TableCell>
+                    <TableCell>
                       <Chip size="small" label={item.revokedAll ? '회수 완료' : '미회수'} color={item.revokedAll ? 'success' : 'warning'} variant="outlined" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function EmployeeBriefList({ employees }: { employees: Employee[] }) {
-  const navigate = useNavigate();
-
-  return (
-    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-          <Typography variant="h6" fontWeight={900}>직원 목록 요약</Typography>
-          <Button size="small" variant="outlined" onClick={() => navigate('/employees')}>전체 보기</Button>
-        </Stack>
-        {employees.length === 0 ? (
-          <Alert severity="info">등록된 직원이 없습니다.</Alert>
-        ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell width={56}>No.</TableCell>
-                  <TableCell>직원</TableCell>
-                  <TableCell>부서</TableCell>
-                  <TableCell>SaaS</TableCell>
-                  <TableCell>상태</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {employees.slice(0, 6).map((employee, index) => (
-                  <TableRow key={employee.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate('/employees')}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={800} color="text.secondary">{index + 1}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={800}>{employee.name}</Typography>
-                      <Typography variant="caption" color="#64748b">{employee.email}</Typography>
-                    </TableCell>
-                    <TableCell>{employee.department || '-'}</TableCell>
-                    <TableCell><Chip size="small" label={`${employee.connectedSaas?.length ?? 0}개`} variant="outlined" /></TableCell>
-                    <TableCell>
-                      <Chip size="small" label={statusLabel(employee.status)} color={employee.status === 'ACTIVE' ? 'success' : 'warning'} variant="outlined" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -342,7 +291,10 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
           <LiveIcon color="primary" />
-          <Typography variant="h6" fontWeight={900}>최근 SaaS 감지</Typography>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>SaaS 감지 알림</Typography>
+            <Typography variant="caption" color="#64748b">동기화 중 발견된 비활성/누락 계정</Typography>
+          </Box>
         </Stack>
         {alerts.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>열린 SaaS 감지 알림이 없습니다.</Alert>
@@ -351,7 +303,7 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
             {alerts.map((alert) => (
               <Box key={alert.id} py={1.5}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                  <Typography variant="body2" fontWeight={900} noWrap>
+                  <Typography variant="body2" fontWeight={600} noWrap>
                     {alert.saasType} · {saasAlertReasonLabel(alert.reason)}
                   </Typography>
                   <Chip label="확인 필요" size="small" color={alert.reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning'} variant="outlined" />
@@ -371,7 +323,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [saasAlerts, setSaasAlerts] = useState<SaasSyncAlert[]>([]);
   const [offboardingTargets, setOffboardingTargets] = useState<OffboardingSummary[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -379,31 +330,29 @@ export default function Dashboard() {
   useEffect(() => {
     let active = true;
 
-    const loadDashboard = () => {
-      Promise.all([
-        dashboardApi.getStats(),
-        dashboardApi.getSaasSyncAlerts(8),
-        offboardingApi.getAll(),
-        employeeApi.getAll({ page: 0, size: 6 }),
-      ])
-        .then(([statsData, alertData, offboardingData, employeeData]) => {
-          if (!active) return;
-          setStats(statsData);
-          setSaasAlerts(alertData);
-          setOffboardingTargets(
-            offboardingData
-              .filter((item) => !item.revokedAll && !item.falsePositive)
-              .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)),
-          );
-          setEmployees(employeeData.content ?? []);
-          setError(null);
-        })
-        .catch(() => {
-          if (active) setError('대시보드 정보를 불러오지 못했습니다.');
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
+    const loadDashboard = async () => {
+      try {
+        const [statsData, alertData, offboardingData] = await Promise.all([
+          dashboardApi.getStats(),
+          dashboardApi.getSaasSyncAlerts(8),
+          offboardingApi.getAll(),
+        ]);
+
+        if (!active) return;
+
+        const targets = offboardingData
+          .filter((item) => !item.revokedAll && !item.falsePositive)
+          .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
+
+        setStats(statsData);
+        setSaasAlerts(alertData);
+        setOffboardingTargets(targets);
+        setError(null);
+      } catch {
+        if (active) setError('대시보드 정보를 불러오지 못했습니다.');
+      } finally {
+        if (active) setLoading(false);
+      }
     };
 
     loadDashboard();
@@ -425,9 +374,9 @@ export default function Dashboard() {
     <Box sx={{ width: '100%', pb: 4 }}>
       <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={3}>
         <Box>
-          <Typography variant="h4" fontWeight={900} color="#0f172a">대시보드</Typography>
+          <Typography variant="h4" fontWeight={700} color="#0f172a">대시보드</Typography>
           <Typography variant="body2" color="#64748b" mt={0.75}>
-            직원 현황, 권한 회수 대상, SaaS 감지 알림을 한 화면에서 확인합니다.
+            퇴사/비활성 계정 감지와 권한 회수 진행 상황을 확인합니다.
           </Typography>
         </Box>
         <Button
@@ -436,43 +385,34 @@ export default function Dashboard() {
           onClick={() => downloadDashboardReport(stats, saasAlerts, offboardingTargets)}
           sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
         >
-          엑셀 보고서 다운로드
+          점검 보고서 다운로드
         </Button>
       </Stack>
 
       <Grid container spacing={2} mb={2.5}>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="총 인원" value={stats.totalEmployees} description="ORAM에 등록된 전체 직원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
+          <StatCard title="전체 직원" value={stats.totalEmployees} description="ORAM 등록/동기화 인원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="조치 필요" value={actionCount} description="권한 회수 대상 + SaaS 알림" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
+          <StatCard title="조치 필요" value={actionCount} description="회수 대상 + SaaS 알림" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="권한 회수 대상" value={offboardingTargets.length} description="미회수·오탐 제외 대상" icon={<SecurityIcon />} tone={offboardingTargets.length > 0 ? 'warning' : 'success'} onClick={() => navigate('/offboarding')} />
+          <StatCard title="권한 회수 대상" value={offboardingTargets.length} description="미회수·오탐 제외" icon={<SecurityIcon />} tone={offboardingTargets.length > 0 ? 'warning' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="SaaS 감지 알림" value={stats.openSaasSyncAlerts || 0} description="비활성 또는 누락 계정" icon={<CloudIcon />} tone={(stats.openSaasSyncAlerts || 0) > 0 ? 'info' : 'success'} onClick={() => navigate('/saas-connections')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="퇴사자" value={stats.resignedEmployees} description="권한 회수 검토 대상" icon={<GroupsIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
+          <StatCard title="퇴사자" value={stats.resignedEmployees} description="퇴사 상태 직원" icon={<GroupsIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
         </Grid>
       </Grid>
 
       <Grid container spacing={2.5} alignItems="stretch">
-        <Grid item xs={12} lg={4}>
-          <ActionQueueChart stats={stats} offboardingCount={offboardingTargets.length} />
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <OffboardingQueue items={offboardingTargets} />
+        <Grid item xs={12} lg={8}>
+          <RevocationTargets items={offboardingTargets} />
         </Grid>
         <Grid item xs={12} lg={4}>
           <DetectionLog alerts={saasAlerts} />
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2.5} mt={0}>
-        <Grid item xs={12}>
-          <EmployeeBriefList employees={employees} />
         </Grid>
       </Grid>
     </Box>

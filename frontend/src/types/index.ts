@@ -163,6 +163,9 @@ export interface PermissionInfo {
 }
 
 export interface OffboardingDetail extends OffboardingSummary {
+  anomalyScore?: number;
+  riskBreakdown?: RiskScoreResponse['breakdown'];
+  riskExplanations?: RiskScoreResponse['explanations'];
   permissions: PermissionInfo[];
   recommendedActions: string[];
   completedAt?: string;

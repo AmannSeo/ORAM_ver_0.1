@@ -515,11 +515,11 @@ function FilterPanel(props: {
         <Grid item xs={12} sm={4} lg={1.4}>
           <Button variant="contained" startIcon={<SearchIcon />} onClick={props.runSearch} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>검색</Button>
         </Grid>
-        <Grid item xs={12} sm={4} lg={1.7}>
-          <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
-        </Grid>
         <Grid item xs={12} sm={4} lg={1.6}>
           <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} fullWidth sx={{ height: 40, borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
+        </Grid>
+        <Grid item xs={12} sm={4} lg={1.7}>
+          <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
         </Grid>
       </Grid>
     </Paper>

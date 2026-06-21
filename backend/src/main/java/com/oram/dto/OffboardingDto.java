@@ -48,6 +48,9 @@ public class OffboardingDto {
         private String analysisSource;
         private String analysisTrigger;
         private String analysisEngine;
+        private Double anomalyScore;
+        private RiskDto.Breakdown riskBreakdown;
+        private List<RiskDto.Explanation> riskExplanations;
         private List<PermissionInfo> permissions;
         private List<String> recommendedActions;
         private boolean revokedAll;

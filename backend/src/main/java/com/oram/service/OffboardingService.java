@@ -4,6 +4,7 @@ import com.oram.config.EncryptionConfig;
 import com.oram.connector.ConnectorRegistry;
 import com.oram.connector.SaaSConnector;
 import com.oram.dto.OffboardingDto;
+import com.oram.dto.RiskDto;
 import com.oram.entity.Employee;
 import com.oram.entity.OffboardingResult;
 import com.oram.entity.PermissionRecord;
@@ -446,6 +447,7 @@ public class OffboardingService {
                         .workspaceCount(p.getWorkspaceCount())
                         .build())
                 .toList();
+        RiskDto.ScoreResponse riskDetail = buildRiskDetail(r);
 
         return OffboardingDto.Detail.builder()
                 .id(r.getId())
@@ -456,6 +458,9 @@ public class OffboardingService {
                 .analysisSource(r.getAnalysisSource())
                 .analysisTrigger(r.getAnalysisTrigger())
                 .analysisEngine(r.getAnalysisEngine())
+                .anomalyScore(riskDetail.getAnomalyScore())
+                .riskBreakdown(riskDetail.getBreakdown())
+                .riskExplanations(riskDetail.getExplanations())
                 .permissions(perms)
                 .recommendedActions(generateRecommendations(r))
                 .revokedAll(r.isRevokedAll())
@@ -465,6 +470,23 @@ public class OffboardingService {
                 .startedAt(r.getStartedAt())
                 .completedAt(r.getCompletedAt())
                 .build();
+    }
+
+    private RiskDto.ScoreResponse buildRiskDetail(OffboardingResult result) {
+        try {
+            RiskFeatures features = RiskFeatures.aggregate(result.getPermissions());
+            return riskAnalyzer.analyze(features);
+        } catch (Exception e) {
+            log.warn("Failed to build risk detail for result {}: {}", result.getId(), e.getMessage());
+            return RiskDto.ScoreResponse.builder()
+                    .score(result.getRiskScore() != null ? result.getRiskScore() : 0)
+                    .level(result.getRiskLevel())
+                    .engine(result.getAnalysisEngine())
+                    .anomalyScore(result.getRiskScore() != null ? result.getRiskScore() / 100.0 : 0.0)
+                    .breakdown(RiskDto.Breakdown.builder().build())
+                    .explanations(List.of())
+                    .build();
+        }
     }
 
     private OffboardingDto.EmployeeInfo toEmployeeInfo(Employee e) {
