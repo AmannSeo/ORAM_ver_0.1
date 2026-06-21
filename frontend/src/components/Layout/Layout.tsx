@@ -65,16 +65,32 @@ export default function Layout() {
   const { user, loginAt, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const currentNavItem = NAV_ITEMS.find((item) =>
+    location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
+  );
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const handleLogoClick = () => {
+    navigate('/');
+    setMobileOpen(false);
+  };
+
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0f172a', color: '#e5e7eb' }}>
-      <Toolbar sx={{ minHeight: 64 }}>
+      <Toolbar
+        onClick={handleLogoClick}
+        sx={{
+          minHeight: 64,
+          cursor: 'pointer',
+          '&:hover .oram-logo-mark': { bgcolor: '#475569' },
+        }}
+      >
         <Box
+          className="oram-logo-mark"
           sx={{
             width: 36,
             height: 36,
@@ -84,6 +100,7 @@ export default function Layout() {
             bgcolor: '#334155',
             border: '1px solid rgba(255,255,255,0.1)',
             mr: 1.5,
+            transition: 'background-color 120ms ease',
           }}
         >
           <ShieldIcon sx={{ color: 'white', fontSize: 22 }} />
@@ -195,7 +212,7 @@ export default function Layout() {
             component="div"
             sx={{ flexGrow: 1, fontWeight: 500, color: '#64748b', display: { xs: 'none', md: 'block' } }}
           >
-            오프보딩 / <Box component="span" sx={{ color: '#334155' }}>직원 권한 관리</Box>
+            ORAM / <Box component="span" sx={{ color: '#334155' }}>{currentNavItem?.label || '대시보드'}</Box>
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
             <Typography variant="subtitle2" fontWeight={700}>ORAM</Typography>

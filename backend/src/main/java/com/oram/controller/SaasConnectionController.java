@@ -58,7 +58,10 @@ public class SaasConnectionController {
         if (denied != null) return denied;
 
         SaasConnectionDto.Response result = saasConnectionService.tokenConnect(
-                saasType, tokenRequest.getToken(), tokenRequest.getWorkspaceName());
+                saasType,
+                tokenRequest.getToken(),
+                tokenRequest.getWorkspaceName(),
+                tokenRequest.getAccountScope());
         return ResponseEntity.ok(result);
     }
 
@@ -77,7 +80,11 @@ public class SaasConnectionController {
         if (denied != null) return denied;
 
         try {
-            saasConnectionService.tokenConnect(saasType, tokenRequest.getToken(), tokenRequest.getWorkspaceName());
+            saasConnectionService.tokenConnect(
+                    saasType,
+                    tokenRequest.getToken(),
+                    tokenRequest.getWorkspaceName(),
+                    tokenRequest.getAccountScope());
             return ResponseEntity.ok(Map.of("result", "ok"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -189,5 +196,6 @@ public class SaasConnectionController {
     public static class TokenConnectRequest {
         private String token;
         private String workspaceName;
+        private String accountScope;
     }
 }

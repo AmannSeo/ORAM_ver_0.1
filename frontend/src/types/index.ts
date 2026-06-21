@@ -94,6 +94,8 @@ export interface SaasConnection {
   id?: string;
   saasType: SaasType;
   workspaceName?: string;
+  accountScope?: 'PERSONAL' | 'ORGANIZATION' | 'ENTERPRISE' | 'WORKSPACE' | string;
+  enterpriseAccount?: boolean;
   isConnected: boolean;
   connectedAt?: string;
   connectedBy?: string;

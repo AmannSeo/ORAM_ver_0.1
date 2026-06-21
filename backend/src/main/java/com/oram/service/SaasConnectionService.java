@@ -60,6 +60,8 @@ public class SaasConnectionService {
                             .id(c.getId())
                             .saasType(c.getSaasType())
                             .workspaceName(c.getWorkspaceName())
+                            .accountScope(resolveAccountScope(c.getSaasType(), c.getAccountScope()))
+                            .enterpriseAccount(isEnterpriseAccount(c.getSaasType(), c.getAccountScope()))
                             .isConnected(c.isConnected())
                             .connectedAt(c.getConnectedAt())
                             .connectedBy(c.getConnectedBy() != null ? c.getConnectedBy().getEmail() : null)
@@ -69,6 +71,8 @@ public class SaasConnectionService {
                             .build()
                     ).orElse(SaasConnectionDto.Response.builder()
                             .saasType(type)
+                            .accountScope(resolveAccountScope(type, null))
+                            .enterpriseAccount(false)
                             .isConnected(false)
                             .identityCount(saasIdentityRepository.countBySaasType(type))
                             .lastSyncedAt(saasIdentityRepository.findLatestSyncedAtBySaasType(type))
@@ -120,10 +124,11 @@ public class SaasConnectionService {
 
         connection.setAccessTokenEncrypted(tokenEncryptor.encrypt(tokenInfo.accessToken()));
         if (tokenInfo.refreshToken() != null) {
-            connection.setRefreshTokenEncrypted(tokenEncryptor.encrypt(tokenInfo.refreshToken()));
+        connection.setRefreshTokenEncrypted(tokenEncryptor.encrypt(tokenInfo.refreshToken()));
         }
         connection.setWorkspaceId(tokenInfo.workspaceId());
         connection.setWorkspaceName(tokenInfo.workspaceName());
+        connection.setAccountScope(resolveAccountScope(saasType, null));
         connection.setConnected(true);
         connection.setConnectedAt(LocalDateTime.now());
 
@@ -153,6 +158,11 @@ public class SaasConnectionService {
      */
     @Transactional
     public SaasConnectionDto.Response tokenConnect(SaasType saasType, String rawToken, String workspaceName) {
+        return tokenConnect(saasType, rawToken, workspaceName, null);
+    }
+
+    @Transactional
+    public SaasConnectionDto.Response tokenConnect(SaasType saasType, String rawToken, String workspaceName, String accountScope) {
         String token = normalizeToken(rawToken);
         // 1. 실제 API 검증 (토큰이 살아있는지, 권한이 있는지)
         SaaSConnector connector = connectorRegistry.getConnector(saasType)
@@ -177,6 +187,7 @@ public class SaasConnectionService {
         connection.setAccessTokenEncrypted(tokenEncryptor.encrypt(token));
         connection.setWorkspaceId(saasType.name().toLowerCase() + "-token-connect");
         connection.setWorkspaceName(resolvedWorkspaceName);
+        connection.setAccountScope(resolveAccountScope(saasType, accountScope));
         connection.setConnected(true);
         connection.setConnectedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(connection::setConnectedBy);
@@ -191,6 +202,8 @@ public class SaasConnectionService {
                 .id(connection.getId())
                 .saasType(connection.getSaasType())
                 .workspaceName(connection.getWorkspaceName())
+                .accountScope(resolveAccountScope(connection.getSaasType(), connection.getAccountScope()))
+                .enterpriseAccount(isEnterpriseAccount(connection.getSaasType(), connection.getAccountScope()))
                 .isConnected(true)
                 .connectedAt(connection.getConnectedAt())
                 .identityCount(saasIdentityRepository.countBySaasType(saasType))
@@ -208,6 +221,7 @@ public class SaasConnectionService {
         connection.setAccessTokenEncrypted(tokenEncryptor.encrypt("demo-" + saasType.name().toLowerCase() + "-mock-token"));
         connection.setWorkspaceId("demo-" + saasType.name().toLowerCase() + "-ws");
         connection.setWorkspaceName("[데모] " + saasType.name() + " Workspace");
+        connection.setAccountScope(resolveAccountScope(saasType, null));
         connection.setConnected(true);
         connection.setConnectedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(connection::setConnectedBy);
@@ -220,6 +234,8 @@ public class SaasConnectionService {
                 .id(connection.getId())
                 .saasType(connection.getSaasType())
                 .workspaceName(connection.getWorkspaceName())
+                .accountScope(resolveAccountScope(connection.getSaasType(), connection.getAccountScope()))
+                .enterpriseAccount(isEnterpriseAccount(connection.getSaasType(), connection.getAccountScope()))
                 .isConnected(true)
                 .connectedAt(connection.getConnectedAt())
                 .identityCount(saasIdentityRepository.countBySaasType(saasType))
@@ -549,6 +565,24 @@ public class SaasConnectionService {
     private String normalizeToken(String token) {
         if (token == null) return "";
         return token.replaceAll("\\s+", "");
+    }
+
+    private String resolveAccountScope(SaasType saasType, String accountScope) {
+        if (saasType != SaasType.GITHUB) {
+            return "WORKSPACE";
+        }
+        if (accountScope == null || accountScope.isBlank()) {
+            return "ORGANIZATION";
+        }
+        String normalized = accountScope.trim().toUpperCase();
+        return switch (normalized) {
+            case "PERSONAL", "ORGANIZATION", "ENTERPRISE" -> normalized;
+            default -> "ORGANIZATION";
+        };
+    }
+
+    private boolean isEnterpriseAccount(SaasType saasType, String accountScope) {
+        return saasType == SaasType.GITHUB && "ENTERPRISE".equalsIgnoreCase(resolveAccountScope(saasType, accountScope));
     }
 
     private String buildSaasEmployeeId(SaasType saasType, String externalId, String email) {

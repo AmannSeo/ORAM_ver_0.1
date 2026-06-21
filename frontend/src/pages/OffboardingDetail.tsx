@@ -20,7 +20,11 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Paper,
   Stack,
+  Step,
+  StepLabel,
+  Stepper,
   TextField,
   Tooltip,
   Typography,
@@ -32,7 +36,6 @@ import {
   CheckCircle as CheckIcon,
   DeleteSweep as RevokeIcon,
   ErrorOutline as ErrorIcon,
-  FactCheck as PlanIcon,
   PersonSearch as ManualIcon,
   Security as SecurityIcon,
   VpnKey as TokenIcon,
@@ -54,6 +57,13 @@ const PLAN_STATUS_LABEL: Record<string, { label: string; color: 'success' | 'war
   NO_ACCOUNT: { label: '매핑 계정 없음', color: 'default' },
   REVOKED: { label: '회수 완료', color: 'success' },
   FAILED: { label: '회수 실패', color: 'error' },
+};
+
+const LEVEL_ACTION: Record<string, string> = {
+  LOW: '표준 절차로 회수',
+  MEDIUM: '관리자 확인 후 회수',
+  HIGH: '24시간 내 회수 승인',
+  CRITICAL: '즉시 회수 승인',
 };
 
 function formatDateTime(value?: string) {
@@ -79,11 +89,14 @@ function triggerLabel(trigger?: string) {
 }
 
 function planReasonKo(item: RevokePlanItem) {
+  if (item.status === 'FAILED') {
+    return readableRevokeReason(item.reason);
+  }
   if (item.status === 'NO_ACCOUNT') {
-    return '이 직원과 매핑된 SaaS 계정이 없습니다. 먼저 SaaS 동기화와 이메일 매핑 상태를 확인하세요.';
+    return '직원과 매핑된 SaaS 계정이 없습니다. SaaS 동기화 결과와 이메일 매핑 상태를 먼저 확인해야 합니다.';
   }
   if (item.saasType === 'NOTION') {
-    return 'Notion API는 워크스페이스 멤버 제거를 공식 제공하지 않습니다. Notion 관리자 화면에서 직접 제거해야 합니다.';
+    return 'Notion API는 워크스페이스 멤버 제거를 공식 제공하지 않습니다. Notion 관리자 화면에서 수동 제거가 필요합니다.';
   }
   if (item.saasType === 'SLACK') {
     return 'Slack 자동 제거는 Enterprise Grid 및 admin.users:write 권한이 있는 사용자 토큰에서만 가능합니다.';
@@ -94,18 +107,49 @@ function planReasonKo(item: RevokePlanItem) {
   return item.reason;
 }
 
+function readableRevokeReason(reason?: string) {
+  if (!reason) return '상세 사유가 제공되지 않았습니다.';
+  if (reason.includes('GitHub user could not be matched')) {
+    return 'GitHub 계정을 이메일로 매핑하지 못했습니다. GitHub 비공개 이메일 계정은 수집 계정 목록의 login@github.local 계정과 직원 매핑을 확인해야 합니다.';
+  }
+  if (reason.includes('No removable GitHub access found')) {
+    return '제거 가능한 GitHub 권한을 찾지 못했습니다. 권한이 팀/조직 역할로 상속되었거나 토큰이 해당 계정을 볼 수 없을 수 있습니다.';
+  }
+  if (reason.includes('token lacks admin permission') || reason.includes('403 Forbidden')) {
+    return '토큰에 관리자 권한 또는 필요한 scope가 부족합니다. GitHub는 admin:org, repo 권한과 조직 관리자 권한이 필요할 수 있습니다.';
+  }
+  if (reason.includes('404 Not Found')) {
+    return '대상 계정이나 저장소가 토큰에서 보이지 않거나 이미 제거된 상태입니다.';
+  }
+  if (reason.includes('422 Unprocessable Entity')) {
+    return 'GitHub가 제거 요청을 거부했습니다. 조직 정책, 팀 상속 권한, 외부 collaborator 여부를 확인해야 합니다.';
+  }
+  if (reason.includes('Slack revoke failed')) {
+    return 'Slack 권한 회수에 실패했습니다. Enterprise Grid 여부와 admin.users:write 사용자 토큰 권한을 확인해야 합니다.';
+  }
+  if (reason.includes('Notion')) {
+    return 'Notion은 API 제한으로 자동 멤버 제거가 어렵습니다. Notion 관리자 화면에서 수동 처리해야 합니다.';
+  }
+  return reason;
+}
+
 function revokeResultKo(item: RevokePlanItem) {
   if (item.status === 'REVOKED') return `${SAAS_LABEL[item.saasType]} 권한 회수가 완료되었습니다.`;
-  if (item.status === 'FAILED') return `${SAAS_LABEL[item.saasType]} 권한 회수에 실패했습니다: ${item.reason}`;
+  if (item.status === 'FAILED') return `${SAAS_LABEL[item.saasType]} 권한 회수에 실패했습니다: ${readableRevokeReason(item.reason)}`;
   return `${SAAS_LABEL[item.saasType]}: ${planReasonKo(item)}`;
+}
+
+function decisionStatus(detail: OffboardingDetail, plan?: RevokePlanResponse | null) {
+  if (detail.falsePositive) return { step: 0, label: '오탐 처리됨', color: 'default' as const };
+  if (detail.revokedAll) return { step: 3, label: '기록 완료', color: 'success' as const };
+  if ((plan?.readyCount ?? 0) > 0) return { step: 1, label: '승인 대기', color: 'warning' as const };
+  return { step: 1, label: '수동 검토 필요', color: 'warning' as const };
 }
 
 function InfoRow({ label, value }: { label: string; value?: string }) {
   return (
     <Box>
-      <Typography variant="caption" color="#64748b" fontWeight={700}>
-        {label}
-      </Typography>
+      <Typography variant="caption" color="#64748b">{label}</Typography>
       <Typography fontWeight={600} color="#0f172a" sx={{ wordBreak: 'break-word' }}>
         {value || '-'}
       </Typography>
@@ -121,10 +165,10 @@ function MetricCard({ label, value, tone }: { label: string; value: number; tone
   }[tone];
 
   return (
-    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: colors.bg, border: `1px solid ${colors.border}` }}>
-      <Typography variant="caption" color="#64748b" fontWeight={700}>{label}</Typography>
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: colors.bg, borderColor: colors.border }}>
+      <Typography variant="caption" color="#64748b">{label}</Typography>
       <Typography variant="h5" fontWeight={700} color={colors.color}>{value}</Typography>
-    </Box>
+    </Paper>
   );
 }
 
@@ -137,14 +181,7 @@ function PlanItem({ item }: { item: RevokePlanItem }) {
       : <WarningIcon color="warning" fontSize="small" />;
 
   return (
-    <Box
-      sx={{
-        border: '1px solid #e2e8f0',
-        borderRadius: 2,
-        p: 1.5,
-        bgcolor: '#fff',
-      }}
-    >
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2.25 }}>
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
         <Stack direction="row" alignItems="center" spacing={0.75} minWidth={0}>
           {icon}
@@ -165,7 +202,7 @@ function PlanItem({ item }: { item: RevokePlanItem }) {
           ))}
         </Stack>
       )}
-    </Box>
+    </Paper>
   );
 }
 
@@ -227,7 +264,7 @@ export default function OffboardingDetailPage() {
       setRevokeSuccess(
         res.revokedSaas.length > 0
           ? `권한 회수 요청이 완료되었습니다. 성공: ${res.revokedSaas.map((saas) => SAAS_LABEL[saas]).join(', ')}`
-          : '자동으로 회수할 권한이 없습니다. 실패 사유와 수동 조치 항목을 확인하세요.',
+          : '자동으로 회수할 수 있는 권한이 없습니다. 수동 조치 항목을 확인하세요.',
       );
       await load();
     } catch {
@@ -263,15 +300,16 @@ export default function OffboardingDetailPage() {
   const readyCount = plan?.readyCount ?? 0;
   const manualCount = plan?.manualCount ?? 0;
   const blockedCount = plan?.blockedCount ?? 0;
-  const canRevoke = !detail.falsePositive && !detail.revokedAll && !!plan && plan.items.length > 0;
+  const canRevoke = !detail.falsePositive && !detail.revokedAll && !!plan && plan.items.length > 0 && readyCount > 0;
+  const status = decisionStatus(detail, plan);
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
-      <Card elevation={0} sx={{ mb: 2.5, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: '#fff' }}>
+      <Card elevation={0} sx={{ mb: 2.5, border: '1px solid #e2e8f0', borderRadius: 3 }}>
         <CardContent sx={{ p: { xs: 2, md: 2.5 }, '&:last-child': { pb: { xs: 2, md: 2.5 } } }}>
-          <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" gap={2.5}>
+          <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" gap={2}>
             <Stack direction="row" spacing={1.5} alignItems="flex-start" minWidth={0}>
-              <Tooltip title="권한 회수 목록으로 돌아가기">
+              <Tooltip title="권한 회수 대상 목록으로 돌아가기">
                 <IconButton onClick={() => navigate('/offboarding')} sx={{ border: '1px solid #e2e8f0', mt: 0.25 }}>
                   <BackIcon />
                 </IconButton>
@@ -279,13 +317,14 @@ export default function OffboardingDetailPage() {
               <Box minWidth={0}>
                 <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
                   <Typography variant="h4" fontWeight={700} color="#0f172a">
-                    권한 회수 상세
+                    권한 회수 판단
                   </Typography>
-                  {detail.falsePositive && <Chip icon={<FalsePositiveIcon />} label="오탐 처리됨" color="default" />}
+                  <Chip label={status.label} color={status.color} />
+                  {detail.falsePositive && <Chip icon={<FalsePositiveIcon />} label="오탐 제외" color="default" />}
                   {detail.revokedAll && <Chip icon={<CheckIcon />} label="권한 회수 완료" color="success" />}
                 </Stack>
                 <Typography variant="body2" color="#64748b" mt={0.75}>
-                  잔여 SaaS 권한, 위험도 산정 근거, 권한 회수 가능 여부를 확인합니다.
+                  분석 근거를 확인하고, 관리자가 승인한 뒤 연결된 SaaS 권한을 회수합니다.
                 </Typography>
               </Box>
             </Stack>
@@ -311,10 +350,20 @@ export default function OffboardingDetailPage() {
                 disabled={!canRevoke}
                 sx={{ borderRadius: 1.5, whiteSpace: 'nowrap', height: 34 }}
               >
-                권한 회수 실행
+                승인 후 회수
               </Button>
             </Stack>
           </Stack>
+
+          <Box mt={2.5}>
+            <Stepper activeStep={status.step} alternativeLabel>
+              {['분석', '승인', '회수', '기록'].map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box>
         </CardContent>
       </Card>
 
@@ -338,46 +387,39 @@ export default function OffboardingDetailPage() {
           <Stack spacing={2.5}>
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Typography variant="h6" fontWeight={700}>직원 정보</Typography>
+                <Typography variant="h6" fontWeight={700}>관리자 판단 요약</Typography>
+                <Divider sx={{ my: 2 }} />
+                <Stack spacing={1.75}>
+                  <Box>
+                    <Typography variant="caption" color="#64748b">잔여 접근 위험도</Typography>
+                    <Box mt={0.75}>
+                      <RiskBadge level={detail.riskLevel} score={detail.riskScore} />
+                    </Box>
+                  </Box>
+                  <InfoRow label="권장 판단" value={LEVEL_ACTION[detail.riskLevel || ''] || '관리자 검토'} />
+                  <InfoRow label="감지 근거" value={triggerLabel(detail.analysisTrigger)} />
+                  <InfoRow label="분석 방식" value={automatic ? '자동 분석' : '수동 재분석'} />
+                  <InfoRow label="분석 엔진" value={detail.analysisEngine || 'ORAM Risk Fusion'} />
+                  <InfoRow label="분석 시각" value={formatDateTime(detail.startedAt)} />
+                </Stack>
+              </CardContent>
+            </Card>
+
+            <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                <Typography variant="h6" fontWeight={700}>대상 직원</Typography>
                 <Divider sx={{ my: 2 }} />
                 <Stack spacing={1.75}>
                   <InfoRow label="이름" value={detail.employee.name} />
                   <InfoRow label="이메일" value={detail.employee.email} />
                   <InfoRow label="부서" value={detail.employee.department} />
-                  <Box>
-                    <Typography variant="caption" color="#64748b" fontWeight={700}>잔여 접근 위험도</Typography>
-                    <Box mt={0.75}>
-                      <RiskBadge level={detail.riskLevel} score={detail.riskScore} />
-                    </Box>
-                  </Box>
-                  <InfoRow label="생성/갱신 시각" value={formatDateTime(detail.startedAt)} />
                 </Stack>
               </CardContent>
             </Card>
 
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Typography variant="h6" fontWeight={700}>분석 정보</Typography>
-                <Divider sx={{ my: 2 }} />
-                <Stack spacing={1.75}>
-                  <Chip
-                    icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                    label={automatic ? '자동 감지' : '수동 분석'}
-                    color={automatic ? 'primary' : 'default'}
-                    sx={{ alignSelf: 'flex-start', fontWeight: 600 }}
-                  />
-                  <InfoRow label="감지 사유" value={triggerLabel(detail.analysisTrigger)} />
-                  <InfoRow label="분석 엔진" value={detail.analysisEngine || 'ORAM2 XGBoost'} />
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
-              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <PlanIcon color="primary" />
-                  <Typography variant="h6" fontWeight={700}>회수 실행 계획</Typography>
-                </Stack>
+                <Typography variant="h6" fontWeight={700}>회수 계획</Typography>
                 <Grid container spacing={1.25} mt={1}>
                   <Grid item xs={4}><MetricCard label="자동" value={readyCount} tone="success" /></Grid>
                   <Grid item xs={4}><MetricCard label="수동" value={manualCount} tone="warning" /></Grid>
@@ -387,7 +429,7 @@ export default function OffboardingDetailPage() {
                   {!plan ? (
                     <Alert severity="warning">회수 계획을 불러오지 못했습니다.</Alert>
                   ) : plan.items.length === 0 ? (
-                    <Alert severity="info">연결된 SaaS가 없거나 회수 계획을 만들 계정이 없습니다.</Alert>
+                    <Alert severity="info">연결된 SaaS가 없거나 회수할 계정이 없습니다.</Alert>
                   ) : (
                     plan.items.map((item) => <PlanItem key={item.saasType} item={item} />)
                   )}
@@ -405,7 +447,7 @@ export default function OffboardingDetailPage() {
                   <Box>
                     <Typography variant="h6" fontWeight={700}>발견된 SaaS 권한</Typography>
                     <Typography variant="body2" color="#64748b" mt={0.5}>
-                      직원과 매핑된 계정에서 수집한 권한입니다.
+                      직원과 매핑된 SaaS 계정에서 수집한 실제 권한입니다.
                     </Typography>
                   </Box>
                   <Chip label={`${detail.permissions.length}개 권한`} color="primary" variant="outlined" />
@@ -417,7 +459,7 @@ export default function OffboardingDetailPage() {
                 ) : (
                   <Stack spacing={2}>
                     {groupedPermissions.map(([saasType, permissions]) => (
-                      <Box key={saasType} sx={{ border: '1px solid #e2e8f0', borderRadius: 2.5, p: 2 }}>
+                      <Paper key={saasType} variant="outlined" sx={{ borderRadius: 2.5, p: 2 }}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} mb={1.5}>
                           <Typography fontWeight={700}>{SAAS_LABEL[saasType]}</Typography>
                           <Chip label={`${permissions.length}개`} size="small" variant="outlined" />
@@ -435,6 +477,7 @@ export default function OffboardingDetailPage() {
                                     {permission.isAdmin && <Chip icon={<SecurityIcon />} label="Admin" size="small" color="warning" />}
                                     {permission.isOwner && <Chip icon={<SecurityIcon />} label="Owner" size="small" color="error" />}
                                     {permission.hasApiToken && <Chip icon={<TokenIcon />} label="API Token" size="small" color="error" />}
+                                    {permission.recentLogin && <Chip label="최근 로그인" size="small" color="info" />}
                                     {permission.repoCount > 0 && <Chip label={`${permission.repoCount} Repos`} size="small" />}
                                     {permission.workspaceCount > 0 && <Chip label={`${permission.workspaceCount} Workspaces`} size="small" />}
                                   </Stack>
@@ -443,7 +486,7 @@ export default function OffboardingDetailPage() {
                             </Grid>
                           ))}
                         </Grid>
-                      </Box>
+                      </Paper>
                     ))}
                   </Stack>
                 )}
@@ -452,7 +495,7 @@ export default function OffboardingDetailPage() {
 
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Typography variant="h6" fontWeight={700}>권장 조치</Typography>
+                <Typography variant="h6" fontWeight={700}>권장 조치 및 기록</Typography>
                 <Divider sx={{ my: 2 }} />
                 {detail.recommendedActions.length === 0 ? (
                   <Typography color="#64748b">추가 권장 조치가 없습니다.</Typography>
@@ -468,6 +511,9 @@ export default function OffboardingDetailPage() {
                     ))}
                   </List>
                 )}
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  회수 실행 또는 오탐 처리는 감사 기록으로 남습니다. 자동 회수 불가 항목은 회수 계획의 수동 조치 사유를 기준으로 처리하세요.
+                </Alert>
               </CardContent>
             </Card>
           </Stack>
@@ -475,12 +521,12 @@ export default function OffboardingDetailPage() {
       </Grid>
 
       <Dialog open={revokeDialog} onClose={() => setRevokeDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>권한 회수 실행 확인</DialogTitle>
+        <DialogTitle>권한 회수 승인</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={0.5}>
             <Typography>
-              <strong>{detail.employee.name}</strong> 직원의 연결된 SaaS 권한 회수를 실행합니다.
-              자동 회수가 불가능한 SaaS는 수동 조치 사유가 함께 표시됩니다.
+              <strong>{detail.employee.name}</strong> 직원의 연결된 SaaS 권한 회수를 승인하고 실행합니다.
+              자동 회수가 불가능한 SaaS는 수동 조치 사유가 결과에 남습니다.
             </Typography>
             {plan?.items.map((item) => (
               <PlanItem key={item.saasType} item={item} />
@@ -503,7 +549,7 @@ export default function OffboardingDetailPage() {
             disabled={revoking || !plan || readyCount === 0}
             startIcon={revoking ? <CircularProgress size={16} color="inherit" /> : <RevokeIcon />}
           >
-            {revoking ? '회수 중...' : '권한 회수 실행'}
+            {revoking ? '회수 중...' : '승인 후 회수'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -520,7 +566,7 @@ export default function OffboardingDetailPage() {
               label="오탐 처리 사유"
               value={falsePositiveReason}
               onChange={(event) => setFalsePositiveReason(event.target.value)}
-              placeholder="예: 별도 관리자 검토로 정상 권한임을 확인"
+              placeholder="예: 별도 관리자 검토 결과 정상 권한으로 확인"
               fullWidth
               multiline
               minRows={3}
