@@ -89,7 +89,7 @@ export default function Layout() {
           <ShieldIcon sx={{ color: 'white', fontSize: 22 }} />
         </Box>
         <Box>
-          <Typography variant="h6" fontWeight="bold" color="white" lineHeight={1.1}>
+          <Typography variant="h6" fontWeight={700} color="white" lineHeight={1.1}>
             ORAM
           </Typography>
           <Typography variant="caption" color="#94a3b8">
@@ -121,7 +121,7 @@ export default function Layout() {
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText
                   primary={item.label}
-                  primaryTypographyProps={{ fontWeight: selected ? 800 : 600, fontSize: 14 }}
+                  primaryTypographyProps={{ fontWeight: selected ? 600 : 500, fontSize: 14 }}
                 />
               </ListItemButton>
             </ListItem>
@@ -134,7 +134,7 @@ export default function Layout() {
           <Typography variant="caption" color="#94a3b8">
             Signed in as
           </Typography>
-          <Typography variant="body2" fontWeight="bold" color="white" noWrap>
+          <Typography variant="body2" fontWeight={600} color="white" noWrap>
             {user?.name || '-'}
           </Typography>
           <Typography variant="caption" color="#94a3b8">
@@ -171,12 +171,12 @@ export default function Layout() {
           <Typography
             variant="body2"
             component="div"
-            sx={{ flexGrow: 1, fontWeight: 700, color: '#64748b', display: { xs: 'none', md: 'block' } }}
+            sx={{ flexGrow: 1, fontWeight: 500, color: '#64748b', display: { xs: 'none', md: 'block' } }}
           >
             오프보딩 / <Box component="span" sx={{ color: '#334155' }}>직원 권한 관리</Box>
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
-            <Typography variant="subtitle2" fontWeight={900}>ORAM</Typography>
+            <Typography variant="subtitle2" fontWeight={700}>ORAM</Typography>
           </Box>
           <Tooltip title="도움말 & 가이드">
             <IconButton onClick={() => navigate('/help')} color="inherit" sx={{ mr: 0.5 }}>
@@ -185,7 +185,7 @@ export default function Layout() {
           </Tooltip>
           <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 800 }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 600 }}>
                 {user?.name?.charAt(0)}
               </Avatar>
             </IconButton>
@@ -198,11 +198,11 @@ export default function Layout() {
           >
             <Box sx={{ px: 2, py: 1.5 }}>
               <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-                <Avatar sx={{ width: 42, height: 42, bgcolor: '#2563eb', fontWeight: 800 }}>
+                <Avatar sx={{ width: 42, height: 42, bgcolor: '#2563eb', fontWeight: 600 }}>
                   {user?.name?.charAt(0)}
                 </Avatar>
                 <Box minWidth={0}>
-                  <Typography variant="subtitle2" fontWeight={800} noWrap>
+                  <Typography variant="subtitle2" fontWeight={600} noWrap>
                     {user?.name || '-'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap display="block">

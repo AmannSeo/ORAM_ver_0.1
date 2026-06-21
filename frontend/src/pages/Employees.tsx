@@ -485,7 +485,7 @@ function FilterPanel(props: {
   return (
     <Paper elevation={0} sx={{ p: 2, mb: 2.5, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
       <Grid container spacing={1.5} alignItems="flex-end">
-        <Grid item xs={12} sm={6} lg={2}>
+        <Grid item xs={12} sm={6} lg={1.4}>
           <FormControl size="small" fullWidth>
             <InputLabel>상태</InputLabel>
             <Select value={props.filterStatus} label="상태" onChange={(e) => { props.setFilterStatus(e.target.value); props.setPage(0); }}>
@@ -495,7 +495,7 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
+        <Grid item xs={12} sm={6} lg={1.5}>
           <FormControl size="small" fullWidth>
             <InputLabel>SaaS</InputLabel>
             <Select value={props.filterSaas} label="SaaS" onChange={(e) => { props.setFilterSaas(e.target.value as SaasType | ''); props.setPage(0); }}>
@@ -506,20 +506,22 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} lg={2}>
           <TextField size="small" label="부서" placeholder="부서명 입력" value={props.filterDept} onChange={(e) => props.setFilterDept(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} lg={2.4}>
           <TextField size="small" label="직원 검색" placeholder="이름 또는 이메일" value={props.searchQuery} onChange={(e) => props.setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} lg={2}>
+        <Grid item xs={12} sm={4} lg={1.4}>
           <Button variant="contained" startIcon={<SearchIcon />} onClick={props.runSearch} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>검색</Button>
         </Grid>
+        <Grid item xs={12} sm={4} lg={1.7}>
+          <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
+        </Grid>
+        <Grid item xs={12} sm={4} lg={1.6}>
+          <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} fullWidth sx={{ height: 40, borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
+        </Grid>
       </Grid>
-      <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2} pt={2} borderTop="1px solid #f1f5f9" flexWrap="wrap" useFlexGap>
-        <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
-        <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} sx={{ borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
-      </Stack>
     </Paper>
   );
 }
