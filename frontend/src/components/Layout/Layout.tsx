@@ -37,10 +37,9 @@ const DRAWER_WIDTH = 248;
 const NAV_ITEMS = [
   { label: '대시보드', path: '/', icon: <DashboardIcon /> },
   { label: '직원 권한 관리', path: '/employees', icon: <PeopleIcon /> },
-  { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
   { label: 'AI 리스크 분석', path: '/risk-analysis', icon: <SecurityIcon /> },
   { label: '권한 회수 대상', path: '/offboarding', icon: <AssignmentIcon /> },
-  { label: '도움말 & 가이드', path: '/help', icon: <HelpIcon /> },
+  { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -179,6 +178,11 @@ export default function Layout() {
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
             <Typography variant="subtitle2" fontWeight={900}>ORAM</Typography>
           </Box>
+          <Tooltip title="도움말 & 가이드">
+            <IconButton onClick={() => navigate('/help')} color="inherit" sx={{ mr: 0.5 }}>
+              <HelpIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
               <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 800 }}>

@@ -24,7 +24,6 @@ import {
   CheckCircle as CheckIcon,
   Cloud as CloudIcon,
   Groups as GroupsIcon,
-  History as HistoryIcon,
   People as PeopleIcon,
   Security as SecurityIcon,
   Sensors as LiveIcon,
@@ -43,7 +42,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { dashboardApi, employeeApi, offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
-import RiskCriteriaHelp from '../components/common/RiskCriteriaHelp';
 import type { DashboardStats, Employee, OffboardingSummary, SaasSyncAlert } from '../types';
 
 type Severity = 'error' | 'warning' | 'info' | 'success';
@@ -67,14 +65,20 @@ function formatDateTime(value?: string | Date) {
   });
 }
 
+function statusLabel(status: string) {
+  if (status === 'ACTIVE') return '재직 중';
+  if (status === 'RESIGNED') return '퇴사';
+  return status || '-';
+}
+
 function saasAlertReasonLabel(reason: string) {
-  if (reason === 'MISSING_FROM_LATEST_SYNC') return '동기화 누락';
-  if (reason === 'INACTIVE_FROM_LATEST_SYNC') return '비활성 계정';
-  return '계정 점검';
+  if (reason === 'MISSING_FROM_LATEST_SYNC') return '최근 동기화에서 누락';
+  if (reason === 'INACTIVE_FROM_LATEST_SYNC') return '비활성 계정 감지';
+  return '계정 상태 확인';
 }
 
 function saasAlertDescription(alert: SaasSyncAlert) {
-  const account = alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '미매핑 계정';
+  const account = alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '매핑되지 않은 계정';
   if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
     return `${account} 계정이 최근 ${alert.saasType} 동기화에서 비활성 상태로 확인되었습니다.`;
   }
@@ -84,42 +88,71 @@ function saasAlertDescription(alert: SaasSyncAlert) {
   return alert.detail || `${account} 계정 상태 확인이 필요합니다.`;
 }
 
-function statusLabel(status: string) {
-  if (status === 'ACTIVE') return '재직 중';
-  if (status === 'RESIGNED') return '퇴사';
-  return status;
+function escapeCsv(value: unknown) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function addCsvRow(rows: string[], values: unknown[]) {
+  rows.push(values.map(escapeCsv).join(','));
 }
 
 function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[], offboardingTargets: OffboardingSummary[]) {
   const createdAt = new Date();
-  const lines = [
-    '# ORAM 접근 권한 점검 보고서',
-    '',
-    `생성 시각: ${formatDateTime(createdAt)}`,
-    '',
-    '## 핵심 지표',
-    `- 전체 직원: ${stats.totalEmployees}명`,
-    `- 퇴사자: ${stats.resignedEmployees}명`,
-    `- 권한 회수 대상: ${offboardingTargets.length}건`,
-    `- 열린 SaaS 동기화 알림: ${stats.openSaasSyncAlerts || 0}건`,
-    '',
-    '## 권한 회수 대상',
-    ...(offboardingTargets.length > 0
-      ? offboardingTargets.map((target, index) => `${index + 1}. ${target.employee.name} / ${target.employee.email} / ${target.riskLevel || '-'} ${target.riskScore ?? '-'}점`)
-      : ['- 현재 권한 회수 대상이 없습니다.']),
-    '',
-    '## 최근 SaaS 감지 알림',
-    ...(alerts.length > 0
-      ? alerts.map((alert) => `- [${alert.saasType}] ${saasAlertReasonLabel(alert.reason)} / ${saasAlertDescription(alert)} / ${formatDateTime(alert.createdAt)}`)
-      : ['- 열린 감지 알림이 없습니다.']),
-    '',
-  ];
+  const rows: string[] = [];
 
-  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8;' });
+  addCsvRow(rows, ['ORAM 접근 권한 점검 보고서']);
+  addCsvRow(rows, ['생성 시각', formatDateTime(createdAt)]);
+  rows.push('');
+
+  addCsvRow(rows, ['핵심 지표']);
+  addCsvRow(rows, ['항목', '값', '설명']);
+  addCsvRow(rows, ['전체 직원', stats.totalEmployees, 'ORAM에 등록된 전체 직원']);
+  addCsvRow(rows, ['퇴사자', stats.resignedEmployees, '권한 회수 검토 대상']);
+  addCsvRow(rows, ['권한 회수 대상', offboardingTargets.length, '미회수 및 오탐 제외 대상']);
+  addCsvRow(rows, ['SaaS 감지 알림', stats.openSaasSyncAlerts || 0, '비활성 또는 누락 계정']);
+  rows.push('');
+
+  addCsvRow(rows, ['권한 회수 대상']);
+  addCsvRow(rows, ['No', '이름', '이메일', '부서', '위험도', '점수', '회수 상태']);
+  if (offboardingTargets.length === 0) {
+    addCsvRow(rows, ['-', '현재 권한 회수 대상이 없습니다.', '', '', '', '', '']);
+  } else {
+    offboardingTargets.forEach((target, index) => {
+      addCsvRow(rows, [
+        index + 1,
+        target.employee.name,
+        target.employee.email,
+        target.employee.department || '-',
+        target.riskLevel || '-',
+        target.riskScore ?? '-',
+        target.revokedAll ? '회수 완료' : '미회수',
+      ]);
+    });
+  }
+  rows.push('');
+
+  addCsvRow(rows, ['최근 SaaS 감지 알림']);
+  addCsvRow(rows, ['No', 'SaaS', '사유', '설명', '감지 시각']);
+  if (alerts.length === 0) {
+    addCsvRow(rows, ['-', '열린 감지 알림이 없습니다.', '', '', '']);
+  } else {
+    alerts.forEach((alert, index) => {
+      addCsvRow(rows, [
+        index + 1,
+        alert.saasType,
+        saasAlertReasonLabel(alert.reason),
+        saasAlertDescription(alert),
+        formatDateTime(alert.createdAt),
+      ]);
+    });
+  }
+
+  const blob = new Blob([`\ufeff${rows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `oram-access-report-${createdAt.toISOString().slice(0, 10)}.md`;
+  a.download = `oram-access-report-${createdAt.toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -148,7 +181,19 @@ function StatCard({
           <Typography variant="h4" fontWeight={900} color="#0f172a" mt={1}>{value.toLocaleString()}</Typography>
           <Typography variant="caption" color="#64748b" display="block" mt={0.75}>{description}</Typography>
         </Box>
-        <Box sx={{ width: 44, height: 44, borderRadius: 2, display: 'grid', placeItems: 'center', color: style.color, bgcolor: style.bg, border: `1px solid ${style.border}`, flexShrink: 0 }}>
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            color: style.color,
+            bgcolor: style.bg,
+            border: `1px solid ${style.border}`,
+            flexShrink: 0,
+          }}
+        >
           {icon}
         </Box>
       </Stack>
@@ -212,12 +257,7 @@ function OffboardingQueue({ items }: { items: OffboardingSummary[] }) {
                 <TableRow>
                   <TableCell width={56}>No.</TableCell>
                   <TableCell>직원</TableCell>
-                  <TableCell>
-                    <Stack direction="row" alignItems="center" spacing={0.25}>
-                      <span>위험도</span>
-                      <RiskCriteriaHelp />
-                    </Stack>
-                  </TableCell>
+                  <TableCell>위험도</TableCell>
                   <TableCell>상태</TableCell>
                 </TableRow>
               </TableHead>
@@ -300,12 +340,9 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
   return (
     <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <LiveIcon color="primary" />
-            <Typography variant="h6" fontWeight={900}>최근 SaaS 감지</Typography>
-          </Stack>
-          <Chip label="30초 자동 갱신" size="small" variant="outlined" color="primary" />
+        <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+          <LiveIcon color="primary" />
+          <Typography variant="h6" fontWeight={900}>최근 SaaS 감지</Typography>
         </Stack>
         {alerts.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>열린 SaaS 감지 알림이 없습니다.</Alert>
@@ -390,20 +427,17 @@ export default function Dashboard() {
         <Box>
           <Typography variant="h4" fontWeight={900} color="#0f172a">대시보드</Typography>
           <Typography variant="body2" color="#64748b" mt={0.75}>
-            직원, 권한 회수 대상, SaaS 감지 알림을 한 화면에서 확인합니다.
+            직원 현황, 권한 회수 대상, SaaS 감지 알림을 한 화면에서 확인합니다.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip icon={<HistoryIcon />} label="30초 자동 갱신" color="primary" variant="outlined" />
-          <Button
-            variant="contained"
-            startIcon={<ReportIcon />}
-            onClick={() => downloadDashboardReport(stats, saasAlerts, offboardingTargets)}
-            sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
-          >
-            보고서 다운로드
-          </Button>
-        </Stack>
+        <Button
+          variant="contained"
+          startIcon={<ReportIcon />}
+          onClick={() => downloadDashboardReport(stats, saasAlerts, offboardingTargets)}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          엑셀 보고서 다운로드
+        </Button>
       </Stack>
 
       <Grid container spacing={2} mb={2.5}>
