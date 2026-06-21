@@ -130,6 +130,28 @@ export default function Layout() {
       </List>
 
       <Box sx={{ mt: 'auto', p: 2 }}>
+        <Tooltip title="도움말 & 가이드" placement="right">
+          <ListItemButton
+            onClick={() => { navigate('/help'); setMobileOpen(false); }}
+            sx={{
+              mb: 1,
+              borderRadius: 1.5,
+              color: '#cbd5e1',
+              border: '1px solid rgba(148, 163, 184, 0.18)',
+              bgcolor: 'rgba(15, 23, 42, 0.45)',
+              '&:hover': { bgcolor: 'rgba(148, 163, 184, 0.12)' },
+              '& .MuiListItemIcon-root': { color: '#94a3b8', minWidth: 34 },
+            }}
+          >
+            <ListItemIcon>
+              <HelpIcon sx={{ fontSize: 18 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="도움말 & 가이드"
+              primaryTypographyProps={{ fontSize: 13, fontWeight: 500 }}
+            />
+          </ListItemButton>
+        </Tooltip>
         <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(148, 163, 184, 0.18)' }}>
           <Typography variant="caption" color="#94a3b8">
             Signed in as
@@ -178,11 +200,6 @@ export default function Layout() {
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
             <Typography variant="subtitle2" fontWeight={700}>ORAM</Typography>
           </Box>
-          <Tooltip title="도움말 & 가이드">
-            <IconButton onClick={() => navigate('/help')} color="inherit" sx={{ mr: 0.5 }}>
-              <HelpIcon />
-            </IconButton>
-          </Tooltip>
           <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
               <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 600 }}>

@@ -312,16 +312,40 @@ export default function Employees() {
             직원별 SaaS 계정, 접근 상태, 오프보딩 조치를 한 화면에서 관리합니다.
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<DeleteAllIcon />}
-          onClick={() => setDeleteAllDialog(true)}
-          disabled={totalElements === 0}
-          sx={{ alignSelf: { xs: 'stretch', lg: 'center' }, borderRadius: 2, bgcolor: 'white', whiteSpace: 'nowrap' }}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
+          alignSelf={{ xs: 'stretch', lg: 'center' }}
+          justifyContent="flex-end"
         >
-          전체 삭제
-        </Button>
+          <Button
+            variant="contained"
+            color="inherit"
+            startIcon={<AddIcon />}
+            onClick={() => setAddDialog(true)}
+            sx={{ borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}
+          >
+            직원 등록
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => { setCsvResult(null); setCsvDialog(true); }}
+            sx={{ borderRadius: 2, bgcolor: 'white', whiteSpace: 'nowrap' }}
+          >
+            CSV 가져오기
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteAllIcon />}
+            onClick={() => setDeleteAllDialog(true)}
+            disabled={totalElements === 0}
+            sx={{ borderRadius: 2, bgcolor: 'white', whiteSpace: 'nowrap' }}
+          >
+            전체 삭제
+          </Button>
+        </Stack>
       </Stack>
 
       <Stack direction="row" spacing={1} mb={2.5}>
@@ -351,8 +375,6 @@ export default function Employees() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             runSearch={runSearch}
-            openCsv={() => { setCsvResult(null); setCsvDialog(true); }}
-            openAdd={() => setAddDialog(true)}
             setPage={setPage}
           />
 
@@ -444,25 +466,25 @@ function MetricCard({ label, value, sub, color, bg, accent, icon }: {
         border: '1px solid #e2e8f0',
         borderRadius: 3,
         bgcolor: 'white',
-        minHeight: 148,
+        minHeight: 96,
         boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
         transition: 'transform 160ms ease, box-shadow 160ms ease',
         '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 14px 28px rgba(15, 23, 42, 0.08)' },
         '&:before': { content: '""', position: 'absolute', left: 0, top: 0, width: 4, height: '100%', bgcolor: accent },
       }}
     >
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+      <CardContent sx={{ p: 1.75, '&:last-child': { pb: 1.75 } }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
           <Box>
-            <Typography variant="body2" color="#64748b" fontWeight={800}>{label}</Typography>
-            <Typography variant="h4" fontWeight={900} color="#0f172a" mt={1}>
+            <Typography variant="caption" color="#64748b" fontWeight={700}>{label}</Typography>
+            <Typography variant="h5" fontWeight={700} color="#0f172a" mt={0.25}>
               {value}
-              <Typography component="span" ml={0.5} color="#94a3b8" fontSize={16}>명</Typography>
+              <Typography component="span" ml={0.5} color="#94a3b8" fontSize={13}>명</Typography>
             </Typography>
           </Box>
-          <Box sx={{ width: 42, height: 42, borderRadius: 2, bgcolor: bg, color, display: 'grid', placeItems: 'center' }}>{icon}</Box>
+          <Box sx={{ width: 34, height: 34, borderRadius: 1.5, bgcolor: bg, color, display: 'grid', placeItems: 'center', flexShrink: 0 }}>{icon}</Box>
         </Stack>
-        <Typography variant="caption" color="#94a3b8" mt={1.5} display="block">{sub}</Typography>
+        <Typography variant="caption" color="#94a3b8" mt={0.75} display="block">{sub}</Typography>
       </CardContent>
     </Card>
   );
@@ -478,14 +500,12 @@ function FilterPanel(props: {
   searchQuery: string;
   setSearchQuery: (value: string) => void;
   runSearch: () => void;
-  openCsv: () => void;
-  openAdd: () => void;
   setPage: (value: number) => void;
 }) {
   return (
     <Paper elevation={0} sx={{ p: 2, mb: 2.5, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
       <Grid container spacing={1.5} alignItems="flex-end">
-        <Grid item xs={12} sm={6} lg={1.4}>
+        <Grid item xs={12} sm={6} lg={1.6}>
           <FormControl size="small" fullWidth>
             <InputLabel>상태</InputLabel>
             <Select value={props.filterStatus} label="상태" onChange={(e) => { props.setFilterStatus(e.target.value); props.setPage(0); }}>
@@ -495,7 +515,7 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} lg={1.5}>
+        <Grid item xs={12} sm={6} lg={1.8}>
           <FormControl size="small" fullWidth>
             <InputLabel>SaaS</InputLabel>
             <Select value={props.filterSaas} label="SaaS" onChange={(e) => { props.setFilterSaas(e.target.value as SaasType | ''); props.setPage(0); }}>
@@ -506,20 +526,14 @@ function FilterPanel(props: {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} lg={2}>
+        <Grid item xs={12} sm={6} lg={2.6}>
           <TextField size="small" label="부서" placeholder="부서명 입력" value={props.filterDept} onChange={(e) => props.setFilterDept(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} sm={6} lg={2.4}>
+        <Grid item xs={12} sm={6} lg={4.2}>
           <TextField size="small" label="직원 검색" placeholder="이름 또는 이메일" value={props.searchQuery} onChange={(e) => props.setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
         </Grid>
-        <Grid item xs={12} sm={4} lg={1.4}>
+        <Grid item xs={12} sm={6} lg={1.8}>
           <Button variant="contained" startIcon={<SearchIcon />} onClick={props.runSearch} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>검색</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} lg={1.6}>
-          <Button variant="contained" color="inherit" startIcon={<AddIcon />} onClick={props.openAdd} fullWidth sx={{ height: 40, borderRadius: 2, bgcolor: '#0f172a', color: 'white', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1e293b' } }}>직원 등록</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} lg={1.7}>
-          <Button variant="outlined" startIcon={<UploadIcon />} onClick={props.openCsv} fullWidth sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}>CSV 가져오기</Button>
         </Grid>
       </Grid>
     </Paper>

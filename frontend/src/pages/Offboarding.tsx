@@ -208,10 +208,10 @@ export default function Offboarding() {
         <Box>
           <Stack direction="row" alignItems="center" spacing={1}>
             <QueueIcon color="primary" />
-            <Typography variant="h4" fontWeight={700}>권한 회수 큐</Typography>
+            <Typography variant="h4" fontWeight={700}>권한 회수 대상</Typography>
           </Stack>
           <Typography variant="body2" color="#64748b" mt={0.75}>
-            직원 전체 목록이 아니라, AI 분석과 SaaS 동기화 결과로 조치가 필요한 대상만 모아 처리합니다.
+            직원 전체 목록이 아니라, 퇴사/비활성 감지 후 권한 회수가 필요한 대상만 모아 처리합니다.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -221,7 +221,7 @@ export default function Offboarding() {
       </Stack>
 
       <Grid container spacing={2} mb={2.5}>
-        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="전체 큐" value={metrics.total} tone="info" /></Grid>
+        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="전체 대상" value={metrics.total} tone="info" /></Grid>
         <Grid item xs={12} sm={6} lg={3}><QueueMetric label="미회수" value={metrics.pending} tone="warning" /></Grid>
         <Grid item xs={12} sm={6} lg={3}><QueueMetric label="긴급 조치" value={metrics.urgent} tone={metrics.urgent > 0 ? 'error' : 'success'} /></Grid>
         <Grid item xs={12} sm={6} lg={3}><QueueMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
@@ -234,7 +234,7 @@ export default function Offboarding() {
         <Table sx={{ minWidth: 1120 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell width={72}>우선순위</TableCell>
+              <TableCell width={72}>No.</TableCell>
               <TableCell>대상</TableCell>
               <TableCell>AI 판단</TableCell>
               <TableCell>감지 근거</TableCell>
@@ -354,7 +354,7 @@ export default function Offboarding() {
           <Stack spacing={2} mt={1}>
             <Typography>
               <strong>{falsePositiveTarget?.employee.name}</strong> 직원의 AI 분석 결과를 오탐으로 처리합니다.
-              처리 후 권한 회수 큐와 AI 리스크 목록에서 제외되며, 감사 로그에는 기록됩니다.
+              처리 후 권한 회수 대상과 AI 리스크 목록에서 제외되며, 감사 로그에는 기록됩니다.
             </Typography>
             <TextField
               label="오탐 처리 사유"
