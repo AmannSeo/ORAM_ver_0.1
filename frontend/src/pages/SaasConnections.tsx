@@ -118,6 +118,16 @@ function accountScopeLabel(saasType: SaasType, scope?: string, enterpriseAccount
   return '조직 계정';
 }
 
+function identitySourceLabel(row: SaasIdentity) {
+  if (row.department && row.department.trim()) {
+    return row.department;
+  }
+  if (row.saasType === 'GITHUB') return 'GitHub';
+  if (row.saasType === 'SLACK') return 'Slack Workspace';
+  if (row.saasType === 'NOTION') return 'Notion Workspace';
+  return row.saasType;
+}
+
 function formatDateTime(value?: string) {
   if (!value) return '아직 없음';
   return new Date(value).toLocaleString('ko-KR', {
@@ -626,6 +636,7 @@ export default function SaasConnections() {
                     <TableRow>
                       <TableCell><strong>SaaS 계정</strong></TableCell>
                       <TableCell><strong>이메일</strong></TableCell>
+                      <TableCell><strong>수집 출처</strong></TableCell>
                       <TableCell><strong>매핑된 직원</strong></TableCell>
                       <TableCell><strong>상태</strong></TableCell>
                       <TableCell><strong>동기화 시각</strong></TableCell>
@@ -643,6 +654,14 @@ export default function SaasConnections() {
                           </Typography>
                         </TableCell>
                         <TableCell>{row.externalEmail || '-'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={identitySourceLabel(row)}
+                            variant="outlined"
+                            color={row.saasType === 'GITHUB' && identitySourceLabel(row).includes('Repo') ? 'default' : 'primary'}
+                          />
+                        </TableCell>
                         <TableCell>
                           {row.employeeName ? (
                             <>

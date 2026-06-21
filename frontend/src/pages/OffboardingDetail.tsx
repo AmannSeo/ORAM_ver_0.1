@@ -90,6 +90,9 @@ function triggerLabel(trigger?: string) {
 }
 
 function planReasonKo(item: RevokePlanItem) {
+  if (item.status === 'FAILED') {
+    return readableRevokeReason(item.reason);
+  }
   if (item.status === 'NO_ACCOUNT') {
     return '직원과 매핑된 SaaS 계정이 없습니다. SaaS 동기화 결과와 이메일 매핑 상태를 먼저 확인해야 합니다.';
   }
@@ -105,9 +108,35 @@ function planReasonKo(item: RevokePlanItem) {
   return item.reason;
 }
 
+function readableRevokeReason(reason?: string) {
+  if (!reason) return '상세 사유가 제공되지 않았습니다.';
+  if (reason.includes('GitHub user could not be matched')) {
+    return 'GitHub 계정을 이메일로 매핑하지 못했습니다. GitHub 비공개 이메일 계정은 수집 계정 목록의 login@github.local 계정과 직원 매핑을 확인해야 합니다.';
+  }
+  if (reason.includes('No removable GitHub access found')) {
+    return '제거 가능한 GitHub 권한을 찾지 못했습니다. 권한이 팀/조직 역할로 상속되었거나 토큰이 해당 계정을 볼 수 없을 수 있습니다.';
+  }
+  if (reason.includes('token lacks admin permission') || reason.includes('403 Forbidden')) {
+    return '토큰에 관리자 권한 또는 필요한 scope가 부족합니다. GitHub는 admin:org, repo 권한과 조직 관리자 권한이 필요할 수 있습니다.';
+  }
+  if (reason.includes('404 Not Found')) {
+    return '대상 계정이나 저장소가 토큰에서 보이지 않거나 이미 제거된 상태입니다.';
+  }
+  if (reason.includes('422 Unprocessable Entity')) {
+    return 'GitHub가 제거 요청을 거부했습니다. 조직 정책, 팀 상속 권한, 외부 collaborator 여부를 확인해야 합니다.';
+  }
+  if (reason.includes('Slack revoke failed')) {
+    return 'Slack 권한 회수에 실패했습니다. Enterprise Grid 여부와 admin.users:write 사용자 토큰 권한을 확인해야 합니다.';
+  }
+  if (reason.includes('Notion')) {
+    return 'Notion은 API 제한으로 자동 멤버 제거가 어렵습니다. Notion 관리자 화면에서 수동 처리해야 합니다.';
+  }
+  return reason;
+}
+
 function revokeResultKo(item: RevokePlanItem) {
   if (item.status === 'REVOKED') return `${SAAS_LABEL[item.saasType]} 권한 회수가 완료되었습니다.`;
-  if (item.status === 'FAILED') return `${SAAS_LABEL[item.saasType]} 권한 회수에 실패했습니다: ${item.reason}`;
+  if (item.status === 'FAILED') return `${SAAS_LABEL[item.saasType]} 권한 회수에 실패했습니다: ${readableRevokeReason(item.reason)}`;
   return `${SAAS_LABEL[item.saasType]}: ${planReasonKo(item)}`;
 }
 
