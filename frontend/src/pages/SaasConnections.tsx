@@ -16,6 +16,7 @@ import {
   PeopleAlt as PeopleIcon,
   NotificationsActive as AlertIcon,
   Schedule as ScheduleIcon,
+  ManageSearch as DetectionIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import type { SaasConnection, SaasIdentity, SaasType } from '../types';
@@ -247,22 +248,68 @@ export default function SaasConnections() {
 
   const info = connectDialog ? SAAS_INFO[connectDialog] : null;
   const visibleConnections = connections.length > 0 ? connections : DEFAULT_CONNECTIONS;
+  const connectedConnections = visibleConnections.filter((conn) => conn.isConnected);
+  const connectedCount = connectedConnections.length;
+  const identityCount = connectedConnections.reduce((sum, conn) => sum + (conn.identityCount ?? 0), 0);
+  const openAlertCount = connectedConnections.reduce((sum, conn) => sum + (conn.openAlertCount ?? 0), 0);
+  const syncedDates = connectedConnections
+    .map((conn) => conn.lastSyncedAt)
+    .filter(Boolean)
+    .sort();
+  const lastSyncedAt = syncedDates.length > 0 ? syncedDates[syncedDates.length - 1] : undefined;
 
   return (
     <Box>
       <Typography variant="h4" fontWeight="bold" gutterBottom>SaaS 연결 관리</Typography>
 
-      <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'info.50', borderColor: 'info.200' }}>
-        <Typography variant="body2" color="info.dark">
-          <strong>연결 방식:</strong> 각 SaaS에서 관리자 토큰을 발급받아 붙여넣으면 즉시 연결됩니다.
-          별도 앱 등록이나 서버 재시작 없이 바로 사용 가능합니다.
-          <br />
-          ORAM은 이 토큰으로 직원 권한 조회·해제 API를 대신 호출합니다. 토큰은 AES-256으로 암호화 저장됩니다.
-        </Typography>
-        <Typography variant="body2" color="info.dark" mt={1}>
-          <strong>직원 목록:</strong> 같은 이메일은 하나의 직원으로 통합됩니다.
-          SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong> 버튼에서 따로 확인할 수 있습니다.
-        </Typography>
+      <Grid container spacing={1.5} mb={2.5}>
+        <Grid item xs={6} md={3}>
+          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
+            <Typography variant="caption" color="#64748b">연결 SaaS</Typography>
+            <Typography variant="h5" fontWeight={700}>{connectedCount}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
+            <Typography variant="caption" color="#64748b">수집 계정</Typography>
+            <Typography variant="h5" fontWeight={700}>{identityCount}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 1.75,
+              borderRadius: 2.5,
+              bgcolor: openAlertCount > 0 ? '#fffbeb' : '#ecfdf5',
+              borderColor: openAlertCount > 0 ? '#fde68a' : '#a7f3d0',
+            }}
+          >
+            <Typography variant="caption" color="#64748b">열린 감지 알림</Typography>
+            <Typography variant="h5" fontWeight={700} color={openAlertCount > 0 ? '#b45309' : '#047857'}>
+              {openAlertCount}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
+            <Typography variant="caption" color="#64748b">최근 동기화</Typography>
+            <Typography variant="body2" fontWeight={700} mt={0.75}>{formatDateTime(lastSyncedAt)}</Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#f8fafc', borderColor: '#e2e8f0', borderRadius: 2.5 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+          <DetectionIcon color="primary" />
+          <Box>
+            <Typography variant="subtitle2" fontWeight={700}>관리자 감지 기준</Typography>
+            <Typography variant="body2" color="#475569" mt={0.25}>
+              SaaS 동기화는 단순 계정 수집이 아니라 이전 동기화 대비 비활성/누락 계정을 감지해 권한 회수 대상과 대시보드 알림으로 연결합니다.
+              같은 이메일은 직원으로 통합하고, SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong>에서 확인합니다.
+            </Typography>
+          </Box>
+        </Stack>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
@@ -329,11 +376,11 @@ export default function SaasConnections() {
                       <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
                         <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
                         <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'}>
-                          열린 알림: {conn.openAlertCount ?? 0}건
+                          감지 알림: {conn.openAlertCount ?? 0}건
                         </Typography>
                       </Stack>
                       <Typography variant="caption" color="text.secondary" display="block">
-                        동기화 시 비활성/누락 계정은 대시보드 알림으로 표시됩니다.
+                        비활성/누락 계정은 권한 회수 대상으로 자동 연결됩니다.
                       </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">

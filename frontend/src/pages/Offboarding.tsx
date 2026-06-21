@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -35,7 +36,6 @@ import {
   Visibility as ViewIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
 import type { OffboardingSummary, RiskLevel } from '../types';
@@ -74,8 +74,8 @@ function actionGuide(result: OffboardingSummary) {
   if (result.revokedAll) return '조치 완료';
   if (result.riskLevel === 'CRITICAL') return '즉시 권한 회수';
   if (result.riskLevel === 'HIGH') return '24시간 내 회수';
-  if (result.riskLevel === 'MEDIUM') return '담당자 검토 후 회수';
-  return '표준 오프보딩 절차';
+  if (result.riskLevel === 'MEDIUM') return '검토 후 회수';
+  return '표준 회수 절차';
 }
 
 function formatDateTime(value?: string) {
@@ -114,10 +114,10 @@ function QueueMetric({
   }[tone];
 
   return (
-    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: bg }}>
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Typography variant="body2" color="#64748b">{label}</Typography>
-        <Typography variant="h4" fontWeight={700} color={color} mt={0.75}>{value}</Typography>
+    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2.5, bgcolor: bg }}>
+      <CardContent sx={{ p: 1.75, '&:last-child': { pb: 1.75 } }}>
+        <Typography variant="caption" color="#64748b">{label}</Typography>
+        <Typography variant="h5" fontWeight={700} color={color} mt={0.5}>{value}</Typography>
       </CardContent>
     </Card>
   );
@@ -158,11 +158,11 @@ export default function Offboarding() {
   }, []);
 
   const metrics = useMemo(() => {
-    const pending = results.filter((result) => !result.revokedAll);
+    const activeTargets = results.filter((result) => !result.revokedAll && !result.falsePositive);
     return {
       total: results.length,
-      pending: pending.length,
-      urgent: pending.filter((result) => result.riskLevel === 'CRITICAL' || result.riskLevel === 'HIGH').length,
+      pending: activeTargets.length,
+      urgent: activeTargets.filter((result) => result.riskLevel === 'CRITICAL' || result.riskLevel === 'HIGH').length,
       automatic: results.filter((result) => result.analysisSource === 'AUTOMATIC').length,
     };
   }, [results]);
@@ -204,14 +204,14 @@ export default function Offboarding() {
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
-      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={3}>
+      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={2.5}>
         <Box>
           <Stack direction="row" alignItems="center" spacing={1}>
             <QueueIcon color="primary" />
             <Typography variant="h4" fontWeight={700}>권한 회수 대상</Typography>
           </Stack>
           <Typography variant="body2" color="#64748b" mt={0.75}>
-            직원 전체 목록이 아니라, 퇴사/비활성 감지 후 권한 회수가 필요한 대상만 모아 처리합니다.
+            분석된 잔여 접근 권한을 승인, 회수, 오탐 처리하고 처리 결과를 기록합니다.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -220,11 +220,11 @@ export default function Offboarding() {
         </Stack>
       </Stack>
 
-      <Grid container spacing={2} mb={2.5}>
-        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="전체 대상" value={metrics.total} tone="info" /></Grid>
-        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="미회수" value={metrics.pending} tone="warning" /></Grid>
-        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="긴급 조치" value={metrics.urgent} tone={metrics.urgent > 0 ? 'error' : 'success'} /></Grid>
-        <Grid item xs={12} sm={6} lg={3}><QueueMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
+      <Grid container spacing={1.5} mb={2.5}>
+        <Grid item xs={6} lg={3}><QueueMetric label="전체 대상" value={metrics.total} tone="info" /></Grid>
+        <Grid item xs={6} lg={3}><QueueMetric label="미회수" value={metrics.pending} tone="warning" /></Grid>
+        <Grid item xs={6} lg={3}><QueueMetric label="긴급 조치" value={metrics.urgent} tone={metrics.urgent > 0 ? 'error' : 'success'} /></Grid>
+        <Grid item xs={6} lg={3}><QueueMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
       </Grid>
 
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
@@ -270,7 +270,7 @@ export default function Offboarding() {
                       <RiskBadge level={result.riskLevel} score={result.riskScore} />
                       <Chip
                         icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                        label={automatic ? '자동 분석' : '수동 분석'}
+                        label={automatic ? '자동 분석' : '수동 재분석'}
                         size="small"
                         variant="outlined"
                       />
@@ -283,8 +283,8 @@ export default function Offboarding() {
                   <TableCell>
                     <Stack spacing={0.75} alignItems="flex-start">
                       <Chip
-                        label={result.revokedAll ? '회수 완료' : '미회수'}
-                        color={result.revokedAll ? 'success' : 'warning'}
+                        label={result.falsePositive ? '오탐 제외' : result.revokedAll ? '회수 완료' : '미회수'}
+                        color={result.falsePositive ? 'default' : result.revokedAll ? 'success' : 'warning'}
                         size="small"
                         variant="outlined"
                       />
@@ -308,7 +308,7 @@ export default function Offboarding() {
                             variant="contained"
                             color="error"
                             startIcon={revoking ? <CircularProgress size={14} color="inherit" /> : <RevokeIcon />}
-                            disabled={result.revokedAll || revoking}
+                            disabled={result.revokedAll || result.falsePositive || revoking}
                             onClick={() => handleRevoke(result)}
                             sx={{ whiteSpace: 'nowrap' }}
                           >
@@ -323,7 +323,7 @@ export default function Offboarding() {
                             variant="outlined"
                             color="inherit"
                             startIcon={<FalsePositiveIcon />}
-                            disabled={result.revokedAll || revoking}
+                            disabled={result.revokedAll || result.falsePositive || revoking}
                             onClick={() => {
                               setFalsePositiveTarget(result);
                               setFalsePositiveReason('');
@@ -334,7 +334,7 @@ export default function Offboarding() {
                           </Button>
                         </span>
                       </Tooltip>
-                      <Tooltip title="상세 보기">
+                      <Tooltip title="상세 판단 화면">
                         <IconButton size="small" color="primary" onClick={() => navigate(`/offboarding/${result.id}`)}>
                           <ViewIcon />
                         </IconButton>
@@ -360,7 +360,7 @@ export default function Offboarding() {
               label="오탐 처리 사유"
               value={falsePositiveReason}
               onChange={(event) => setFalsePositiveReason(event.target.value)}
-              placeholder="예: 담당자 검토 결과 정상 권한으로 확인"
+              placeholder="예: 해당 권한은 별도 관리자 검토 결과 정상 권한으로 확인"
               fullWidth
               multiline
               minRows={3}
