@@ -18,7 +18,7 @@ const theme = createTheme({
     secondary: { main: '#7b1fa2' },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", sans-serif',
+    fontFamily: '"Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Inter", "Roboto", "Helvetica", sans-serif',
   },
   shape: { borderRadius: 8 },
 });

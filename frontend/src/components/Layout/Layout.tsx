@@ -1,37 +1,50 @@
 import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Box, Drawer, AppBar, Toolbar, List, ListItem, ListItemButton,
-  ListItemIcon, ListItemText, Typography, IconButton, Avatar,
-  Divider, Tooltip, Menu, MenuItem, Chip,
+  AppBar,
+  Avatar,
+  Box,
+  Chip,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Tooltip,
+  Typography,
 } from '@mui/material';
 import {
-  Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Cloud as CloudIcon,
-  Security as SecurityIcon,
   Assignment as AssignmentIcon,
-  Menu as MenuIcon,
-  Logout as LogoutIcon,
-  Shield as ShieldIcon,
+  Cloud as CloudIcon,
+  Dashboard as DashboardIcon,
   Help as HelpIcon,
+  Logout as LogoutIcon,
+  Menu as MenuIcon,
+  People as PeopleIcon,
+  Security as SecurityIcon,
+  Shield as ShieldIcon,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 248;
 
 const NAV_ITEMS = [
   { label: '대시보드', path: '/', icon: <DashboardIcon /> },
-  { label: '직원 관리', path: '/employees', icon: <PeopleIcon /> },
-  { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
+  { label: '직원 권한 관리', path: '/employees', icon: <PeopleIcon /> },
   { label: 'AI 리스크 분석', path: '/risk-analysis', icon: <SecurityIcon /> },
-  { label: '오프보딩 결과', path: '/offboarding', icon: <AssignmentIcon /> },
-  { label: '도움말 & 가이드', path: '/help', icon: <HelpIcon /> },
+  { label: '권한 회수 대상', path: '/offboarding', icon: <AssignmentIcon /> },
+  { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '관리자',
-  SECURITY_MANAGER: '보안 담당자',
+  SECURITY_MANAGER: '보안 관리자',
   AUDITOR: '감사자',
 };
 
@@ -52,67 +65,140 @@ export default function Layout() {
   const { user, loginAt, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const currentNavItem = NAV_ITEMS.find((item) =>
+    location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
+  );
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const handleLogoClick = () => {
+    navigate('/');
+    setMobileOpen(false);
+  };
+
   const drawer = (
-    <Box>
-      <Toolbar sx={{ bgcolor: 'primary.main' }}>
-        <ShieldIcon sx={{ color: 'white', mr: 1 }} />
-        <Typography variant="h6" fontWeight="bold" color="white">
-          ORAM
-        </Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0f172a', color: '#e5e7eb' }}>
+      <Toolbar
+        onClick={handleLogoClick}
+        sx={{
+          minHeight: 64,
+          cursor: 'pointer',
+          '&:hover .oram-logo-mark': { bgcolor: '#475569' },
+        }}
+      >
+        <Box
+          className="oram-logo-mark"
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            bgcolor: '#334155',
+            border: '1px solid rgba(255,255,255,0.1)',
+            mr: 1.5,
+            transition: 'background-color 120ms ease',
+          }}
+        >
+          <ShieldIcon sx={{ color: 'white', fontSize: 22 }} />
+        </Box>
+        <Box>
+          <Typography variant="h6" fontWeight={700} color="white" lineHeight={1.1}>
+            ORAM
+          </Typography>
+          <Typography variant="caption" color="#94a3b8">
+            Security Offboarding
+          </Typography>
+        </Box>
       </Toolbar>
-      <Divider />
-      <List>
-        {NAV_ITEMS.map((item) => (
-          <ListItem key={item.path} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => { navigate(item.path); setMobileOpen(false); }}
-              sx={{
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'common.white',
-                  '& .MuiListItemIcon-root': { color: 'common.white' },
-                  '& .MuiListItemText-primary': { color: 'common.white', fontWeight: 700 },
-                },
-                '&.Mui-selected:hover': {
-                  bgcolor: 'primary.dark',
-                  color: 'common.white',
-                  '& .MuiListItemIcon-root': { color: 'common.white' },
-                  '& .MuiListItemText-primary': { color: 'common.white' },
-                },
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+
+      <List sx={{ px: 1.5, py: 1 }}>
+        {NAV_ITEMS.map((item) => {
+          const selected = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+          return (
+            <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                selected={selected}
+                onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                sx={{
+                  borderRadius: 1.5,
+                  color: selected ? '#ffffff' : '#cbd5e1',
+                  '& .MuiListItemIcon-root': { color: selected ? '#ffffff' : '#94a3b8', minWidth: 38 },
+                  '&.Mui-selected': {
+                    bgcolor: '#1e293b',
+                    boxShadow: 'none',
+                  },
+                  '&.Mui-selected:hover': { bgcolor: '#1e293b' },
+                  '&:hover': { bgcolor: selected ? '#1e293b' : 'rgba(148, 163, 184, 0.12)' },
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontWeight: selected ? 600 : 500, fontSize: 14 }}
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Typography variant="caption" color="text.secondary">
-          Signed in as
-        </Typography>
-        <Typography variant="body2" fontWeight="bold">
-          {user?.name}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {user?.role?.replace('_', ' ')}
-        </Typography>
+
+      <Box sx={{ mt: 'auto', p: 2 }}>
+        <Tooltip title="도움말 & 가이드" placement="right">
+          <ListItemButton
+            onClick={() => { navigate('/help'); setMobileOpen(false); }}
+            sx={{
+              mb: 1,
+              borderRadius: 1.5,
+              color: '#cbd5e1',
+              border: '1px solid rgba(148, 163, 184, 0.18)',
+              bgcolor: 'rgba(15, 23, 42, 0.45)',
+              '&:hover': { bgcolor: 'rgba(148, 163, 184, 0.12)' },
+              '& .MuiListItemIcon-root': { color: '#94a3b8', minWidth: 34 },
+            }}
+          >
+            <ListItemIcon>
+              <HelpIcon sx={{ fontSize: 18 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="도움말 & 가이드"
+              primaryTypographyProps={{ fontSize: 13, fontWeight: 500 }}
+            />
+          </ListItemButton>
+        </Tooltip>
+        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(148, 163, 184, 0.18)' }}>
+          <Typography variant="caption" color="#94a3b8">
+            Signed in as
+          </Typography>
+          <Typography variant="body2" fontWeight={600} color="white" noWrap>
+            {user?.name || '-'}
+          </Typography>
+          <Typography variant="caption" color="#94a3b8">
+            {ROLE_LABELS[user?.role || ''] || user?.role || '-'}
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f1f5f9' }}>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer - 1,
+          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { sm: `${DRAWER_WIDTH}px` },
+          bgcolor: '#ffffff',
+          color: '#0f172a',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 2, sm: 3 } }}>
           <IconButton
             color="inherit"
             edge="start"
@@ -121,13 +207,19 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <ShieldIcon sx={{ mr: 1 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            ORAM — 퇴사자 접근 권한 관리
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ flexGrow: 1, fontWeight: 500, color: '#64748b', display: { xs: 'none', md: 'block' } }}
+          >
+            ORAM / <Box component="span" sx={{ color: '#334155' }}>{currentNavItem?.label || '대시보드'}</Box>
           </Typography>
-          <Tooltip title="Account">
+          <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
+            <Typography variant="subtitle2" fontWeight={700}>ORAM</Typography>
+          </Box>
+          <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main', fontSize: '0.8rem' }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 600 }}>
                 {user?.name?.charAt(0)}
               </Avatar>
             </IconButton>
@@ -136,15 +228,15 @@ export default function Layout() {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
-            PaperProps={{ sx: { width: 280 } }}
+            PaperProps={{ sx: { width: 292, borderRadius: 2 } }}
           >
             <Box sx={{ px: 2, py: 1.5 }}>
               <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-                <Avatar sx={{ width: 40, height: 40, bgcolor: 'secondary.main' }}>
+                <Avatar sx={{ width: 42, height: 42, bgcolor: '#2563eb', fontWeight: 600 }}>
                   {user?.name?.charAt(0)}
                 </Avatar>
                 <Box minWidth={0}>
-                  <Typography variant="subtitle2" fontWeight={700} noWrap>
+                  <Typography variant="subtitle2" fontWeight={600} noWrap>
                     {user?.name || '-'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap display="block">
@@ -188,7 +280,7 @@ export default function Layout() {
         </Drawer>
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' } }}
+          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', border: 0 } }}
           open
         >
           {drawer}
@@ -199,11 +291,12 @@ export default function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          px: 3,
-          pt: 2,
+          px: { xs: 2, md: 3 },
+          pt: 3,
           pb: 3,
           mt: { xs: '56px', sm: '64px' },
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
+          minWidth: 0,
         }}
       >
         <Outlet />

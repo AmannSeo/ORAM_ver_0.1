@@ -36,6 +36,10 @@ public class SaasConnection {
     @Column(name = "workspace_name")
     private String workspaceName;
 
+    @Column(name = "account_scope", length = 50)
+    @Builder.Default
+    private String accountScope = "WORKSPACE";
+
     @Column(name = "is_connected", nullable = false)
     @Builder.Default
     private boolean connected = false;

@@ -95,18 +95,66 @@ public class GitHubConnector implements SaaSConnector {
             if (login == null) return permissions;
 
             List<Map<?, ?>> orgs = getUserOrgs(login, accessToken);
-            int repoCount = countReposForUser(login, accessToken);
+            for (Map<?, ?> org : orgs) {
+                String orgLogin = stringValue(org.get("login"));
+                if (orgLogin == null || orgLogin.isBlank()) continue;
 
-            permissions.add(new DiscoveredPermission(
-                    orgs.isEmpty() ? "COLLABORATOR" : "MEMBER",
-                    orgs.isEmpty() ? "GitHub Repository" : "GitHub Organization",
-                    false,
-                    false,
-                    false,
-                    true,
-                    repoCount,
-                    orgs.size()
-            ));
+                String role = getOrgMembershipRole(orgLogin, login, accessToken);
+                boolean isAdmin = "admin".equalsIgnoreCase(role);
+                permissions.add(new DiscoveredPermission(
+                        isAdmin ? "ORG_ADMIN" : "ORG_MEMBER",
+                        orgLogin,
+                        isAdmin,
+                        false,
+                        false,
+                        true,
+                        0,
+                        1
+                ));
+            }
+
+            int visibleRepoCount = 0;
+            for (Map<?, ?> repo : getAccessibleRepos(accessToken)) {
+                String fullName = stringValue(repo.get("full_name"));
+                if (fullName == null || !fullName.contains("/")) continue;
+
+                String[] parts = fullName.split("/", 2);
+                String permission = getRepoCollaboratorPermission(parts[0], parts[1], login, accessToken);
+                if (permission == null || permission.isBlank()) continue;
+
+                visibleRepoCount++;
+                boolean isAdmin = "admin".equalsIgnoreCase(permission);
+                boolean isOwner = Boolean.TRUE.equals(repo.get("fork")) ? false : isAdmin && parts[0].equalsIgnoreCase(login);
+
+                permissions.add(new DiscoveredPermission(
+                        "REPO_" + permission.toUpperCase(),
+                        fullName,
+                        isAdmin,
+                        isOwner,
+                        false,
+                        true,
+                        1,
+                        0
+                ));
+            }
+
+            if (permissions.isEmpty()) {
+                int repoCount = countReposForUser(login, accessToken);
+                if (repoCount > 0 || !orgs.isEmpty()) {
+                    permissions.add(new DiscoveredPermission(
+                            orgs.isEmpty() ? "COLLABORATOR" : "MEMBER",
+                            orgs.isEmpty() ? "GitHub Repository" : "GitHub Organization",
+                            false,
+                            false,
+                            false,
+                            true,
+                            repoCount,
+                            orgs.size()
+                    ));
+                }
+            } else if (visibleRepoCount > 0) {
+                log.info("Discovered {} GitHub repo permissions for {}", visibleRepoCount, login);
+            }
         } catch (Exception e) {
             log.warn("GitHub getPermissions failed: {}", e.getMessage());
         }
@@ -135,8 +183,10 @@ public class GitHubConnector implements SaaSConnector {
             int status = deleteRepoCollaborator(parts[0], parts[1], login, accessToken);
             if (status == 204) {
                 revokedResources.add("Repository collaborator: " + fullName);
-            } else if (status == 403) {
-                blockedResources.add("Repository permission denied: " + fullName);
+            } else if (status == 404) {
+                blockedResources.add("Repository collaborator not found or not visible: " + fullName);
+            } else if (status != 204) {
+                blockedResources.add("Repository " + fullName + " remove failed: " + githubStatusReason(status));
             }
         }
 
@@ -147,15 +197,17 @@ public class GitHubConnector implements SaaSConnector {
             int status = deleteOrgMember(orgLogin, login, accessToken);
             if (status == 204) {
                 revokedResources.add("Organization member: " + orgLogin);
-            } else if (status == 403) {
-                blockedResources.add("Organization permission denied: " + orgLogin);
+            } else if (status == 404) {
+                blockedResources.add("Organization member not found or not visible: " + orgLogin);
+            } else if (status != 204) {
+                blockedResources.add("Organization " + orgLogin + " remove failed: " + githubStatusReason(status));
             }
         }
 
         if (revokedResources.isEmpty()) {
             String message = blockedResources.isEmpty()
                     ? "No removable GitHub access found. Access may be inherited through a team/org role, or the token cannot see that account."
-                    : "GitHub access was found, but the token does not have permission to remove it.";
+                    : "GitHub revoke could not complete. Check token scopes, organization role, and whether the target account is still visible to the token.";
             return new RevokeResult(false, message, blockedResources);
         }
 
@@ -375,6 +427,40 @@ public class GitHubConnector implements SaaSConnector {
         }
     }
 
+    private String getRepoCollaboratorPermission(String owner, String repo, String login, String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri("/repos/{owner}/{repo}/collaborators/{login}/permission", owner, repo, login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return response != null ? stringValue(response.get("permission")) : null;
+        } catch (Exception e) {
+            log.debug("GitHub repo permission lookup failed for {}/{} {}: {}", owner, repo, login, e.getMessage());
+            return null;
+        }
+    }
+
+    private String getOrgMembershipRole(String org, String login, String accessToken) {
+        try {
+            Map<?, ?> response = webClient.get()
+                    .uri("/orgs/{org}/memberships/{username}", org, login)
+                    .header("Authorization", authHeader(accessToken))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            return response != null ? stringValue(response.get("role")) : "member";
+        } catch (Exception e) {
+            log.debug("GitHub org membership role lookup failed for {}/{}: {}", org, login, e.getMessage());
+            return "member";
+        }
+    }
+
     private SyncedUser toSyncedUser(String login, String department, String accessToken) {
         Map<?, ?> profile = getUserProfile(login, accessToken);
         String name = profile != null && profile.get("name") != null
@@ -455,9 +541,19 @@ public class GitHubConnector implements SaaSConnector {
                 .block();
     }
 
+    private String githubStatusReason(int status) {
+        return switch (status) {
+            case 401 -> "401 Unauthorized - token is invalid or expired";
+            case 403 -> "403 Forbidden - token lacks admin permission or required scope";
+            case 404 -> "404 Not Found - account/resource is not visible to the token or already removed";
+            case 422 -> "422 Unprocessable Entity - GitHub rejected the removal request";
+            default -> status + " response from GitHub API";
+        };
+    }
+
     private String authHeader(String accessToken) {
         String token = sanitizeToken(accessToken);
-        return token.startsWith("ghp_") || token.startsWith("github_pat_")
+        return token.startsWith("github_pat_")
                 ? "Bearer " + token
                 : "token " + token;
     }

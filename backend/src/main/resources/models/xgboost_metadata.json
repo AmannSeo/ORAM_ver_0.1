@@ -1,0 +1,40 @@
+{
+  "role_map": {
+    "CEO": 1,
+    "CIO": 2,
+    "CTO": 3,
+    "Designer": 4,
+    "Developer": 5,
+    "Director": 6,
+    "Employee": 7,
+    "Manager": 8,
+    "Security_Engineer": 9,
+    "<UNKNOWN>": 0
+  },
+  "dept_map": {
+    "Development": 1,
+    "Finance": 2,
+    "HR": 3,
+    "Legal": 4,
+    "Sales": 5,
+    "<UNKNOWN>": 0
+  },
+  "app_map": {
+    "AWS": 1,
+    "Dropbox Business": 2,
+    "Figma": 3,
+    "Flex HR": 4,
+    "GitHub": 5,
+    "Google Workspace": 6,
+    "Notion": 7,
+    "Okta": 8,
+    "Slack": 9,
+    "<UNKNOWN>": 0
+  },
+  "scope_map": {
+    "admin": 1,
+    "read": 2,
+    "write": 3,
+    "<UNKNOWN>": 0
+  }
+}

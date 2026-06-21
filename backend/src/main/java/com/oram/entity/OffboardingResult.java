@@ -40,6 +40,15 @@ public class OffboardingResult {
     @Column(name = "risk_level", length = 20)
     private RiskLevel riskLevel;
 
+    @Column(name = "analysis_source", length = 30)
+    private String analysisSource;
+
+    @Column(name = "analysis_trigger", length = 100)
+    private String analysisTrigger;
+
+    @Column(name = "analysis_engine", length = 100)
+    private String analysisEngine;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
 
@@ -50,15 +59,29 @@ public class OffboardingResult {
     @Builder.Default
     private boolean revokedAll = false;
 
+    @Column(name = "false_positive")
+    @Builder.Default
+    private Boolean falsePositive = false;
+
+    @Column(name = "false_positive_reason", length = 500)
+    private String falsePositiveReason;
+
+    @Column(name = "false_positive_at")
+    private LocalDateTime falsePositiveAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;
 
-    @OneToMany(mappedBy = "offboardingResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "offboardingResult", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PermissionRecord> permissions = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public boolean isFalsePositive() {
+        return Boolean.TRUE.equals(falsePositive);
+    }
 }

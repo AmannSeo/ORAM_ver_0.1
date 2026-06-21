@@ -23,10 +23,13 @@ C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\Employee.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\OffboardingResult.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\PermissionRecord.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\SaasConnection.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\SaasIdentity.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\SaasSyncAlert.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\entity\User.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\EmployeeStatus.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\OffboardingStatus.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\RiskLevel.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\SaasSyncAlertStatus.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\SaasType.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\enums\UserRole.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\OramApplication.java
@@ -35,6 +38,8 @@ C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\EmployeeRe
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\OffboardingResultRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\PermissionRecordRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\SaasConnectionRepository.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\SaasIdentityRepository.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\SaasSyncAlertRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\repository\UserRepository.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\risk\RiskFeatures.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\risk\XGBoostRiskAnalyzer.java
@@ -47,3 +52,4 @@ C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\service\DashboardServ
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\service\EmployeeService.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\service\OffboardingService.java
 C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\service\SaasConnectionService.java
+C:\Users\yeaco\ORAM_ver_0.1\backend\src\main\java\com\oram\service\SaasSyncScheduler.java

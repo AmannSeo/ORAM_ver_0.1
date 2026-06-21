@@ -11,3 +11,5 @@ backend/target/
 
 .env
 .env.*
+
+*.log
