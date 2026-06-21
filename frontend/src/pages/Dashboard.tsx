@@ -32,7 +32,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { dashboardApi, offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
-import type { DashboardStats, OffboardingSummary, RiskLevel, SaasSyncAlert } from '../types';
+import type { DashboardStats, OffboardingSummary, SaasSyncAlert } from '../types';
 
 type Severity = 'error' | 'warning' | 'info' | 'success';
 
@@ -43,17 +43,9 @@ const TONE: Record<Severity, { color: string; bg: string; border: string }> = {
   success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
 };
 
-const RISK_LEVELS: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
-
-const RISK_META: Record<RiskLevel, { label: string; description: string }> = {
-  CRITICAL: { label: '매우 위험', description: '즉시 회수 필요' },
-  HIGH: { label: '높음', description: '24시간 내 조치' },
-  MEDIUM: { label: '보통', description: '검토 후 조치' },
-  LOW: { label: '낮음', description: '표준 절차' },
-};
-
 function formatDateTime(value?: string | Date) {
-  const date = value ? new Date(value) : new Date();
+  if (!value) return '-';
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleString('ko-KR', {
     year: 'numeric',
@@ -66,7 +58,7 @@ function formatDateTime(value?: string | Date) {
 
 function analysisSourceLabel(source?: string) {
   if (source === 'AUTOMATIC') return '자동 분석';
-  if (source === 'MANUAL') return '수동 분석';
+  if (source === 'MANUAL') return '수동 재분석';
   return source || '-';
 }
 
@@ -82,7 +74,7 @@ function saasAlertDescription(alert: SaasSyncAlert) {
     return `${account} 계정이 최근 ${alert.saasType} 동기화에서 비활성 상태로 확인되었습니다.`;
   }
   if (alert.reason === 'MISSING_FROM_LATEST_SYNC') {
-    return `${account} 계정이 이전 동기화에는 있었지만 최근 ${alert.saasType} 결과에서 사라졌습니다.`;
+    return `${account} 계정이 이전 동기화에는 있었지만 최근 ${alert.saasType} 결과에서 누락되었습니다.`;
   }
   return alert.detail || `${account} 계정 상태 확인이 필요합니다.`;
 }
@@ -96,19 +88,8 @@ function addCsvRow(rows: string[], values: unknown[]) {
   rows.push(values.map(escapeCsv).join(','));
 }
 
-function getRiskLevelCounts(items: OffboardingSummary[]) {
-  return items.reduce<Record<RiskLevel, number>>(
-    (acc, item) => {
-      if (item.riskLevel) acc[item.riskLevel] += 1;
-      return acc;
-    },
-    { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
-  );
-}
-
 function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[], targets: OffboardingSummary[]) {
   const createdAt = new Date();
-  const levelCounts = getRiskLevelCounts(targets);
   const rows: string[] = [];
 
   addCsvRow(rows, ['ORAM 접근 권한 점검 보고서']);
@@ -118,16 +99,12 @@ function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[],
   addCsvRow(rows, ['요약']);
   addCsvRow(rows, ['항목', '값', '설명']);
   addCsvRow(rows, ['전체 직원', stats.totalEmployees, 'ORAM에 등록 또는 동기화된 직원']);
+  addCsvRow(rows, ['재직자', stats.activeEmployees, '활성 상태 직원']);
   addCsvRow(rows, ['퇴사자', stats.resignedEmployees, '권한 회수 검토 대상']);
+  addCsvRow(rows, ['연결 SaaS', stats.connectedSaasCount, '연동된 SaaS 수']);
   addCsvRow(rows, ['권한 회수 대상', targets.length, '미회수 및 오탐 제외 대상']);
+  addCsvRow(rows, ['긴급 위험', stats.criticalRiskCount, 'CRITICAL 위험 대상']);
   addCsvRow(rows, ['SaaS 감지 알림', stats.openSaasSyncAlerts || 0, '비활성 또는 누락 계정']);
-  rows.push('');
-
-  addCsvRow(rows, ['위험도 분포']);
-  addCsvRow(rows, ['위험도', '건수', '조치 기준']);
-  RISK_LEVELS.forEach((level) => {
-    addCsvRow(rows, [RISK_META[level].label, levelCounts[level], RISK_META[level].description]);
-  });
   rows.push('');
 
   addCsvRow(rows, ['권한 회수 대상']);
@@ -168,10 +145,10 @@ function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[],
 
   const blob = new Blob([`\ufeff${rows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `oram-access-report-${createdAt.toISOString().slice(0, 10)}.csv`;
-  a.click();
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `oram-access-report-${createdAt.toISOString().slice(0, 10)}.csv`;
+  anchor.click();
   URL.revokeObjectURL(url);
 }
 
@@ -192,17 +169,17 @@ function StatCard({
 }) {
   const style = TONE[tone];
   const content = (
-    <CardContent sx={{ p: 2.25, '&:last-child': { pb: 2.25 } }}>
+    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
         <Box minWidth={0}>
-          <Typography variant="body2" fontWeight={600} color="#64748b">{title}</Typography>
-          <Typography variant="h4" fontWeight={700} color="#0f172a" mt={0.75}>{value.toLocaleString()}</Typography>
-          <Typography variant="caption" color="#64748b" display="block" mt={0.75}>{description}</Typography>
+          <Typography variant="body2" color="#64748b">{title}</Typography>
+          <Typography variant="h4" fontWeight={700} color="#0f172a" mt={0.5}>{value.toLocaleString()}</Typography>
+          <Typography variant="caption" color="#64748b" display="block" mt={0.5}>{description}</Typography>
         </Box>
         <Box
           sx={{
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
@@ -219,7 +196,7 @@ function StatCard({
   );
 
   return (
-    <Card elevation={0} sx={{ height: '100%', border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white' }}>
+    <Card elevation={0} sx={{ height: '100%', border: '1px solid #e2e8f0', borderRadius: 2.5, bgcolor: 'white' }}>
       {onClick ? <CardActionArea onClick={onClick} sx={{ height: '100%' }}>{content}</CardActionArea> : content}
     </Card>
   );
@@ -240,7 +217,7 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
             </Typography>
           </Box>
           <Stack direction="row" spacing={1}>
-            <Button size="small" variant="outlined" onClick={() => navigate('/risk-analysis')}>AI 분석 보기</Button>
+            <Button size="small" variant="outlined" onClick={() => navigate('/risk-analysis')}>AI 분석</Button>
             <Button size="small" variant="contained" onClick={() => navigate('/offboarding')}>전체 관리</Button>
           </Stack>
         </Stack>
@@ -356,11 +333,9 @@ export default function Dashboard() {
     };
 
     loadDashboard();
-    const timer = window.setInterval(loadDashboard, 30000);
 
     return () => {
       active = false;
-      window.clearInterval(timer);
     };
   }, []);
 
@@ -391,7 +366,7 @@ export default function Dashboard() {
 
       <Grid container spacing={2} mb={2.5}>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="전체 직원" value={stats.totalEmployees} description="ORAM 등록/동기화 인원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
+          <StatCard title="전체 직원" value={stats.totalEmployees} description="등록/동기화된 인원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="조치 필요" value={actionCount} description="회수 대상 + SaaS 알림" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
