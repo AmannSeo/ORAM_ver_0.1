@@ -3,7 +3,9 @@ package com.oram.connector;
 import com.oram.enums.SaasType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -201,7 +203,9 @@ public class SlackConnector implements SaaSConnector {
             Map<?, ?> response = webClient.post()
                     .uri("/admin.users.remove")
                     .header("Authorization", "Bearer " + sanitizeToken(accessToken))
-                    .bodyValue(Map.of("team_id", teamId, "user_id", userId))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(BodyInserters.fromFormData("team_id", teamId)
+                            .with("user_id", userId))
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();

@@ -377,8 +377,20 @@ public class OffboardingService {
                     .build();
         }
 
+        if (saasType == SaasType.SLACK && isSlackBotToken(connection)) {
+            return OffboardingDto.RevokePlanItem.builder()
+                    .saasType(saasType)
+                    .status("MANUAL")
+                    .canRevoke(false)
+                    .accountMatched(true)
+                    .resourceCount(resourceCount)
+                    .action("사용자 토큰 필요")
+                    .reason("현재 Slack 연결은 xoxb 봇 토큰입니다. 봇 토큰은 사용자 수집만 가능하고 워크스페이스 접근 제거는 할 수 없습니다. Enterprise Grid에서 admin.users:write 권한이 있는 xoxp 사용자 토큰을 연결해야 합니다.")
+                    .build();
+        }
+
         String reason = saasType == SaasType.SLACK
-                ? "Slack 자동 제거는 Enterprise Grid와 admin.users:write 권한이 있는 사용자 토큰에서만 성공할 수 있습니다."
+                ? "Slack API 회수는 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서만 성공할 수 있습니다."
                 : "GitHub 토큰 권한으로 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.";
 
         return OffboardingDto.RevokePlanItem.builder()
@@ -390,6 +402,16 @@ public class OffboardingService {
                 .action("자동 회수 시도")
                 .reason(reason)
                 .build();
+    }
+
+    private boolean isSlackBotToken(SaasConnection connection) {
+        try {
+            String token = tokenEncryptor.decrypt(connection.getAccessTokenEncrypted());
+            return token != null && token.replaceAll("\\s+", "").startsWith("xoxb-");
+        } catch (Exception e) {
+            log.warn("Failed to inspect Slack token type for revoke plan: {}", e.getMessage());
+            return false;
+        }
     }
 
     private OffboardingDto.RevokePlanItem toRevokeResultItem(SaasType saasType, SaaSConnector.RevokeResult revokeResult) {

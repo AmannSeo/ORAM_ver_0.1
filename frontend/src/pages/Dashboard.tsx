@@ -62,6 +62,7 @@ function analysisSourceLabel(source?: string) {
 }
 
 function saasAlertReasonLabel(reason: string) {
+  if (reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE') return '퇴사자 활성 계정';
   if (reason === 'MISSING_FROM_LATEST_SYNC') return '최근 동기화에서 누락';
   if (reason === 'INACTIVE_FROM_LATEST_SYNC') return '비활성 계정 감지';
   return '계정 상태 확인';
@@ -69,6 +70,9 @@ function saasAlertReasonLabel(reason: string) {
 
 function saasAlertDescription(alert: SaasSyncAlert) {
   const account = alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '매핑되지 않은 계정';
+  if (alert.reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE') {
+    return `${account} 계정이 퇴사 상태인데도 최근 ${alert.saasType} 동기화에서 활성 계정으로 확인되었습니다. 즉시 권한 회수 또는 수동 제거가 필요합니다.`;
+  }
   if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
     return `${account} 계정이 최근 ${alert.saasType} 동기화에서 비활성 상태로 확인되었습니다.`;
   }
@@ -262,6 +266,10 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
 }
 
 function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
+  const chipColor = (reason: string) => (
+    reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE' || reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning'
+  );
+
   return (
     <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
@@ -279,7 +287,7 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
                   <Typography variant="body2" fontWeight={600} noWrap>
                     {alert.saasType} · {saasAlertReasonLabel(alert.reason)}
                   </Typography>
-                  <Chip label="확인 필요" size="small" color={alert.reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning'} variant="outlined" />
+                  <Chip label="확인 필요" size="small" color={chipColor(alert.reason)} variant="outlined" />
                 </Stack>
                 <Typography variant="body2" color="#475569" mt={0.75}>{saasAlertDescription(alert)}</Typography>
                 <Typography variant="caption" color="#94a3b8" display="block" mt={0.5}>{formatDateTime(alert.createdAt)}</Typography>
@@ -340,6 +348,7 @@ export default function Dashboard() {
   if (!stats) return null;
 
   const actionCount = offboardingTargets.length + (stats.openSaasSyncAlerts || 0);
+  const residualAccessAlerts = saasAlerts.filter((alert) => alert.reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE');
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
@@ -359,6 +368,20 @@ export default function Dashboard() {
           점검 보고서 다운로드
         </Button>
       </Stack>
+
+      {residualAccessAlerts.length > 0 && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2.5, borderRadius: 2, alignItems: 'center' }}
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate('/offboarding')}>
+              회수 대상 보기
+            </Button>
+          }
+        >
+          퇴사자 활성 계정 {residualAccessAlerts.length}건이 감지되었습니다. Slack/Notion/GitHub에 남아 있는 접근 권한을 확인해야 합니다.
+        </Alert>
+      )}
 
       <Grid container spacing={2} mb={2.5}>
         <Grid item xs={12} sm={6} lg={2.4}>

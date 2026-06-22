@@ -73,6 +73,7 @@ const getScoreColor = (score = 0) => {
 
 function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
+  if (trigger.includes('SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE')) return '퇴사자 활성 SaaS 계정 감지';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 동기화에서 비활성 계정 감지';
   if (trigger.includes('SYNC_MISSING_ACCOUNT')) return '이전 동기화 대비 SaaS 계정 누락 감지';
   if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 후 자동 분석';

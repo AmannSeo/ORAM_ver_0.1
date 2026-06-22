@@ -52,7 +52,7 @@ const SAAS_LABEL: Record<SaasType, string> = {
 };
 
 const PLAN_STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning' | 'error' | 'default' | 'info' }> = {
-  READY: { label: '자동 회수 가능', color: 'success' },
+  READY: { label: 'API 회수 가능', color: 'success' },
   MANUAL: { label: '수동 조치 필요', color: 'warning' },
   NO_ACCOUNT: { label: '매핑 계정 없음', color: 'default' },
   REVOKED: { label: '회수 완료', color: 'success' },
@@ -81,6 +81,7 @@ function formatDateTime(value?: string) {
 
 function triggerLabel(trigger?: string) {
   if (!trigger) return '-';
+  if (trigger.includes('SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE')) return '퇴사 상태 직원의 활성 SaaS 계정이 감지되었습니다.';
   if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 동기화에서 비활성 계정이 감지되었습니다.';
   if (trigger.includes('SYNC_MISSING_ACCOUNT')) return '이전 동기화에 있던 SaaS 계정이 최신 동기화에서 사라졌습니다.';
   if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 후 자동으로 잔여 접근 권한 분석이 실행되었습니다.';
@@ -99,7 +100,7 @@ function planReasonKo(item: RevokePlanItem) {
     return 'Notion API는 워크스페이스 멤버 제거를 공식 제공하지 않습니다. Notion 관리자 화면에서 수동 제거하거나 IdP/SCIM으로 비활성 처리해야 합니다.';
   }
   if (item.saasType === 'SLACK') {
-    return 'Slack 자동 제거는 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서만 가능합니다. xoxb 봇 토큰은 수집만 가능합니다.';
+    return 'Slack API 회수는 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서만 가능합니다. xoxb 봇 토큰은 수집만 가능합니다.';
   }
   if (item.saasType === 'GITHUB') {
     return 'GitHub 토큰 권한으로 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.';
@@ -267,7 +268,7 @@ export default function OffboardingDetailPage() {
       setRevokeSuccess(
         res.revokedSaas.length > 0
           ? `권한 회수 요청이 완료되었습니다. 성공: ${res.revokedSaas.map((saas) => SAAS_LABEL[saas]).join(', ')}`
-          : '자동으로 회수할 수 있는 권한이 없습니다. 수동 조치 항목을 확인하세요.',
+          : 'API로 회수할 수 있는 권한이 없습니다. 수동 조치 항목을 확인하세요.',
       );
       await load();
     } catch {
@@ -515,7 +516,7 @@ export default function OffboardingDetailPage() {
                   </List>
                 )}
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  회수 실행 또는 오탐 처리는 감사 기록으로 남습니다. 자동 회수 불가 항목은 회수 계획의 수동 조치 사유를 기준으로 처리하세요.
+                  회수 실행 또는 오탐 처리는 감사 기록으로 남습니다. API 회수 불가 항목은 회수 계획의 수동 조치 사유를 기준으로 처리하세요.
                 </Alert>
               </CardContent>
             </Card>
@@ -529,14 +530,14 @@ export default function OffboardingDetailPage() {
           <Stack spacing={2} mt={0.5}>
             <Typography>
               <strong>{detail.employee.name}</strong> 직원의 연결된 SaaS 권한 회수를 승인하고 실행합니다.
-              자동 회수가 불가능한 SaaS는 수동 조치 사유가 결과에 남습니다.
+              API 회수가 불가능한 SaaS는 수동 조치 사유가 결과에 남습니다.
             </Typography>
             {plan?.items.map((item) => (
               <PlanItem key={item.saasType} item={item} />
             ))}
             {plan && readyCount === 0 && (
               <Alert severity="warning">
-                현재 자동 회수 가능한 SaaS가 없습니다. 연결 토큰 권한 또는 계정 매핑 상태를 먼저 확인하세요.
+                현재 API로 회수 가능한 SaaS가 없습니다. 연결 토큰 권한 또는 계정 매핑 상태를 먼저 확인하세요.
               </Alert>
             )}
           </Stack>

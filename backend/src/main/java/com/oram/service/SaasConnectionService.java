@@ -298,6 +298,7 @@ public class SaasConnectionService {
             int created = 0;
             int mapped = 0;
             int inactiveCount = 0;
+            int residualAccessCount = 0;
             int resolvedAlertCount = 0;
 
             for (SaaSConnector.SyncedUser user : users) {
@@ -310,6 +311,9 @@ public class SaasConnectionService {
                 seenExternalIds.add(externalId);
 
                 Employee employee = resolveOrCreateEmployee(saasType, user, email, externalId);
+                boolean resignedEmployeeStillActive = employee != null
+                        && employee.getStatus() == EmployeeStatus.RESIGNED
+                        && user.active();
                 SaasIdentity identity = saasIdentityRepository
                         .findBySaasTypeAndExternalUserId(saasType, externalId)
                         .orElseGet(() -> {
@@ -348,11 +352,29 @@ public class SaasConnectionService {
                             "INACTIVE_FROM_LATEST_SYNC",
                             "The latest " + saasType + " sync returned this account as inactive. ORAM marked the mapped employee as resigned and started risk analysis."
                     );
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "RESIGNED_ACCOUNT_STILL_ACTIVE");
                     warnings.add("Auto risk analysis created for inactive " + saasType
                             + " account: " + employee.getEmail() + " (" + resultId + ")");
+                } else if (resignedEmployeeStillActive) {
+                    residualAccessCount++;
+                    UUID resultId = offboardingService.autoAnalyzeOffboarding(
+                            employee,
+                            saasType + "_SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE"
+                    );
+                    upsertOpenSyncAlert(
+                            identity,
+                            "RESIGNED_ACCOUNT_STILL_ACTIVE",
+                            "This employee is marked resigned in ORAM, but the latest " + saasType
+                                    + " sync still returns an active account. Revoke access or complete the required manual removal."
+                    );
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "MISSING_FROM_LATEST_SYNC");
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "INACTIVE_FROM_LATEST_SYNC");
+                    warnings.add("Residual access detected for resigned employee in " + saasType
+                            + ": " + employee.getEmail() + " (" + resultId + ")");
                 } else {
                     resolvedAlertCount += resolveOpenAlert(saasType, externalId, "MISSING_FROM_LATEST_SYNC");
                     resolvedAlertCount += resolveOpenAlert(saasType, externalId, "INACTIVE_FROM_LATEST_SYNC");
+                    resolvedAlertCount += resolveOpenAlert(saasType, externalId, "RESIGNED_ACCOUNT_STILL_ACTIVE");
                 }
             }
 
@@ -373,6 +395,10 @@ public class SaasConnectionService {
 
             if (inactiveCount > 0) {
                 warnings.add(saasType + "에서 비활성 상태로 반환된 계정 " + inactiveCount + "개를 퇴사/점검 대상으로 표시했습니다.");
+            }
+
+            if (residualAccessCount > 0) {
+                warnings.add(saasType + "에서 퇴사자에게 남아 있는 활성 계정 " + residualAccessCount + "개를 감지했습니다.");
             }
 
             if (resolvedAlertCount > 0) {
