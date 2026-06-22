@@ -383,10 +383,13 @@ export default function SaasConnections() {
                     {meta.quickLinks.slice(0, 2).map(link => (
                       <Button
                         key={link.url}
+                        component="a"
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         size="small"
                         variant="text"
                         endIcon={<OpenIcon fontSize="small" />}
-                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
                         sx={{ px: 0.5, minWidth: 'auto' }}
                       >
                         {link.label}
@@ -513,10 +516,13 @@ export default function SaasConnections() {
                   ))}
                   <Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}>
                     <Button
+                      component="a"
+                      href={info.appUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       size="small"
                       variant="contained"
                       endIcon={<OpenIcon fontSize="small" />}
-                      onClick={() => window.open(info.appUrl, '_blank', 'noopener,noreferrer')}
                       sx={{ bgcolor: info.color, '&:hover': { bgcolor: info.color, opacity: 0.85 } }}
                     >
                       설정 페이지 열기
@@ -524,10 +530,13 @@ export default function SaasConnections() {
                     {info.quickLinks.map(link => (
                       <Button
                         key={link.url}
+                        component="a"
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         size="small"
                         variant="outlined"
                         endIcon={<OpenIcon fontSize="small" />}
-                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
                       >
                         {link.label}
                       </Button>
