@@ -92,8 +92,8 @@ const WORKFLOW_STEPS = [
     summary: '가능한 SaaS 권한을 회수하고 결과를 기록합니다.',
     detail: [
       'GitHub는 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.',
-      'Slack은 Enterprise Grid와 admin.users:write 권한이 있는 사용자 토큰에서 자동 제거가 가능합니다.',
-      'Notion은 API 제한으로 자동 멤버 제거가 어렵기 때문에 수동 처리 대상으로 안내합니다.',
+      'Slack은 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서 워크스페이스 제거를 시도합니다. 채널 내보내기는 전체 접근 차단이 아닙니다.',
+      'Notion은 API 제한으로 자동 멤버 제거가 어렵기 때문에 관리자 화면 또는 IdP/SCIM 수동 처리 대상으로 안내합니다.',
       '회수 성공, 실패, 오탐 처리 결과는 감사 기록으로 남습니다.',
     ],
   },
@@ -103,8 +103,8 @@ const CAPABILITIES = [
   { area: '직원 관리', status: '지원', detail: '직원 등록, 수정, 삭제, CSV 가져오기, 퇴사 처리' },
   { area: 'SaaS 계정 수집', status: '지원', detail: 'Slack, GitHub, Notion 계정 동기화 및 직원 매핑' },
   { area: 'GitHub 권한 회수', status: '부분 지원', detail: '조직 멤버 및 저장소 collaborator 제거 시도' },
-  { area: 'Slack 권한 회수', status: '조건부 지원', detail: 'Enterprise Grid 및 admin.users:write 사용자 토큰 필요' },
-  { area: 'Notion 권한 회수', status: '수동 처리', detail: 'API 제한으로 관리자 화면에서 직접 제거 필요' },
+  { area: 'Slack 권한 회수', status: '조건부 지원', detail: 'Enterprise Grid 및 xoxp 사용자 토큰(admin.users:write) 필요. xoxb 봇 토큰은 수집만 가능' },
+  { area: 'Notion 권한 회수', status: '수동 처리', detail: 'API 제한으로 관리자 화면에서 직접 제거하거나 IdP/SCIM으로 비활성 처리 필요' },
   { area: 'GitHub Enterprise', status: '표시 지원', detail: '기업 계정 여부를 관리자가 선택해 표시. Enterprise API 자동 제어는 확장 범위' },
   { area: '감사 로그', status: 'DB 기록', detail: '연결, 분석, 회수, 오탐 처리 기록 저장. 별도 감사 로그 UI는 확장 범위' },
   { area: '보고서', status: '지원', detail: '대시보드에서 엑셀로 열 수 있는 CSV 점검 보고서 다운로드' },
@@ -141,7 +141,7 @@ const FAQ = [
   },
   {
     q: '권한 회수가 실제로 되나요?',
-    a: 'GitHub 조직 멤버 또는 저장소 collaborator 제거, Slack Enterprise 조건부 제거는 실제 API 호출로 시도합니다. Notion은 API 제한으로 자동 제거 대신 수동 처리 안내를 제공합니다. 토큰 권한이 부족하면 실패 사유가 화면에 표시됩니다.',
+    a: 'GitHub 조직 멤버 또는 저장소 collaborator 제거, Slack Enterprise 조건부 제거는 실제 API 호출로 시도합니다. Slack 채널 내보내기는 전체 접근 차단이 아니므로 ORAM은 workspace removal 기준으로 판단합니다. Notion은 API 제한으로 자동 제거 대신 수동 처리 안내를 제공합니다. 토큰 권한이 부족하면 실패 사유가 화면에 표시됩니다.',
   },
   {
     q: 'AI 분석은 자동인가요?',

@@ -180,12 +180,21 @@ public class SlackConnector implements SaaSConnector {
     public RevokeResult revokeAccess(String email, String accessToken) {
         log.info("[SLACK] Revoking access for: {}", email);
 
+        String token = sanitizeToken(accessToken);
+        if (token.startsWith("xoxb-")) {
+            return new RevokeResult(false,
+                    "Slack workspace removal requires an Enterprise Grid user token (xoxp-) with admin.users:write. Bot tokens can collect users but cannot remove workspace access.",
+                    List.of("Manual action: remove or deactivate the user in Slack Admin, or connect an xoxp- user token with admin.users:write."));
+        }
+
         Map<?, ?> auth = authTest(accessToken);
         String teamId = auth != null ? stringValue(auth.get("team_id")) : null;
         String userId = lookupUserId(email, accessToken);
 
         if (teamId == null || teamId.isBlank() || userId == null || userId.isBlank()) {
-            return new RevokeResult(false, "Slack user or workspace could not be resolved.", List.of());
+            return new RevokeResult(false,
+                    "Slack user or workspace could not be resolved. Confirm the user email exists in Slack and the token can read workspace users.",
+                    List.of());
         }
 
         try {
@@ -206,7 +215,10 @@ public class SlackConnector implements SaaSConnector {
                     List.of());
         } catch (Exception e) {
             log.warn("Slack revoke failed: {}", e.getMessage());
-            return new RevokeResult(false, "Slack revoke failed: " + e.getMessage(), List.of());
+            return new RevokeResult(false,
+                    "Slack revoke failed: " + e.getMessage()
+                            + ". Slack removal requires Enterprise Grid and a user token with admin.users:write.",
+                    List.of());
         }
     }
 

@@ -96,10 +96,10 @@ function planReasonKo(item: RevokePlanItem) {
     return '직원과 매핑된 SaaS 계정이 없습니다. SaaS 동기화 결과와 이메일 매핑 상태를 먼저 확인해야 합니다.';
   }
   if (item.saasType === 'NOTION') {
-    return 'Notion API는 워크스페이스 멤버 제거를 공식 제공하지 않습니다. Notion 관리자 화면에서 수동 제거가 필요합니다.';
+    return 'Notion API는 워크스페이스 멤버 제거를 공식 제공하지 않습니다. Notion 관리자 화면에서 수동 제거하거나 IdP/SCIM으로 비활성 처리해야 합니다.';
   }
   if (item.saasType === 'SLACK') {
-    return 'Slack 자동 제거는 Enterprise Grid 및 admin.users:write 권한이 있는 사용자 토큰에서만 가능합니다.';
+    return 'Slack 자동 제거는 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서만 가능합니다. xoxb 봇 토큰은 수집만 가능합니다.';
   }
   if (item.saasType === 'GITHUB') {
     return 'GitHub 토큰 권한으로 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.';
@@ -127,8 +127,11 @@ function readableRevokeReason(reason?: string) {
   if (reason.includes('Slack revoke failed')) {
     return 'Slack 권한 회수에 실패했습니다. Enterprise Grid 여부와 admin.users:write 사용자 토큰 권한을 확인해야 합니다.';
   }
+  if (reason.includes('Bot tokens can collect users') || reason.includes('xoxp-')) {
+    return 'Slack Bot Token(xoxb)은 사용자 수집만 가능하고 워크스페이스 접근 제거는 할 수 없습니다. Enterprise Grid에서 admin.users:write 권한이 있는 xoxp 사용자 토큰을 연결해야 합니다.';
+  }
   if (reason.includes('Notion')) {
-    return 'Notion은 API 제한으로 자동 멤버 제거가 어렵습니다. Notion 관리자 화면에서 수동 처리해야 합니다.';
+    return 'Notion은 API 제한으로 자동 멤버 제거가 어렵습니다. Notion 관리자 화면에서 수동 제거하거나 IdP/SCIM으로 비활성 처리해야 합니다.';
   }
   return reason;
 }

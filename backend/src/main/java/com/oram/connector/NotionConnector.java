@@ -136,8 +136,8 @@ public class NotionConnector implements SaaSConnector {
     public RevokeResult revokeAccess(String email, String accessToken) {
         log.info("[NOTION] Revoke requested for: {}", email);
         return new RevokeResult(false,
-                "Notion API does not provide workspace member removal. Remove this user manually in Notion.",
-                List.of());
+                "Notion API does not provide workspace member removal. Remove this user manually in Notion Settings > Members, or deprovision the user through SAML/SCIM/IdP if your workspace supports it.",
+                List.of("Manual action: Notion Settings > Members > remove user."));
     }
 
     @Override
