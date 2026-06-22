@@ -61,8 +61,11 @@ const SAAS_INFO: Record<SaasType, {
     steps: [
       'GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)',
       '"Generate new token (classic)" 클릭',
+      '토큰을 만드는 GitHub 계정이 대상 Organization의 Owner 또는 관리자 권한을 가지고 있어야 함',
       'Scopes 선택: read:org, admin:org, repo (조직 멤버와 저장소 collaborator 조회/제거용)',
+      '조직에서 SSO/SAML을 사용한다면 생성한 토큰을 해당 Organization에 Authorize 해야 함',
       '"Generate token" 클릭 → 토큰 복사 (한 번만 표시됨)',
+      'GitHub 계정 범위에서 개인/조직/기업 계정 중 실제 관리 범위를 선택',
       '복사한 토큰을 아래에 붙여넣기',
     ],
     docsUrl: 'https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens',
@@ -73,7 +76,7 @@ const SAAS_INFO: Record<SaasType, {
       { label: '조직 설정', url: 'https://github.com/settings/organizations' },
     ],
     detectItems: ['Organization 멤버십', '저장소 Collaborator', '저장소 접근 권한'],
-    revokeNote: '조직 멤버 또는 저장소 collaborator 제거 가능',
+    revokeNote: '조직 관리자 권한이 있는 토큰에서 조직 멤버 또는 저장소 collaborator 제거 가능',
   },
   NOTION: {
     label: 'Notion', color: '#000000', emoji: '📝',

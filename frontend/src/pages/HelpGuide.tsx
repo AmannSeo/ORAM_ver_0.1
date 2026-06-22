@@ -110,6 +110,16 @@ const CAPABILITIES = [
   { area: '보고서', status: '지원', detail: '대시보드에서 엑셀로 열 수 있는 CSV 점검 보고서 다운로드' },
 ];
 
+const GITHUB_TOKEN_REQUIREMENTS = [
+  ['토큰 종류', 'Classic Personal Access Token 권장'],
+  ['토큰 생성 계정', '대상 Organization의 Owner 또는 관리자 권한을 가진 GitHub 계정'],
+  ['필수 scope', 'read:org, admin:org, repo, user:email'],
+  ['SSO/SAML 조직', '토큰 생성 후 해당 Organization에 SSO authorize 필요'],
+  ['수집 범위', 'Organization 멤버, 저장소 collaborator, 접근 가능한 저장소'],
+  ['회수 범위', '조직 멤버 제거 및 저장소 collaborator 제거 시도'],
+  ['Enterprise', '현재는 기업 계정 표시 지원. Enterprise API 기반 전체 계정 제어는 확장 범위'],
+];
+
 const ROLE_ROWS = [
   ['대시보드 조회', '가능', '가능', '가능'],
   ['직원 목록 조회', '가능', '가능', '가능'],
@@ -237,6 +247,26 @@ export default function HelpGuide() {
                 <TableCell>{item.area}</TableCell>
                 <TableCell><StatusChip status={item.status} /></TableCell>
                 <TableCell>{item.detail}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Typography variant="h5" fontWeight={700} gutterBottom>GitHub 토큰 준비 기준</Typography>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              <TableCell><strong>항목</strong></TableCell>
+              <TableCell><strong>기준</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {GITHUB_TOKEN_REQUIREMENTS.map(([label, value]) => (
+              <TableRow key={label} hover>
+                <TableCell>{label}</TableCell>
+                <TableCell>{value}</TableCell>
               </TableRow>
             ))}
           </TableBody>
