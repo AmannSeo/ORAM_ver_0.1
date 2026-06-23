@@ -46,7 +46,7 @@ export default function Login() {
             <ShieldIcon color="primary" sx={{ fontSize: 56, mb: 1 }} />
             <Typography variant="h4" fontWeight="bold" color="primary">ORAM</Typography>
             <Typography variant="body2" color="text.secondary" textAlign="center">
-              Offboarding & Revocation Access Manager
+              Offboarding Residual Access Management
             </Typography>
           </Box>
 

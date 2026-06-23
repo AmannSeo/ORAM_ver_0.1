@@ -80,13 +80,13 @@ export default function Layout() {
   };
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0f172a', color: '#e5e7eb' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff', color: '#0f172a', borderRight: '1px solid #e2e8f0' }}>
       <Toolbar
         onClick={handleLogoClick}
         sx={{
           minHeight: 64,
           cursor: 'pointer',
-          '&:hover .oram-logo-mark': { bgcolor: '#475569' },
+          '&:hover .oram-logo-mark': { bgcolor: '#1d4ed8' },
         }}
       >
         <Box
@@ -97,8 +97,8 @@ export default function Layout() {
             borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
-            bgcolor: '#334155',
-            border: '1px solid rgba(255,255,255,0.1)',
+            bgcolor: '#2563eb',
+            border: '1px solid #1d4ed8',
             mr: 1.5,
             transition: 'background-color 120ms ease',
           }}
@@ -106,11 +106,11 @@ export default function Layout() {
           <ShieldIcon sx={{ color: 'white', fontSize: 22 }} />
         </Box>
         <Box>
-          <Typography variant="h6" fontWeight={700} color="white" lineHeight={1.1}>
+          <Typography variant="h6" fontWeight={700} color="#0f172a" lineHeight={1.1}>
             ORAM
           </Typography>
-          <Typography variant="caption" color="#94a3b8">
-            Security Offboarding
+          <Typography variant="caption" color="#64748b">
+            Residual Access
           </Typography>
         </Box>
       </Toolbar>
@@ -125,14 +125,14 @@ export default function Layout() {
                 onClick={() => { navigate(item.path); setMobileOpen(false); }}
                 sx={{
                   borderRadius: 1.5,
-                  color: selected ? '#ffffff' : '#cbd5e1',
-                  '& .MuiListItemIcon-root': { color: selected ? '#ffffff' : '#94a3b8', minWidth: 38 },
+                  color: selected ? '#1d4ed8' : '#475569',
+                  '& .MuiListItemIcon-root': { color: selected ? '#1d4ed8' : '#64748b', minWidth: 38 },
                   '&.Mui-selected': {
-                    bgcolor: '#1e293b',
+                    bgcolor: '#eff6ff',
                     boxShadow: 'none',
                   },
-                  '&.Mui-selected:hover': { bgcolor: '#1e293b' },
-                  '&:hover': { bgcolor: selected ? '#1e293b' : 'rgba(148, 163, 184, 0.12)' },
+                  '&.Mui-selected:hover': { bgcolor: '#dbeafe' },
+                  '&:hover': { bgcolor: selected ? '#dbeafe' : '#f8fafc' },
                 }}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
@@ -153,11 +153,11 @@ export default function Layout() {
             sx={{
               mb: 1,
               borderRadius: 1.5,
-              color: '#cbd5e1',
-              border: '1px solid rgba(148, 163, 184, 0.18)',
-              bgcolor: 'rgba(15, 23, 42, 0.45)',
-              '&:hover': { bgcolor: 'rgba(148, 163, 184, 0.12)' },
-              '& .MuiListItemIcon-root': { color: '#94a3b8', minWidth: 34 },
+              color: '#475569',
+              border: '1px solid #e2e8f0',
+              bgcolor: '#f8fafc',
+              '&:hover': { bgcolor: '#eff6ff' },
+              '& .MuiListItemIcon-root': { color: '#64748b', minWidth: 34 },
             }}
           >
             <ListItemIcon>
@@ -169,14 +169,14 @@ export default function Layout() {
             />
           </ListItemButton>
         </Tooltip>
-        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(148, 163, 184, 0.18)' }}>
-          <Typography variant="caption" color="#94a3b8">
+        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <Typography variant="caption" color="#64748b">
             Signed in as
           </Typography>
-          <Typography variant="body2" fontWeight={600} color="white" noWrap>
+          <Typography variant="body2" fontWeight={600} color="#0f172a" noWrap>
             {user?.name || '-'}
           </Typography>
-          <Typography variant="caption" color="#94a3b8">
+          <Typography variant="caption" color="#64748b">
             {ROLE_LABELS[user?.role || ''] || user?.role || '-'}
           </Typography>
         </Box>
@@ -193,7 +193,7 @@ export default function Layout() {
           zIndex: (theme) => theme.zIndex.drawer - 1,
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { sm: `${DRAWER_WIDTH}px` },
-          bgcolor: '#ffffff',
+          bgcolor: '#f8fafc',
           color: '#0f172a',
           borderBottom: '1px solid #e2e8f0',
         }}
@@ -212,14 +212,14 @@ export default function Layout() {
             component="div"
             sx={{ flexGrow: 1, fontWeight: 500, color: '#64748b', display: { xs: 'none', md: 'block' } }}
           >
-            ORAM / <Box component="span" sx={{ color: '#334155' }}>{currentNavItem?.label || '대시보드'}</Box>
+            ORAM / <Box component="span" sx={{ color: '#0f172a' }}>{currentNavItem?.label || '대시보드'}</Box>
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}>
-            <Typography variant="subtitle2" fontWeight={700}>ORAM</Typography>
+            <Typography variant="subtitle2" fontWeight={700} color="#0f172a">ORAM</Typography>
           </Box>
           <Tooltip title="계정 정보">
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#0f172a', fontSize: '0.85rem', fontWeight: 600 }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: '#2563eb', fontSize: '0.85rem', fontWeight: 600 }}>
                 {user?.name?.charAt(0)}
               </Avatar>
             </IconButton>

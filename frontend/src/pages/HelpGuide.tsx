@@ -94,7 +94,7 @@ const WORKFLOW_STEPS = [
       'GitHub는 조직 멤버 또는 저장소 collaborator 제거를 시도합니다.',
       'Slack은 Enterprise Grid와 admin.users:write 권한이 있는 xoxp 사용자 토큰에서 워크스페이스 제거를 시도합니다. 채널 내보내기는 전체 접근 차단이 아닙니다.',
       'Notion은 API 제한으로 자동 멤버 제거가 어렵기 때문에 관리자 화면 또는 IdP/SCIM 수동 처리 대상으로 안내합니다.',
-      '회수 성공, 실패, 오탐 처리 결과는 감사 기록으로 남습니다.',
+      '회수 성공, 실패, 오탐 처리 결과는 권한 회수 화면에서 확인합니다.',
     ],
   },
 ];
@@ -106,7 +106,6 @@ const CAPABILITIES = [
   { area: 'Slack 권한 회수', status: '조건부 지원', detail: 'Enterprise Grid 및 xoxp 사용자 토큰(admin.users:write) 필요. xoxb 봇 토큰은 수집만 가능' },
   { area: 'Notion 권한 회수', status: '수동 처리', detail: 'API 제한으로 관리자 화면에서 직접 제거하거나 IdP/SCIM으로 비활성 처리 필요' },
   { area: 'GitHub Enterprise', status: '표시 지원', detail: '기업 계정 여부를 관리자가 선택해 표시. Enterprise API 자동 제어는 확장 범위' },
-  { area: '감사 로그', status: 'DB 기록', detail: '연결, 분석, 회수, 오탐 처리 기록 저장. 별도 감사 로그 UI는 확장 범위' },
   { area: '보고서', status: '지원', detail: '대시보드에서 엑셀로 열 수 있는 CSV 점검 보고서 다운로드' },
 ];
 
@@ -151,10 +150,6 @@ const FAQ = [
     q: 'HR 시스템과 연동되어 있나요?',
     a: 'ORAM에는 HR Webhook 엔드포인트가 있습니다. 외부 HR 시스템이 퇴사 이벤트를 전송하면 직원 상태를 퇴사로 바꾸고 오프보딩 분석을 시작할 수 있습니다. 실제 Workday, BambooHR 같은 제품별 커넥터는 별도 확장 범위입니다.',
   },
-  {
-    q: '감사 로그는 어디서 확인하나요?',
-    a: '현재 감사 기록은 데이터베이스에 저장됩니다. 별도 감사 로그 조회 화면은 아직 구현 범위 밖이며, 발표에서는 대시보드 보고서와 권한 회수 결과를 증적으로 보여주는 흐름이 적절합니다.',
-  },
 ];
 
 function StatusChip({ status }: { status: string }) {
@@ -172,13 +167,13 @@ export default function HelpGuide() {
       <Box mb={3}>
         <Typography variant="h4" fontWeight={700} color="#0f172a">도움말 & 가이드</Typography>
         <Typography variant="body2" color="#64748b" mt={0.75}>
-          현재 ORAM에 실제 구현된 기능과 시연 시 설명해야 할 범위를 정리합니다.
+          현재 ORAM에 실제 구현된 기능과 사용 범위를 정리합니다.
         </Typography>
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
         ORAM은 SaaS 계정을 수집하고, 퇴사/비활성 계정의 잔여 접근 위험을 분석한 뒤,
-        관리자가 승인한 권한 회수 결과를 기록하는 시스템입니다.
+        관리자가 승인한 권한 회수 결과를 확인하는 시스템입니다.
       </Alert>
 
       <Grid container spacing={2} mb={3}>
@@ -298,7 +293,7 @@ export default function HelpGuide() {
       </TableContainer>
 
       <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 3 }}>
-        시연 시 “모든 SaaS 권한을 무조건 자동 차단한다”라고 설명하면 안 됩니다.
+        모든 SaaS 권한을 무조건 자동 차단하는 구조는 아닙니다.
         ORAM은 가능한 API 회수를 시도하고, API 제한 또는 토큰 권한 부족은 실패 사유와 수동 처리 대상으로 기록합니다.
       </Alert>
 
@@ -316,28 +311,6 @@ export default function HelpGuide() {
         </Accordion>
       ))}
 
-      <Typography variant="h5" fontWeight={700} mt={4} gutterBottom>시연 순서</Typography>
-      <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2.5 }}>
-        <List dense>
-          {[
-            ['SaaS 연결 관리', 'GitHub 또는 Slack 토큰을 연결하고 계정을 동기화합니다.'],
-            ['직원 권한 관리', '수집된 계정과 직원 매핑을 확인하고 퇴사 처리를 실행합니다.'],
-            ['AI 리스크 분석', '권한 회수 대상의 위험 점수와 판단 근거를 확인합니다.'],
-            ['권한 회수 대상', '상세 판단 화면에서 회수 승인 또는 오탐 처리를 진행합니다.'],
-            ['대시보드', '처리 대상, 감지 알림, 점검 보고서 다운로드를 보여줍니다.'],
-          ].map(([title, desc], index) => (
-            <ListItem key={title} disablePadding sx={{ py: 0.75 }}>
-              <ListItemIcon sx={{ minWidth: 42 }}>
-                <Chip label={index + 1} size="small" color="primary" />
-              </ListItemIcon>
-              <ListItemText
-                primary={<Typography fontWeight={700}>{title}</Typography>}
-                secondary={desc}
-              />
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
     </Box>
   );
 }

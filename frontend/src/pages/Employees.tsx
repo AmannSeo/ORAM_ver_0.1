@@ -362,6 +362,13 @@ export default function Employees() {
             <Grid item xs={12} sm={6} xl={3}><MetricCard label="현재 조회 결과" value={totalElements} sub={`현재 페이지 SaaS 보유 ${currentPageSaasLinkedCount}명`} color="#dc2626" bg="#fef2f2" accent="#ef4444" icon={<PriorityIcon fontSize="small" />} /></Grid>
           </Grid>
 
+          <EmployeeVisualSummary
+            stats={dashboardStats}
+            totalElements={totalElements}
+            currentPageLinkedCount={currentPageSaasLinkedCount}
+            currentPageCount={employees.length}
+          />
+
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
           {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>}
 
@@ -490,6 +497,85 @@ function MetricCard({ label, value, sub, color, bg, accent, icon }: {
   );
 }
 
+function EmployeeVisualSummary({
+  stats,
+  totalElements,
+  currentPageLinkedCount,
+  currentPageCount,
+}: {
+  stats: DashboardStats | null;
+  totalElements: number;
+  currentPageLinkedCount: number;
+  currentPageCount: number;
+}) {
+  const total = Math.max(stats?.totalEmployees ?? totalElements, 0);
+  const active = stats?.activeEmployees ?? 0;
+  const resigned = stats?.resignedEmployees ?? 0;
+  const linkedRatio = currentPageCount > 0 ? Math.round((currentPageLinkedCount / currentPageCount) * 100) : 0;
+
+  return (
+    <Grid container spacing={2} mb={2.5}>
+      <Grid item xs={12} md={4}>
+        <SummaryBar
+          label="직원 상태"
+          value={`${active} 재직 / ${resigned} 퇴사`}
+          ratio={total > 0 ? Math.round((active / total) * 100) : 0}
+          color="#2563eb"
+          helper="전체 직원 기준 재직 비율"
+        />
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <SummaryBar
+          label="현재 페이지 SaaS 연동"
+          value={`${currentPageLinkedCount} / ${currentPageCount}명`}
+          ratio={linkedRatio}
+          color="#059669"
+          helper="현재 조회 페이지 기준"
+        />
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <SummaryBar
+          label="퇴사자 비율"
+          value={`${resigned}명`}
+          ratio={total > 0 ? Math.round((resigned / total) * 100) : 0}
+          color="#dc2626"
+          helper="권한 회수 검토 대상 비율"
+        />
+      </Grid>
+    </Grid>
+  );
+}
+
+function SummaryBar({
+  label,
+  value,
+  ratio,
+  color,
+  helper,
+}: {
+  label: string;
+  value: string;
+  ratio: number;
+  color: string;
+  helper: string;
+}) {
+  return (
+    <Paper elevation={0} sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="baseline" mb={1}>
+        <Typography variant="body2" fontWeight={800} color="#334155">{label}</Typography>
+        <Typography variant="body2" fontWeight={900} color="#0f172a">{value}</Typography>
+      </Stack>
+      <Box sx={{ height: 8, borderRadius: 99, bgcolor: '#e2e8f0', overflow: 'hidden' }}>
+        <Box sx={{ width: `${Math.max(0, Math.min(100, ratio))}%`, height: '100%', bgcolor: color, borderRadius: 99 }} />
+      </Box>
+      <Stack direction="row" justifyContent="space-between" mt={0.75}>
+        <Typography variant="caption" color="#64748b">{helper}</Typography>
+        <Typography variant="caption" fontWeight={800} color={color}>{ratio}%</Typography>
+      </Stack>
+    </Paper>
+  );
+}
+
 function FilterPanel(props: {
   filterStatus: string;
   setFilterStatus: (value: string) => void;
@@ -555,22 +641,25 @@ function EmployeeTable(props: {
 }) {
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
-      <Table sx={{ minWidth: 1240, tableLayout: 'fixed' }}>
+      <Table sx={{ minWidth: 1520, tableLayout: 'fixed' }}>
         <TableHead>
           <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-            <HeaderCell width="6%">NO.</HeaderCell>
-            <HeaderCell width="22%">ID / EMAIL</HeaderCell>
-            <HeaderCell width="14%">사번 / 상태</HeaderCell>
-            <HeaderCell width="18%">부서 / 등록 원천</HeaderCell>
-            <HeaderCell width="15%">연동 SaaS</HeaderCell>
-            <HeaderCell width="14%">계정 상태</HeaderCell>
-            <HeaderCell width="11%" align="right">조치</HeaderCell>
+            <HeaderCell width="5%">NO.</HeaderCell>
+            <HeaderCell width="11%">이름</HeaderCell>
+            <HeaderCell width="18%">이메일</HeaderCell>
+            <HeaderCell width="13%">사번</HeaderCell>
+            <HeaderCell width="8%">상태</HeaderCell>
+            <HeaderCell width="11%">부서</HeaderCell>
+            <HeaderCell width="12%">등록 원천</HeaderCell>
+            <HeaderCell width="10%">연동 SaaS</HeaderCell>
+            <HeaderCell width="10%">계정 상태</HeaderCell>
+            <HeaderCell width="16%" align="right">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={10} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
@@ -590,16 +679,20 @@ function EmployeeTable(props: {
                       <Typography fontWeight={900} noWrap>{employee.name}</Typography>
                       {isPriorityTarget(employee) && <PriorityIcon color="error" sx={{ fontSize: 16, flexShrink: 0 }} />}
                     </Stack>
-                    <Typography variant="body2" color="#64748b" noWrap>{employee.email}</Typography>
                   </Box>
                 </Stack>
               </TableCell>
               <TableCell>
-                <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }} noWrap>{employee.employeeId}</Typography>
-                <Box mt={0.75}><StatusChip status={employee.status} /></Box>
+                <Typography variant="body2" color="#334155" noWrap>{employee.email}</Typography>
               </TableCell>
               <TableCell>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }} noWrap>{employee.employeeId}</Typography>
+              </TableCell>
+              <TableCell><StatusChip status={employee.status} /></TableCell>
+              <TableCell>
                 <Typography fontWeight={800} noWrap>{employee.department || '부서 미수집'}</Typography>
+              </TableCell>
+              <TableCell>
                 <Typography variant="body2" color="#64748b" noWrap>{getEmployeeSourceLabel(employee)}</Typography>
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
@@ -625,9 +718,9 @@ function EmployeeTable(props: {
                           </Button>
                         </span>
                       </Tooltip>
-                      <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)} sx={compactButtonSx}>삭제</Button>
                     </>
                   )}
+                  <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => props.openDeleteDialog(employee)} sx={compactButtonSx}>삭제</Button>
                 </Stack>
               </TableCell>
             </TableRow>
