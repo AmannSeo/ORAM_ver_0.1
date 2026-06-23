@@ -112,6 +112,7 @@ export default function Employees() {
   const [resignDialog, setResignDialog] = useState<Employee | null>(null);
   const [resigningEmployeeId, setResigningEmployeeId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Employee | null>(null);
+  const [detailDialog, setDetailDialog] = useState<Employee | null>(null);
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState<Employee | null>(null);
@@ -398,6 +399,7 @@ export default function Employees() {
               resigningEmployeeId={resigningEmployeeId}
               analyzingEmployeeId={analyzingEmployeeId}
               analyzeEmployee={handleAnalyze}
+              openDetailDialog={setDetailDialog}
             />
           )}
         </>
@@ -439,6 +441,8 @@ export default function Employees() {
         deleteDialog={deleteDialog}
         setDeleteDialog={setDeleteDialog}
         handleDeleteEmployee={handleDeleteEmployee}
+        detailDialog={detailDialog}
+        setDetailDialog={setDetailDialog}
         deleteAllDialog={deleteAllDialog}
         setDeleteAllDialog={setDeleteAllDialog}
         handleDeleteAllEmployees={handleDeleteAllEmployees}
@@ -638,6 +642,7 @@ function EmployeeTable(props: {
   resigningEmployeeId: string | null;
   analyzingEmployeeId: string | null;
   analyzeEmployee: (employee: Employee) => void;
+  openDetailDialog: (employee: Employee) => void;
 }) {
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
@@ -676,14 +681,26 @@ function EmployeeTable(props: {
                   </Box>
                   <Box minWidth={0}>
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography fontWeight={900} noWrap>{employee.name}</Typography>
+                      <Button
+                        variant="text"
+                        onClick={() => props.openDetailDialog(employee)}
+                        sx={{ minWidth: 0, p: 0, color: '#0f172a', fontWeight: 900, textAlign: 'left', justifyContent: 'flex-start', textTransform: 'none' }}
+                      >
+                        <Typography fontWeight={900} noWrap>{employee.name}</Typography>
+                      </Button>
                       {isPriorityTarget(employee) && <PriorityIcon color="error" sx={{ fontSize: 16, flexShrink: 0 }} />}
                     </Stack>
                   </Box>
                 </Stack>
               </TableCell>
               <TableCell>
-                <Typography variant="body2" color="#334155" noWrap>{employee.email}</Typography>
+                <Button
+                  variant="text"
+                  onClick={() => props.openDetailDialog(employee)}
+                  sx={{ minWidth: 0, p: 0, color: '#334155', textAlign: 'left', justifyContent: 'flex-start', textTransform: 'none' }}
+                >
+                  <Typography variant="body2" noWrap>{employee.email}</Typography>
+                </Button>
               </TableCell>
               <TableCell>
                 <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }} noWrap>{employee.employeeId}</Typography>
@@ -790,12 +807,110 @@ function AccountState({ employee }: { employee: Employee }) {
   );
 }
 
+function EmployeeDetail({ employee }: { employee: Employee }) {
+  const connected = employee.connectedSaas ?? [];
+
+  return (
+    <Stack spacing={2.5}>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Box
+          sx={{
+            width: 52,
+            height: 52,
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            bgcolor: '#2563eb',
+            color: 'white',
+            fontWeight: 900,
+            fontSize: 20,
+            flexShrink: 0,
+          }}
+        >
+          {employee.name.slice(0, 1)}
+        </Box>
+        <Box minWidth={0}>
+          <Typography variant="h6" fontWeight={900} noWrap>{employee.name}</Typography>
+          <Typography variant="body2" color="#64748b" noWrap>{employee.email}</Typography>
+        </Box>
+      </Stack>
+
+      <Grid container spacing={1.5}>
+        <DetailItem label="사번" value={employee.employeeId} mono />
+        <DetailItem label="상태" value={<StatusChip status={employee.status} />} />
+        <DetailItem label="부서" value={employee.department || '부서 미수집'} />
+        <DetailItem label="등록 원천" value={getEmployeeSourceLabel(employee)} />
+        <DetailItem label="등록일" value={formatDetailDate(employee.createdAt)} />
+        <DetailItem label="연동 SaaS 수" value={`${connected.length}개`} />
+      </Grid>
+
+      <Box>
+        <Typography variant="subtitle2" fontWeight={900} mb={1}>SaaS 연동 계정</Typography>
+        {connected.length === 0 ? (
+          <Alert severity="info">연동된 SaaS 계정이 없습니다.</Alert>
+        ) : (
+          <Stack spacing={1}>
+            {connected.map((account) => {
+              const meta = SAAS_BADGE[account.saasType];
+              const status = account.accessRevoked ? '회수됨' : account.status === 'RESIGNED' ? '비활성' : '활성';
+              return (
+                <Paper key={account.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between">
+                    <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                      <Chip
+                        label={meta.short}
+                        size="small"
+                        sx={{ color: meta.color, bgcolor: meta.bg, border: '1px solid', borderColor: meta.border, fontWeight: 900 }}
+                      />
+                      <Box minWidth={0}>
+                        <Typography variant="body2" fontWeight={800} noWrap>{meta.label}</Typography>
+                        <Typography variant="caption" color="#64748b" noWrap>
+                          {account.displayName || account.externalUsername || account.externalEmail || '-'}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Chip size="small" label={status} color={account.accessRevoked ? 'default' : account.status === 'RESIGNED' ? 'warning' : 'success'} variant="outlined" />
+                      {account.externalEmail && <Typography variant="caption" color="#64748b">{account.externalEmail}</Typography>}
+                    </Stack>
+                  </Stack>
+                </Paper>
+              );
+            })}
+          </Stack>
+        )}
+      </Box>
+    </Stack>
+  );
+}
+
+function DetailItem({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
+  return (
+    <Grid item xs={12} sm={6}>
+      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, height: '100%' }}>
+        <Typography variant="caption" color="#64748b" display="block" mb={0.5}>{label}</Typography>
+        <Box sx={{ fontFamily: mono ? 'monospace' : undefined, color: '#0f172a', fontWeight: 700 }}>
+          {value}
+        </Box>
+      </Paper>
+    </Grid>
+  );
+}
+
+function formatDetailDate(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('ko-KR');
+}
+
 function EmployeeDialogs(props: any) {
   const {
     addDialog, setAddDialog, newEmployee, setNewEmployee, handleAddEmployee,
     editDialog, setEditDialog, editEmployee, setEditEmployee, handleUpdateEmployee,
     resignDialog, setResignDialog, resigningEmployeeId, handleResign,
     deleteDialog, setDeleteDialog, handleDeleteEmployee,
+    detailDialog, setDetailDialog,
     deleteAllDialog, setDeleteAllDialog, handleDeleteAllEmployees,
     csvDialog, setCsvDialog, csvResult, setCsvResult, csvUploading,
     fileInputRef, handleCsvUpload, downloadCsvTemplate,
@@ -821,6 +936,16 @@ function EmployeeDialogs(props: any) {
         <DialogActions>
           <Button onClick={() => setDeleteDialog(null)}>취소</Button>
           <Button variant="contained" color="error" onClick={handleDeleteEmployee}>삭제</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(detailDialog)} onClose={() => setDetailDialog(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>직원 상세 정보</DialogTitle>
+        <DialogContent dividers>
+          {detailDialog && <EmployeeDetail employee={detailDialog} />}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailDialog(null)}>닫기</Button>
         </DialogActions>
       </Dialog>
 
