@@ -227,20 +227,20 @@ export default function HelpGuide() {
       </Grid>
 
       <Typography variant="h5" fontWeight={700} gutterBottom>현재 기능 범위</Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5 }}>
-        <Table size="small">
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5, overflowX: 'hidden' }}>
+        <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { px: 1.2 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell><strong>영역</strong></TableCell>
-              <TableCell><strong>상태</strong></TableCell>
-              <TableCell><strong>설명</strong></TableCell>
+              <TableCell width="22%">영역</TableCell>
+              <TableCell width="16%" align="center">상태</TableCell>
+              <TableCell width="62%">설명</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {CAPABILITIES.map((item) => (
               <TableRow key={item.area} hover>
                 <TableCell>{item.area}</TableCell>
-                <TableCell><StatusChip status={item.status} /></TableCell>
+                <TableCell align="center"><StatusChip status={item.status} /></TableCell>
                 <TableCell>{item.detail}</TableCell>
               </TableRow>
             ))}
@@ -249,12 +249,12 @@ export default function HelpGuide() {
       </TableContainer>
 
       <Typography variant="h5" fontWeight={700} gutterBottom>GitHub 토큰 준비 기준</Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5 }}>
-        <Table size="small">
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5, overflowX: 'hidden' }}>
+        <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { px: 1.2 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell><strong>항목</strong></TableCell>
-              <TableCell><strong>기준</strong></TableCell>
+              <TableCell width="24%">항목</TableCell>
+              <TableCell width="76%">기준</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -269,14 +269,14 @@ export default function HelpGuide() {
       </TableContainer>
 
       <Typography variant="h5" fontWeight={700} gutterBottom>역할별 권한</Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5 }}>
-        <Table size="small">
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, borderRadius: 2.5, overflowX: 'hidden' }}>
+        <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { px: 1.2 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell><strong>기능</strong></TableCell>
-              <TableCell align="center"><strong>Admin</strong></TableCell>
-              <TableCell align="center"><strong>Security Manager</strong></TableCell>
-              <TableCell align="center"><strong>Auditor</strong></TableCell>
+              <TableCell width="40%">기능</TableCell>
+              <TableCell width="20%" align="center">Admin</TableCell>
+              <TableCell width="20%" align="center">Security Manager</TableCell>
+              <TableCell width="20%" align="center">Auditor</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

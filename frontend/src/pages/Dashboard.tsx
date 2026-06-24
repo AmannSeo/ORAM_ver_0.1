@@ -228,16 +228,16 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
         {visible.length === 0 ? (
           <Alert severity="success" icon={<CheckIcon />}>현재 권한 회수 대상이 없습니다.</Alert>
         ) : (
-          <TableContainer>
-            <Table size="small">
+          <TableContainer sx={{ overflowX: 'hidden' }}>
+            <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'nowrap', px: 1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
               <TableHead>
-                <TableRow>
-                  <TableCell width={52}>No.</TableCell>
-                  <TableCell>이름</TableCell>
-                  <TableCell>이메일</TableCell>
-                  <TableCell>위험도</TableCell>
-                  <TableCell>분석</TableCell>
-                  <TableCell>상태</TableCell>
+                <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                  <TableCell width="8%">No.</TableCell>
+                  <TableCell width="17%">이름</TableCell>
+                  <TableCell width="31%">이메일</TableCell>
+                  <TableCell width="16%">위험도</TableCell>
+                  <TableCell width="14%" align="center">분석</TableCell>
+                  <TableCell width="14%" align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -245,16 +245,16 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
                   <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/offboarding/${item.id}`)}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600}>{item.employee.name}</Typography>
+                      <Typography variant="body2" fontWeight={600} noWrap>{item.employee.name}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" color="#64748b">{item.employee.email}</Typography>
+                      <Typography variant="caption" color="#64748b" noWrap>{item.employee.email}</Typography>
                     </TableCell>
                     <TableCell><RiskBadge level={item.riskLevel} score={item.riskScore} /></TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       <Chip size="small" label={analysisSourceLabel(item.analysisSource)} variant="outlined" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       <Chip size="small" label={item.revokedAll ? '회수 완료' : '미회수'} color={item.revokedAll ? 'success' : 'warning'} variant="outlined" />
                     </TableCell>
                   </TableRow>

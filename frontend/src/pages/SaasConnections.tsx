@@ -641,31 +641,31 @@ export default function SaasConnections() {
                 같은 이메일을 가진 계정은 하나의 직원으로 자동 매핑됩니다. GitHub 비공개 이메일처럼 실제 이메일을 알 수 없는 경우
                 <strong> @github.local</strong> 계정으로 분리될 수 있습니다.
               </Alert>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'hidden', borderRadius: 2 }}>
+                <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'nowrap', px: 1.1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
                   <TableHead>
-                    <TableRow>
-                      <TableCell><strong>SaaS 계정</strong></TableCell>
-                      <TableCell><strong>이메일</strong></TableCell>
-                      <TableCell><strong>수집 출처</strong></TableCell>
-                      <TableCell><strong>매핑된 직원</strong></TableCell>
-                      <TableCell><strong>상태</strong></TableCell>
-                      <TableCell><strong>동기화 시각</strong></TableCell>
+                    <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                      <TableCell width="20%">SaaS 계정</TableCell>
+                      <TableCell width="24%">이메일</TableCell>
+                      <TableCell width="14%" align="center">수집 출처</TableCell>
+                      <TableCell width="20%">매핑된 직원</TableCell>
+                      <TableCell width="10%" align="center">상태</TableCell>
+                      <TableCell width="12%">동기화 시각</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {identityRows.map(row => (
                       <TableRow key={row.id} hover>
                         <TableCell>
-                          <Typography variant="body2" fontWeight="bold">
+                          <Typography variant="body2" fontWeight={700} noWrap>
                             {row.displayName || row.externalUsername || row.externalUserId}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" noWrap display="block">
                             {row.externalUsername || row.externalUserId}
                           </Typography>
                         </TableCell>
-                        <TableCell>{row.externalEmail || '-'}</TableCell>
-                        <TableCell>
+                        <TableCell><Typography variant="body2" noWrap>{row.externalEmail || '-'}</Typography></TableCell>
+                        <TableCell align="center">
                           <Chip
                             size="small"
                             label={identitySourceLabel(row)}
@@ -676,14 +676,14 @@ export default function SaasConnections() {
                         <TableCell>
                           {row.employeeName ? (
                             <>
-                              <Typography variant="body2">{row.employeeName}</Typography>
-                              <Typography variant="caption" color="text.secondary">{row.employeeEmail}</Typography>
+                              <Typography variant="body2" noWrap>{row.employeeName}</Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap display="block">{row.employeeEmail}</Typography>
                             </>
                           ) : (
                             <Chip size="small" label="미매핑" />
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell align="center">
                           <Chip
                             size="small"
                             color={row.accessRevoked ? 'default' : row.status === 'ACTIVE' ? 'success' : 'warning'}
@@ -691,7 +691,9 @@ export default function SaasConnections() {
                           />
                         </TableCell>
                         <TableCell>
-                          {row.lastSyncedAt ? new Date(row.lastSyncedAt).toLocaleString('ko-KR') : '-'}
+                          <Typography variant="body2" noWrap>
+                            {row.lastSyncedAt ? formatDateTime(row.lastSyncedAt) : '-'}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}

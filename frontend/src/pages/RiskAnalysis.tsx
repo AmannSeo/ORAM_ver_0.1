@@ -31,8 +31,6 @@ import {
 import {
   AutoAwesome as AutoIcon,
   CheckCircle as CheckIcon,
-  DeleteSweep as RevokeIcon,
-  FactCheck as DecisionIcon,
   HelpOutline as HelpIcon,
   Psychology as AIIcon,
   Warning as WarnIcon,
@@ -217,19 +215,19 @@ function RiskDecisionList() {
             <Chip icon={<AutoIcon />} label="자동 분석 결과 포함" color="primary" variant="outlined" />
           </Stack>
 
-          <TableContainer>
-            <Table sx={{ minWidth: 1260 }}>
+          <TableContainer sx={{ overflowX: 'hidden' }}>
+            <Table sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'nowrap', px: 1.1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                  <TableCell width={70}>No.</TableCell>
-                  <TableCell>이름</TableCell>
-                  <TableCell>이메일</TableCell>
-                  <TableCell>부서</TableCell>
-                  <TableCell>위험도</TableCell>
-                  <TableCell>감지 근거</TableCell>
-                  <TableCell>AI 판단</TableCell>
-                  <TableCell>분석 시각</TableCell>
-                  <TableCell align="right">다음 단계</TableCell>
+                  <TableCell width="5%">No.</TableCell>
+                  <TableCell width="9%">이름</TableCell>
+                  <TableCell width="18%">이메일</TableCell>
+                  <TableCell width="8%">부서</TableCell>
+                  <TableCell width="10%">위험도</TableCell>
+                  <TableCell width="17%">감지 근거</TableCell>
+                  <TableCell width="13%">AI 판단</TableCell>
+                  <TableCell width="10%">분석 시각</TableCell>
+                  <TableCell width="10%" align="center">다음 단계</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -243,20 +241,20 @@ function RiskDecisionList() {
                 {results.map((item, index) => (
                   <TableRow key={item.id} hover sx={{ '& td': { borderColor: '#f1f5f9' } }}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={700} color="#64748b">#{index + 1}</Typography>
+                      <Typography variant="body2" fontWeight={700} color="#64748b">{index + 1}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography fontWeight={700}>{item.employee.name}</Typography>
+                      <Typography fontWeight={700} noWrap>{item.employee.name}</Typography>
                     </TableCell>
-                    <TableCell><Typography variant="body2" color="#64748b">{item.employee.email}</Typography></TableCell>
-                    <TableCell><Typography variant="body2" color="#64748b">{item.employee.department || '-'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" color="#64748b" noWrap>{item.employee.email}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" color="#64748b" noWrap>{item.employee.department || '-'}</Typography></TableCell>
                     <TableCell>
                       <Stack spacing={0.75} alignItems="flex-start">
                         <RiskBadge level={item.riskLevel} score={item.riskScore} />
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{triggerLabel(item.analysisTrigger)}</Typography>
+                      <Typography variant="body2" noWrap>{triggerLabel(item.analysisTrigger)}</Typography>
                       <Chip
                         icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
                         label={sourceLabel(item.analysisSource)}
@@ -267,32 +265,32 @@ function RiskDecisionList() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={700}>
-                        {item.riskLevel ? LEVEL_ACTION[item.riskLevel] : '관리자 검토'}
+                        <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.riskLevel ? LEVEL_ACTION[item.riskLevel] : '관리자 검토'}
+                        </Box>
                       </Typography>
                       <Typography variant="caption" color="#64748b">
                         {item.riskScore ?? 0}점 기준
                       </Typography>
                     </TableCell>
-                    <TableCell>{formatDateTime(item.startedAt)}</TableCell>
-                    <TableCell align="right">
-                      <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
+                    <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="nowrap">
                         <Button
                           size="small"
                           variant="contained"
-                          startIcon={<DecisionIcon />}
                           onClick={() => navigate(`/offboarding/${item.id}`)}
-                          sx={{ whiteSpace: 'nowrap' }}
+                          sx={{ minWidth: 46, px: 0.8, whiteSpace: 'nowrap' }}
                         >
-                          상세 판단
+                          상세
                         </Button>
                         <Button
                           size="small"
                           variant="outlined"
-                          startIcon={<RevokeIcon />}
                           onClick={() => navigate('/offboarding')}
-                          sx={{ whiteSpace: 'nowrap' }}
+                          sx={{ minWidth: 46, px: 0.8, whiteSpace: 'nowrap' }}
                         >
-                          회수 대상
+                          회수
                         </Button>
                       </Stack>
                     </TableCell>

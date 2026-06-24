@@ -663,18 +663,18 @@ function EmployeeTable(props: {
   openDetailDialog: (employee: Employee) => void;
 }) {
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
-      <Table sx={{ minWidth: 1240, tableLayout: 'fixed' }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'hidden', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
+      <Table sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { px: 1.1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
         <TableHead>
           <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-            <HeaderCell width="6%">NO.</HeaderCell>
-            <HeaderCell width="14%">이름</HeaderCell>
-            <HeaderCell width="22%">이메일</HeaderCell>
-            <HeaderCell width="14%">부서</HeaderCell>
-            <HeaderCell width="11%">연동 SaaS</HeaderCell>
-            <HeaderCell width="8%">상태</HeaderCell>
-            <HeaderCell width="11%">계정 상태</HeaderCell>
-            <HeaderCell width="14%" align="right">조치</HeaderCell>
+            <HeaderCell width="5%">No.</HeaderCell>
+            <HeaderCell width="13%">이름</HeaderCell>
+            <HeaderCell width="21%">이메일</HeaderCell>
+            <HeaderCell width="12%">부서</HeaderCell>
+            <HeaderCell width="12%">연동 SaaS</HeaderCell>
+            <HeaderCell width="8%" align="center">상태</HeaderCell>
+            <HeaderCell width="11%" align="center">계정 상태</HeaderCell>
+            <HeaderCell width="18%" align="center">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -722,10 +722,10 @@ function EmployeeTable(props: {
                 <Typography fontWeight={800} noWrap>{employee.department || '부서 미수집'}</Typography>
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
-              <TableCell><StatusChip status={employee.status} /></TableCell>
-              <TableCell><AccountState employee={employee} /></TableCell>
-              <TableCell align="right">
-                <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
+              <TableCell align="center"><StatusChip status={employee.status} /></TableCell>
+              <TableCell align="center"><AccountState employee={employee} /></TableCell>
+              <TableCell align="center">
+                <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="nowrap">
                   <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>
                   {employee.status === 'ACTIVE' ? (
                     <Button size="small" variant="outlined" color="warning" startIcon={props.resigningEmployeeId === employee.id ? <CircularProgress size={14} /> : <ResignIcon />} onClick={() => props.openResignDialog(employee)} disabled={props.resigningEmployeeId === employee.id} sx={compactButtonSx}>퇴사</Button>
