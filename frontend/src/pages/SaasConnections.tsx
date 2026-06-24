@@ -125,24 +125,12 @@ function accountScopeLabel(saasType: SaasType, scope?: string, enterpriseAccount
   return '조직 계정';
 }
 
-function identitySourceLabel(row: SaasIdentity) {
-  if (row.department && row.department.trim()) {
-    return row.department;
-  }
-  if (row.saasType === 'GITHUB') return 'GitHub';
-  if (row.saasType === 'SLACK') return 'Slack Workspace';
-  if (row.saasType === 'NOTION') return 'Notion Workspace';
-  return row.saasType;
-}
-
 function formatDateTime(value?: string) {
   if (!value) return '아직 없음';
-  return new Date(value).toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 export default function SaasConnections() {
@@ -591,12 +579,10 @@ export default function SaasConnections() {
                 <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'nowrap', px: 1.1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                      <TableCell width="20%">SaaS 계정</TableCell>
-                      <TableCell width="24%">이메일</TableCell>
-                      <TableCell width="14%" align="center">수집 출처</TableCell>
-                      <TableCell width="20%">매핑된 직원</TableCell>
-                      <TableCell width="10%" align="center">상태</TableCell>
-                      <TableCell width="12%">동기화 시각</TableCell>
+                      <TableCell width="34%">SaaS 계정</TableCell>
+                      <TableCell width="32%">이메일</TableCell>
+                      <TableCell width="14%" align="center">상태</TableCell>
+                      <TableCell width="20%">동기화 시각</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -606,29 +592,8 @@ export default function SaasConnections() {
                           <Typography variant="body2" fontWeight={700} noWrap>
                             {row.displayName || row.externalUsername || row.externalUserId}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap display="block">
-                            {row.externalUsername || row.externalUserId}
-                          </Typography>
                         </TableCell>
                         <TableCell><Typography variant="body2" noWrap>{row.externalEmail || '-'}</Typography></TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            size="small"
-                            label={identitySourceLabel(row)}
-                            variant="outlined"
-                            color={row.saasType === 'GITHUB' && identitySourceLabel(row).includes('Repo') ? 'default' : 'primary'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {row.employeeName ? (
-                            <>
-                              <Typography variant="body2" noWrap>{row.employeeName}</Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap display="block">{row.employeeEmail}</Typography>
-                            </>
-                          ) : (
-                            <Chip size="small" label="미매핑" />
-                          )}
-                        </TableCell>
                         <TableCell align="center">
                           <Chip
                             size="small"

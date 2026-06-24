@@ -89,13 +89,8 @@ function formatDateTime(value?: string) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function DecisionMetric({
@@ -224,8 +219,9 @@ function RiskDecisionList() {
                   <TableCell width="18%">이메일</TableCell>
                   <TableCell width="8%">부서</TableCell>
                   <TableCell width="10%">위험도</TableCell>
-                  <TableCell width="17%">감지 근거</TableCell>
-                  <TableCell width="13%">AI 판단</TableCell>
+                  <TableCell width="15%">감지 근거</TableCell>
+                  <TableCell width="10%" align="center">분석 방식</TableCell>
+                  <TableCell width="12%">AI 판단</TableCell>
                   <TableCell width="10%">분석 시각</TableCell>
                   <TableCell width="10%" align="center">다음 단계</TableCell>
                 </TableRow>
@@ -233,7 +229,7 @@ function RiskDecisionList() {
               <TableBody>
                 {results.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 6, color: '#64748b' }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 6, color: '#64748b' }}>
                       현재 AI 분석 후 조치가 필요한 권한 회수 대상이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -255,12 +251,13 @@ function RiskDecisionList() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" noWrap>{triggerLabel(item.analysisTrigger)}</Typography>
+                    </TableCell>
+                    <TableCell align="center">
                       <Chip
                         icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
                         label={sourceLabel(item.analysisSource)}
                         size="small"
                         variant="outlined"
-                        sx={{ mt: 0.75 }}
                       />
                     </TableCell>
                     <TableCell>

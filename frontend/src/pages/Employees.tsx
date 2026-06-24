@@ -828,7 +828,7 @@ function EmployeeDetail({ employee }: { employee: Employee }) {
       <Grid container spacing={1.5}>
         <DetailItem label="사번" value={employee.employeeId} mono />
         <DetailItem label="상태" value={<StatusChip status={employee.status} />} />
-        <DetailItem label="부서" value={employee.department || '부서 미수집'} />
+        <DetailItem label="부서" value="-" />
         <DetailItem label="등록일" value={formatDetailDate(employee.createdAt)} />
         <DetailItem label="연동 SaaS 수" value={`${connected.length}개`} />
       </Grid>
