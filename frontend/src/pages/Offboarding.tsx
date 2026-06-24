@@ -228,16 +228,18 @@ export default function Offboarding() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <TableContainer component={Card} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
-        <Table sx={{ minWidth: 1320 }}>
+        <Table sx={{ minWidth: 1660, '& th, & td': { whiteSpace: 'nowrap' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
               <TableCell width={72}>No.</TableCell>
               <TableCell>이름</TableCell>
               <TableCell>이메일</TableCell>
               <TableCell>부서</TableCell>
-              <TableCell>AI 판단</TableCell>
+              <TableCell>위험도</TableCell>
+              <TableCell>분석 방식</TableCell>
               <TableCell>감지 근거</TableCell>
-              <TableCell>회수 상태</TableCell>
+              <TableCell>회수 여부</TableCell>
+              <TableCell>처리 상태</TableCell>
               <TableCell>권장 조치</TableCell>
               <TableCell>생성 시각</TableCell>
               <TableCell align="right">처리</TableCell>
@@ -246,7 +248,7 @@ export default function Offboarding() {
           <TableBody>
             {results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 6, color: '#64748b' }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 6, color: '#64748b' }}>
                   아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
@@ -265,34 +267,33 @@ export default function Offboarding() {
                   <TableCell><Typography variant="body2" color="#64748b">{result.employee.email}</Typography></TableCell>
                   <TableCell><Typography variant="body2" color="#64748b">{result.employee.department || '-'}</Typography></TableCell>
                   <TableCell>
-                    <Stack spacing={0.75} alignItems="flex-start">
-                      <RiskBadge level={result.riskLevel} score={result.riskScore} />
-                      <Chip
-                        icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                        label={automatic ? '자동 분석' : '수동 재분석'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Stack>
+                    <RiskBadge level={result.riskLevel} score={result.riskScore} />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      icon={automatic ? <AutoIcon /> : <ManualIcon />}
+                      label={automatic ? '자동 분석' : '수동 재분석'}
+                      size="small"
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{triggerLabel(result.analysisTrigger)}</Typography>
-                    <Typography variant="caption" color="#64748b">{result.analysisEngine || '-'}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Stack spacing={0.75} alignItems="flex-start">
-                      <Chip
-                        label={result.falsePositive ? '오탐 제외' : result.revokedAll ? '회수 완료' : '미회수'}
-                        color={result.falsePositive ? 'default' : result.revokedAll ? 'success' : 'warning'}
-                        size="small"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={STATUS_LABEL[result.status] ?? result.status}
-                        color={STATUS_COLOR[result.status] ?? 'default'}
-                        size="small"
-                      />
-                    </Stack>
+                    <Chip
+                      label={result.falsePositive ? '오탐 제외' : result.revokedAll ? '회수 완료' : '미회수'}
+                      color={result.falsePositive ? 'default' : result.revokedAll ? 'success' : 'warning'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={STATUS_LABEL[result.status] ?? result.status}
+                      color={STATUS_COLOR[result.status] ?? 'default'}
+                      size="small"
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600}>{actionGuide(result)}</Typography>

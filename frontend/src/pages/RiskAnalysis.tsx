@@ -112,7 +112,7 @@ function DecisionMetric({
   help: string;
 }) {
   const colors = {
-    danger: { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
+    danger: { bg: '#fff1f2', border: '#fecdd3', text: '#e11d48' },
     warning: { bg: '#fffbeb', border: '#fde68a', text: '#b45309' },
     info: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
     success: { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857' },
@@ -253,7 +253,6 @@ function RiskDecisionList() {
                     <TableCell>
                       <Stack spacing={0.75} alignItems="flex-start">
                         <RiskBadge level={item.riskLevel} score={item.riskScore} />
-                        <Typography variant="caption" color="#64748b">{item.analysisEngine || 'ORAM Risk Fusion'}</Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
