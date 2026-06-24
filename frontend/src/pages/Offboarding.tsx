@@ -1,18 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   IconButton,
   LinearProgress,
   Stack,
@@ -32,7 +30,6 @@ import {
   CheckCircle as CheckIcon,
   PersonSearch as ManualIcon,
   Visibility as ViewIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
@@ -85,38 +82,6 @@ function formatDateTime(value?: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function QueueMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: 'error' | 'warning' | 'info' | 'success';
-}) {
-  const color = {
-    error: '#dc2626',
-    warning: '#d97706',
-    info: '#2563eb',
-    success: '#059669',
-  }[tone];
-  const bg = {
-    error: '#fef2f2',
-    warning: '#fffbeb',
-    info: '#eff6ff',
-    success: '#ecfdf5',
-  }[tone];
-
-  return (
-    <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2.5, bgcolor: bg }}>
-      <CardContent sx={{ p: 1.75, '&:last-child': { pb: 1.75 } }}>
-        <Typography variant="caption" color="#64748b">{label}</Typography>
-        <Typography variant="h5" fontWeight={700} color={color} mt={0.5}>{value}</Typography>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function Offboarding() {
   const navigate = useNavigate();
   const [results, setResults] = useState<OffboardingSummary[]>([]);
@@ -150,16 +115,6 @@ export default function Offboarding() {
   useEffect(() => {
     loadResults();
   }, []);
-
-  const metrics = useMemo(() => {
-    const activeTargets = results.filter((result) => !result.revokedAll && !result.falsePositive);
-    return {
-      total: results.length,
-      pending: activeTargets.length,
-      urgent: activeTargets.filter((result) => result.riskLevel === 'CRITICAL' || result.riskLevel === 'HIGH').length,
-      automatic: results.filter((result) => result.analysisSource === 'AUTOMATIC').length,
-    };
-  }, [results]);
 
   const handleRevoke = async (result: OffboardingSummary) => {
     setRevokeLoadingId(result.id);
@@ -205,18 +160,7 @@ export default function Offboarding() {
             분석된 잔여 접근 권한을 승인, 회수, 오탐 처리하고 처리 결과를 기록합니다.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip icon={<AutoIcon />} label={`자동 감지 ${metrics.automatic}건`} color="primary" variant="outlined" />
-          <Chip icon={<WarningIcon />} label={`긴급 ${metrics.urgent}건`} color={metrics.urgent > 0 ? 'error' : 'default'} variant="outlined" />
-        </Stack>
       </Stack>
-
-      <Grid container spacing={1.5} mb={2.5}>
-        <Grid item xs={6} lg={3}><QueueMetric label="전체 대상" value={metrics.total} tone="info" /></Grid>
-        <Grid item xs={6} lg={3}><QueueMetric label="미회수" value={metrics.pending} tone="warning" /></Grid>
-        <Grid item xs={6} lg={3}><QueueMetric label="긴급 조치" value={metrics.urgent} tone={metrics.urgent > 0 ? 'error' : 'success'} /></Grid>
-        <Grid item xs={6} lg={3}><QueueMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
-      </Grid>
 
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

@@ -4,8 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
@@ -42,7 +40,6 @@ import {
   DeleteSweep as DeleteAllIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
-  People as PeopleIcon,
   PersonOff as ResignIcon,
   Search as SearchIcon,
   Upload as UploadIcon,
@@ -360,13 +357,6 @@ export default function Employees() {
 
       {tab === 'employees' && (
         <>
-          <Grid container spacing={2} mb={2.5}>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="전체 직원" value={dashboardStats?.totalEmployees ?? totalElements} sub="대시보드와 동일 기준" color="#2563eb" bg="#eff6ff" accent="#3b82f6" icon={<PeopleIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="재직자" value={dashboardStats?.activeEmployees ?? 0} sub="전체 직원 기준" color="#059669" bg="#ecfdf5" accent="#10b981" icon={<PeopleIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="퇴사자" value={dashboardStats?.resignedEmployees ?? 0} sub="오프보딩 대상" color="#475569" bg="#f1f5f9" accent="#94a3b8" icon={<ResignIcon fontSize="small" />} /></Grid>
-            <Grid item xs={12} sm={6} xl={3}><MetricCard label="현재 조회 결과" value={totalElements} sub={`현재 페이지 SaaS 보유 ${currentPageSaasLinkedCount}명`} color="#dc2626" bg="#fef2f2" accent="#ef4444" icon={<PriorityIcon fontSize="small" />} /></Grid>
-          </Grid>
-
           <EmployeeVisualSummary
             stats={dashboardStats}
             totalElements={totalElements}
@@ -461,48 +451,6 @@ export default function Employees() {
         downloadCsvTemplate={downloadCsvTemplate}
       />
     </Box>
-  );
-}
-
-function MetricCard({ label, value, sub, color, bg, accent, icon }: {
-  label: string;
-  value: number;
-  sub: string;
-  color: string;
-  bg: string;
-  accent: string;
-  icon: ReactNode;
-}) {
-  return (
-    <Card
-      elevation={0}
-      sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid #e2e8f0',
-        borderRadius: 3,
-        bgcolor: 'white',
-        minHeight: 96,
-        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-        transition: 'transform 160ms ease, box-shadow 160ms ease',
-        '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 14px 28px rgba(15, 23, 42, 0.08)' },
-        '&:before': { content: '""', position: 'absolute', left: 0, top: 0, width: 4, height: '100%', bgcolor: accent },
-      }}
-    >
-      <CardContent sx={{ p: 1.75, '&:last-child': { pb: 1.75 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
-          <Box>
-            <Typography variant="caption" color="#64748b" fontWeight={700}>{label}</Typography>
-            <Typography variant="h5" fontWeight={700} color="#0f172a" mt={0.25}>
-              {value}
-              <Typography component="span" ml={0.5} color="#94a3b8" fontSize={13}>명</Typography>
-            </Typography>
-          </Box>
-          <Box sx={{ width: 34, height: 34, borderRadius: 1.5, bgcolor: bg, color, display: 'grid', placeItems: 'center', flexShrink: 0 }}>{icon}</Box>
-        </Stack>
-        <Typography variant="caption" color="#94a3b8" mt={0.75} display="block">{sub}</Typography>
-      </CardContent>
-    </Card>
   );
 }
 
