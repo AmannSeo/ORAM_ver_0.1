@@ -318,9 +318,12 @@ export default function SaasConnections() {
               borderColor: openAlertCount > 0 ? '#fde68a' : '#a7f3d0',
             }}
           >
-            <Typography variant="caption" color="#64748b">열린 감지 알림</Typography>
+            <Typography variant="caption" color="#64748b">미처리 접근 감지</Typography>
             <Typography variant="h5" fontWeight={700} color={openAlertCount > 0 ? '#b45309' : '#047857'}>
               {openAlertCount}
+            </Typography>
+            <Typography variant="caption" color="#64748b" display="block" mt={0.25}>
+              회수 대상 검토가 필요한 SaaS 계정
             </Typography>
           </Paper>
         </Grid>
@@ -421,11 +424,11 @@ export default function SaasConnections() {
                       <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
                         <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
                         <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'}>
-                          감지 알림: {conn.openAlertCount ?? 0}건
+                          미처리 감지: {conn.openAlertCount ?? 0}건
                         </Typography>
                       </Stack>
                       <Typography variant="caption" color="text.secondary" display="block">
-                        비활성/누락 계정은 권한 회수 대상으로 자동 연결됩니다.
+                        퇴사자 활성 계정, 비활성 계정, 이전 동기화 대비 누락 계정을 권한 회수 검토 대상으로 표시합니다.
                       </Typography>
                       {conn.connectedAt && (
                         <Typography variant="caption" color="text.secondary">
