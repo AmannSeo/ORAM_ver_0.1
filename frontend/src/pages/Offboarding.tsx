@@ -243,7 +243,7 @@ export default function Offboarding() {
               <TableCell width="7%">처리 상태</TableCell>
               <TableCell width="8%">권장 조치</TableCell>
               <TableCell width="10%">생성 시각</TableCell>
-              <TableCell width="9%" align="right">처리</TableCell>
+              <TableCell width="9%" align="center">처리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -260,7 +260,7 @@ export default function Offboarding() {
               return (
                 <TableRow key={result.id} hover sx={{ '& td': { borderColor: '#f1f5f9' } }}>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={700} color="#64748b">#{index + 1}</Typography>
+                    <Typography variant="body2" fontWeight={700} color="#64748b">{index + 1}</Typography>
                   </TableCell>
                   <TableCell>
                     <Typography fontWeight={700} noWrap>{result.employee.name}</Typography>
@@ -300,8 +300,8 @@ export default function Offboarding() {
                     <Typography variant="body2" fontWeight={600} noWrap>{actionGuide(result)}</Typography>
                   </TableCell>
                   <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.startedAt)}</Typography></TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
+                  <TableCell align="center">
+                    <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="nowrap">
                       <Tooltip title={result.revokedAll ? '이미 권한 회수가 완료되었습니다.' : '연결된 SaaS 권한 회수를 실행합니다.'}>
                         <span>
                           <Button
