@@ -107,7 +107,7 @@ function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[],
   addCsvRow(rows, ['연결 SaaS', stats.connectedSaasCount, '연동된 SaaS 수']);
   addCsvRow(rows, ['권한 회수 대상', targets.length, '미회수 및 오탐 제외 대상']);
   addCsvRow(rows, ['긴급 위험', stats.criticalRiskCount, 'CRITICAL 위험 대상']);
-  addCsvRow(rows, ['SaaS 감지 알림', stats.openSaasSyncAlerts || 0, '비활성 또는 누락 계정']);
+  addCsvRow(rows, ['잔여 접근 감지 로그', stats.openSaasSyncAlerts || 0, '권한 회수 대상 생성 또는 상태 변경 원인 로그']);
   rows.push('');
 
   addCsvRow(rows, ['권한 회수 대상']);
@@ -233,7 +233,8 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
               <TableHead>
                 <TableRow>
                   <TableCell width={52}>No.</TableCell>
-                  <TableCell>대상</TableCell>
+                  <TableCell>이름</TableCell>
+                  <TableCell>이메일</TableCell>
                   <TableCell>위험도</TableCell>
                   <TableCell>분석</TableCell>
                   <TableCell>상태</TableCell>
@@ -245,6 +246,8 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>{item.employee.name}</Typography>
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="caption" color="#64748b">{item.employee.email}</Typography>
                     </TableCell>
                     <TableCell><RiskBadge level={item.riskLevel} score={item.riskScore} /></TableCell>
@@ -265,7 +268,7 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
   );
 }
 
-function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
+function DetectionLog({ alerts, onOpenTargets }: { alerts: SaasSyncAlert[]; onOpenTargets: () => void }) {
   const chipColor = (reason: string) => (
     reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE' || reason === 'INACTIVE_FROM_LATEST_SYNC' ? 'error' : 'warning'
   );
@@ -274,15 +277,20 @@ function DetectionLog({ alerts }: { alerts: SaasSyncAlert[] }) {
     <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, height: '100%' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Box mb={1.5}>
-          <Typography variant="h6" fontWeight={700}>SaaS 감지 알림</Typography>
-          <Typography variant="caption" color="#64748b">동기화 중 발견된 비활성/누락 계정</Typography>
+          <Typography variant="h6" fontWeight={700}>감지 로그</Typography>
+          <Typography variant="caption" color="#64748b">권한 회수 대상이 생성되거나 갱신된 원인</Typography>
         </Box>
         {alerts.length === 0 ? (
-          <Alert severity="success" icon={<CheckIcon />}>열린 SaaS 감지 알림이 없습니다.</Alert>
+          <Alert severity="success" icon={<CheckIcon />}>현재 표시할 감지 로그가 없습니다.</Alert>
         ) : (
           <Stack divider={<Divider flexItem />} spacing={0}>
             {alerts.map((alert) => (
-              <Box key={alert.id} py={1.5}>
+              <Box
+                key={alert.id}
+                py={1.5}
+                onClick={onOpenTargets}
+                sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' } }}
+              >
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                   <Typography variant="body2" fontWeight={600} noWrap>
                     {alert.saasType} · {saasAlertReasonLabel(alert.reason)}
@@ -347,8 +355,8 @@ export default function Dashboard() {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!stats) return null;
 
-  const actionCount = offboardingTargets.length + (stats.openSaasSyncAlerts || 0);
-  const residualAccessAlerts = saasAlerts.filter((alert) => alert.reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE');
+  const actionCount = offboardingTargets.length;
+  const urgentTargets = offboardingTargets.filter((item) => item.riskLevel === 'CRITICAL' || item.riskLevel === 'HIGH').length;
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
@@ -369,7 +377,7 @@ export default function Dashboard() {
         </Button>
       </Stack>
 
-      {residualAccessAlerts.length > 0 && (
+      {offboardingTargets.length > 0 && (
         <Alert
           severity="error"
           sx={{ mb: 2.5, borderRadius: 2, alignItems: 'center' }}
@@ -379,7 +387,8 @@ export default function Dashboard() {
             </Button>
           }
         >
-          퇴사자 활성 계정 {residualAccessAlerts.length}건이 감지되었습니다. Slack/Notion/GitHub에 남아 있는 접근 권한을 확인해야 합니다.
+          권한 회수 대상 {offboardingTargets.length}명이 있습니다.
+          {' '}권한 회수 대상에서 회수 또는 수동 조치 여부를 확인해야 합니다.
         </Alert>
       )}
 
@@ -388,13 +397,13 @@ export default function Dashboard() {
           <StatCard title="전체 직원" value={stats.totalEmployees} description="등록/동기화된 인원" icon={<PeopleIcon />} tone="info" onClick={() => navigate('/employees')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="조치 필요" value={actionCount} description="회수 대상 + SaaS 알림" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
+          <StatCard title="조치 필요" value={actionCount} description="권한 회수 대상 인원" icon={<WarningIcon />} tone={actionCount > 0 ? 'error' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="권한 회수 대상" value={offboardingTargets.length} description="미회수·오탐 제외" icon={<SecurityIcon />} tone={offboardingTargets.length > 0 ? 'warning' : 'success'} onClick={() => navigate('/offboarding')} />
+          <StatCard title="긴급 조치" value={urgentTargets} description="HIGH 이상 위험 대상" icon={<SecurityIcon />} tone={urgentTargets > 0 ? 'warning' : 'success'} onClick={() => navigate('/offboarding')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="SaaS 감지 알림" value={stats.openSaasSyncAlerts || 0} description="비활성 또는 누락 계정" icon={<CloudIcon />} tone={(stats.openSaasSyncAlerts || 0) > 0 ? 'info' : 'success'} onClick={() => navigate('/saas-connections')} />
+          <StatCard title="연결 SaaS" value={stats.connectedSaasCount} description="현재 연동된 서비스" icon={<CloudIcon />} tone="info" onClick={() => navigate('/saas-connections')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
           <StatCard title="퇴사자" value={stats.resignedEmployees} description="퇴사 상태 직원" icon={<GroupsIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
@@ -406,7 +415,7 @@ export default function Dashboard() {
           <RevocationTargets items={offboardingTargets} />
         </Grid>
         <Grid item xs={12} lg={4}>
-          <DetectionLog alerts={saasAlerts} />
+          <DetectionLog alerts={saasAlerts} onOpenTargets={() => navigate('/offboarding')} />
         </Grid>
       </Grid>
     </Box>

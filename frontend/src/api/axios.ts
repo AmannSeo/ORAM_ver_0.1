@@ -12,6 +12,16 @@ const api = axios.create({
 
 // Request interceptor: JWT 토큰 자동 첨부
 api.interceptors.request.use((config) => {
+  const requestUrl = typeof config.url === 'string' ? config.url : '';
+  const isAuthLoginRequest = requestUrl.includes('/auth/login');
+  if (isAuthLoginRequest) {
+    if (config.headers && typeof config.headers.delete === 'function') {
+      config.headers.delete('Authorization');
+      config.headers.delete('X-ORAM-Auth-Token');
+    }
+    return config;
+  }
+
   const token = useAuthStore.getState().token;
   if (token) {
     if (config.headers && typeof config.headers.set === 'function') {

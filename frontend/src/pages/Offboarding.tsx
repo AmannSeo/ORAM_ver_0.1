@@ -228,11 +228,13 @@ export default function Offboarding() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <TableContainer component={Card} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
-        <Table sx={{ minWidth: 1120 }}>
+        <Table sx={{ minWidth: 1320 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
               <TableCell width={72}>No.</TableCell>
-              <TableCell>대상</TableCell>
+              <TableCell>이름</TableCell>
+              <TableCell>이메일</TableCell>
+              <TableCell>부서</TableCell>
               <TableCell>AI 판단</TableCell>
               <TableCell>감지 근거</TableCell>
               <TableCell>회수 상태</TableCell>
@@ -244,7 +246,7 @@ export default function Offboarding() {
           <TableBody>
             {results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#64748b' }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 6, color: '#64748b' }}>
                   아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
@@ -259,9 +261,9 @@ export default function Offboarding() {
                   </TableCell>
                   <TableCell>
                     <Typography fontWeight={700}>{result.employee.name}</Typography>
-                    <Typography variant="caption" color="#64748b">{result.employee.email}</Typography>
-                    <Typography variant="caption" color="#94a3b8" display="block">{result.employee.department || '-'}</Typography>
                   </TableCell>
+                  <TableCell><Typography variant="body2" color="#64748b">{result.employee.email}</Typography></TableCell>
+                  <TableCell><Typography variant="body2" color="#64748b">{result.employee.department || '-'}</Typography></TableCell>
                   <TableCell>
                     <Stack spacing={0.75} alignItems="flex-start">
                       <RiskBadge level={result.riskLevel} score={result.riskScore} />

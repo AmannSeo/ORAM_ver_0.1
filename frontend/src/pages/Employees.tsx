@@ -141,6 +141,10 @@ export default function Employees() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
+  const departmentOptions = useMemo(
+    () => Array.from(new Set(employees.map((employee) => employee.department).filter(Boolean))).sort(),
+    [employees]
+  );
 
   const load = () => {
     setLoading(true);
@@ -382,6 +386,7 @@ export default function Employees() {
             setFilterDept={setFilterDept}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            departmentOptions={departmentOptions}
             runSearch={runSearch}
             setPage={setPage}
           />
@@ -587,6 +592,7 @@ function FilterPanel(props: {
   setFilterSaas: (value: SaasType | '') => void;
   filterDept: string;
   setFilterDept: (value: string) => void;
+  departmentOptions: string[];
   searchQuery: string;
   setSearchQuery: (value: string) => void;
   runSearch: () => void;
@@ -617,7 +623,19 @@ function FilterPanel(props: {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6} lg={2.6}>
-          <TextField size="small" label="부서" placeholder="부서명 입력" value={props.filterDept} onChange={(e) => props.setFilterDept(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
+          <FormControl size="small" fullWidth>
+            <InputLabel>부서</InputLabel>
+            <Select
+              value={props.filterDept}
+              label="부서"
+              onChange={(e) => { props.setFilterDept(e.target.value); props.setPage(0); }}
+            >
+              <MenuItem value="">전체</MenuItem>
+              {props.departmentOptions.map((department) => (
+                <MenuItem key={department} value={department}>{department}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
         <Grid item xs={12} sm={6} lg={4.2}>
           <TextField size="small" label="직원 검색" placeholder="이름 또는 이메일" value={props.searchQuery} onChange={(e) => props.setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.runSearch()} fullWidth />
@@ -646,25 +664,23 @@ function EmployeeTable(props: {
 }) {
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'auto', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
-      <Table sx={{ minWidth: 1520, tableLayout: 'fixed' }}>
+      <Table sx={{ minWidth: 1240, tableLayout: 'fixed' }}>
         <TableHead>
           <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-            <HeaderCell width="5%">NO.</HeaderCell>
-            <HeaderCell width="11%">이름</HeaderCell>
-            <HeaderCell width="18%">이메일</HeaderCell>
-            <HeaderCell width="13%">사번</HeaderCell>
+            <HeaderCell width="6%">NO.</HeaderCell>
+            <HeaderCell width="14%">이름</HeaderCell>
+            <HeaderCell width="22%">이메일</HeaderCell>
+            <HeaderCell width="14%">부서</HeaderCell>
+            <HeaderCell width="11%">연동 SaaS</HeaderCell>
             <HeaderCell width="8%">상태</HeaderCell>
-            <HeaderCell width="11%">부서</HeaderCell>
-            <HeaderCell width="12%">등록 원천</HeaderCell>
-            <HeaderCell width="10%">연동 SaaS</HeaderCell>
-            <HeaderCell width="10%">계정 상태</HeaderCell>
-            <HeaderCell width="16%" align="right">조치</HeaderCell>
+            <HeaderCell width="11%">계정 상태</HeaderCell>
+            <HeaderCell width="14%" align="right">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={8} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
@@ -703,16 +719,10 @@ function EmployeeTable(props: {
                 </Button>
               </TableCell>
               <TableCell>
-                <Typography sx={{ fontFamily: 'monospace', fontSize: 13, color: '#475569' }} noWrap>{employee.employeeId}</Typography>
-              </TableCell>
-              <TableCell><StatusChip status={employee.status} /></TableCell>
-              <TableCell>
                 <Typography fontWeight={800} noWrap>{employee.department || '부서 미수집'}</Typography>
               </TableCell>
-              <TableCell>
-                <Typography variant="body2" color="#64748b" noWrap>{getEmployeeSourceLabel(employee)}</Typography>
-              </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
+              <TableCell><StatusChip status={employee.status} /></TableCell>
               <TableCell><AccountState employee={employee} /></TableCell>
               <TableCell align="right">
                 <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
@@ -839,7 +849,6 @@ function EmployeeDetail({ employee }: { employee: Employee }) {
         <DetailItem label="사번" value={employee.employeeId} mono />
         <DetailItem label="상태" value={<StatusChip status={employee.status} />} />
         <DetailItem label="부서" value={employee.department || '부서 미수집'} />
-        <DetailItem label="등록 원천" value={getEmployeeSourceLabel(employee)} />
         <DetailItem label="등록일" value={formatDetailDate(employee.createdAt)} />
         <DetailItem label="연동 SaaS 수" value={`${connected.length}개`} />
       </Grid>

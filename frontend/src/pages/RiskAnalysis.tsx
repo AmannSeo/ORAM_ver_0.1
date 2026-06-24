@@ -100,7 +100,17 @@ function formatDateTime(value?: string) {
   });
 }
 
-function DecisionMetric({ label, value, tone }: { label: string; value: number; tone: 'danger' | 'warning' | 'info' | 'success' }) {
+function DecisionMetric({
+  label,
+  value,
+  tone,
+  help,
+}: {
+  label: string;
+  value: number;
+  tone: 'danger' | 'warning' | 'info' | 'success';
+  help: string;
+}) {
   const colors = {
     danger: { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
     warning: { bg: '#fffbeb', border: '#fde68a', text: '#b45309' },
@@ -110,7 +120,12 @@ function DecisionMetric({ label, value, tone }: { label: string; value: number; 
 
   return (
     <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5, bgcolor: colors.bg, borderColor: colors.border }}>
-      <Typography variant="caption" color="#64748b">{label}</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.5}>
+        <Typography variant="caption" color="#64748b">{label}</Typography>
+        <Tooltip title={help} arrow placement="top">
+          <HelpIcon sx={{ fontSize: 15, color: '#94a3b8' }} />
+        </Tooltip>
+      </Stack>
       <Typography variant="h5" fontWeight={700} color={colors.text} mt={0.25}>{value}</Typography>
     </Paper>
   );
@@ -153,10 +168,38 @@ function RiskDecisionList() {
       {error && <Alert severity="error">{error}</Alert>}
 
       <Grid container spacing={1.5}>
-        <Grid item xs={6} md={3}><DecisionMetric label="분석 대상" value={metrics.total} tone="info" /></Grid>
-        <Grid item xs={6} md={3}><DecisionMetric label="즉시/긴급 검토" value={metrics.urgent} tone={metrics.urgent > 0 ? 'danger' : 'success'} /></Grid>
-        <Grid item xs={6} md={3}><DecisionMetric label="자동 감지" value={metrics.automatic} tone="success" /></Grid>
-        <Grid item xs={6} md={3}><DecisionMetric label="관리자 검토" value={metrics.review} tone="warning" /></Grid>
+        <Grid item xs={6} md={3}>
+          <DecisionMetric
+            label="분석 대상"
+            value={metrics.total}
+            tone="info"
+            help="권한 회수 대상 중 아직 회수 완료나 오탐 제외가 되지 않았고, AI 위험도 산정 결과가 있는 직원 수입니다."
+          />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <DecisionMetric
+            label="즉시/긴급 검토"
+            value={metrics.urgent}
+            tone="danger"
+            help="위험도가 HIGH 또는 CRITICAL인 대상입니다. 관리자/Owner 권한, API 토큰, 넓은 접근 범위, 퇴사자 활성 계정 같은 요소가 높게 반영된 경우입니다."
+          />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <DecisionMetric
+            label="자동 감지"
+            value={metrics.automatic}
+            tone="success"
+            help="직원 퇴사 처리, SaaS 비활성 계정, 누락 계정, 퇴사자 활성 계정 감지처럼 시스템 이벤트로 자동 분석된 대상 수입니다."
+          />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <DecisionMetric
+            label="관리자 검토"
+            value={metrics.review}
+            tone="warning"
+            help="위험도가 LOW 또는 MEDIUM인 대상입니다. 즉시 회수보다는 관리자가 분석 근거와 회수 계획을 확인한 뒤 판단할 대상입니다."
+          />
+        </Grid>
       </Grid>
 
       <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
@@ -175,11 +218,13 @@ function RiskDecisionList() {
           </Stack>
 
           <TableContainer>
-            <Table sx={{ minWidth: 1080 }}>
+            <Table sx={{ minWidth: 1260 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
                   <TableCell width={70}>No.</TableCell>
-                  <TableCell>대상</TableCell>
+                  <TableCell>이름</TableCell>
+                  <TableCell>이메일</TableCell>
+                  <TableCell>부서</TableCell>
                   <TableCell>위험도</TableCell>
                   <TableCell>감지 근거</TableCell>
                   <TableCell>AI 판단</TableCell>
@@ -190,7 +235,7 @@ function RiskDecisionList() {
               <TableBody>
                 {results.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 6, color: '#64748b' }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 6, color: '#64748b' }}>
                       현재 AI 분석 후 조치가 필요한 권한 회수 대상이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -202,9 +247,9 @@ function RiskDecisionList() {
                     </TableCell>
                     <TableCell>
                       <Typography fontWeight={700}>{item.employee.name}</Typography>
-                      <Typography variant="caption" color="#64748b">{item.employee.email}</Typography>
-                      <Typography variant="caption" color="#94a3b8" display="block">{item.employee.department || '-'}</Typography>
                     </TableCell>
+                    <TableCell><Typography variant="body2" color="#64748b">{item.employee.email}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" color="#64748b">{item.employee.department || '-'}</Typography></TableCell>
                     <TableCell>
                       <Stack spacing={0.75} alignItems="flex-start">
                         <RiskBadge level={item.riskLevel} score={item.riskScore} />
