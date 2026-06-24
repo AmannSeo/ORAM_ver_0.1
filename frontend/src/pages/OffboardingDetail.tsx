@@ -43,6 +43,8 @@ import {
 } from '@mui/icons-material';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
+import { formatDateTime } from '../utils/format';
+import { analysisTriggerLabel } from '../utils/riskLabels';
 import type { OffboardingDetail, RevokePlanItem, RevokePlanResponse, SaasType } from '../types';
 
 const SAAS_LABEL: Record<SaasType, string> = {
@@ -65,29 +67,6 @@ const LEVEL_ACTION: Record<string, string> = {
   HIGH: '24시간 내 회수 승인',
   CRITICAL: '즉시 회수 승인',
 };
-
-function formatDateTime(value?: string) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function triggerLabel(trigger?: string) {
-  if (!trigger) return '-';
-  if (trigger.includes('SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE')) return '퇴사 상태 직원의 활성 SaaS 계정이 감지되었습니다.';
-  if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 동기화에서 비활성 계정이 감지되었습니다.';
-  if (trigger.includes('SYNC_MISSING_ACCOUNT')) return '이전 동기화에 있던 SaaS 계정이 최신 동기화에서 사라졌습니다.';
-  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 후 자동으로 잔여 접근 권한 분석이 실행되었습니다.';
-  if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자가 기존 권한 회수 대상을 재분석했습니다.';
-  return trigger;
-}
 
 function planReasonKo(item: RevokePlanItem) {
   if (item.status === 'FAILED') {
@@ -401,7 +380,7 @@ export default function OffboardingDetailPage() {
                     </Box>
                   </Box>
                   <InfoRow label="권장 판단" value={LEVEL_ACTION[detail.riskLevel || ''] || '관리자 검토'} />
-                  <InfoRow label="감지 근거" value={triggerLabel(detail.analysisTrigger)} />
+                  <InfoRow label="감지 근거" value={analysisTriggerLabel(detail.analysisTrigger, true)} />
                   <InfoRow label="분석 방식" value={automatic ? '자동 분석' : '수동 재분석'} />
                   <InfoRow label="분석 엔진" value={detail.analysisEngine || 'ORAM Risk Fusion'} />
                   <InfoRow label="분석 시각" value={formatDateTime(detail.startedAt)} />

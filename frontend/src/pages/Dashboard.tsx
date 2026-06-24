@@ -30,7 +30,10 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { dashboardApi, offboardingApi } from '../api';
+import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
+import { formatDateTime } from '../utils/format';
+import { analysisSourceLabel, saasAlertDescription, saasAlertReasonLabel } from '../utils/riskLabels';
 import type { DashboardStats, OffboardingSummary, SaasSyncAlert } from '../types';
 
 type Severity = 'error' | 'warning' | 'info' | 'success';
@@ -41,46 +44,6 @@ const TONE: Record<Severity, { color: string; bg: string; border: string }> = {
   info: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
   success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
 };
-
-function formatDateTime(value?: string | Date) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function analysisSourceLabel(source?: string) {
-  if (source === 'AUTOMATIC') return '자동 분석';
-  if (source === 'MANUAL') return '수동 재분석';
-  return source || '-';
-}
-
-function saasAlertReasonLabel(reason: string) {
-  if (reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE') return '퇴사자 활성 계정';
-  if (reason === 'MISSING_FROM_LATEST_SYNC') return '최근 동기화에서 누락';
-  if (reason === 'INACTIVE_FROM_LATEST_SYNC') return '비활성 계정 감지';
-  return '계정 상태 확인';
-}
-
-function saasAlertDescription(alert: SaasSyncAlert) {
-  const account = alert.employeeName || alert.displayName || alert.externalUsername || alert.externalEmail || '매핑되지 않은 계정';
-  if (alert.reason === 'RESIGNED_ACCOUNT_STILL_ACTIVE') {
-    return `${account} 계정이 퇴사 상태인데도 최근 ${alert.saasType} 동기화에서 활성 계정으로 확인되었습니다. 즉시 권한 회수 또는 수동 제거가 필요합니다.`;
-  }
-  if (alert.reason === 'INACTIVE_FROM_LATEST_SYNC') {
-    return `${account} 계정이 최근 ${alert.saasType} 동기화에서 비활성 상태로 확인되었습니다.`;
-  }
-  if (alert.reason === 'MISSING_FROM_LATEST_SYNC') {
-    return `${account} 계정이 이전 동기화에는 있었지만 최근 ${alert.saasType} 결과에서 누락되었습니다.`;
-  }
-  return alert.detail || `${account} 계정 상태 확인이 필요합니다.`;
-}
 
 function escapeCsv(value: unknown) {
   const text = value === null || value === undefined ? '' : String(value);
@@ -360,13 +323,10 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
-      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={3}>
-        <Box>
-          <Typography variant="h4" fontWeight={700} color="#0f172a">대시보드</Typography>
-          <Typography variant="body2" color="#64748b" mt={0.75}>
-            퇴사/비활성 계정 감지와 권한 회수 진행 상황을 확인합니다.
-          </Typography>
-        </Box>
+      <PageHeader
+        title="대시보드"
+        description="퇴사/비활성 계정 감지와 권한 회수 진행 상황을 확인합니다."
+        actions={
         <Button
           variant="contained"
           startIcon={<ReportIcon />}
@@ -375,7 +335,8 @@ export default function Dashboard() {
         >
           점검 보고서 다운로드
         </Button>
-      </Stack>
+        }
+      />
 
       {offboardingTargets.length > 0 && (
         <Alert

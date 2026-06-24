@@ -32,55 +32,18 @@ import {
   Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { offboardingApi } from '../api';
+import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
-import type { OffboardingSummary, RiskLevel } from '../types';
-
-const RISK_ORDER: Record<RiskLevel, number> = {
-  CRITICAL: 0,
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: '대기',
-  IN_PROGRESS: '진행 중',
-  COMPLETED: '분석 완료',
-  FAILED: '실패',
-};
-
-const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success' | 'error' | 'default'> = {
-  PENDING: 'warning',
-  IN_PROGRESS: 'info',
-  COMPLETED: 'success',
-  FAILED: 'error',
-};
-
-function triggerLabel(trigger?: string) {
-  if (!trigger) return '-';
-  if (trigger.includes('SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE')) return '퇴사자 활성 SaaS 계정 감지';
-  if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 비활성 계정 감지';
-  if (trigger.includes('SYNC_MISSING_ACCOUNT')) return 'SaaS 계정 누락 감지';
-  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 기반 자동 분석';
-  if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자 재분석';
-  return trigger;
-}
-
-function actionGuide(result: OffboardingSummary) {
-  if (result.revokedAll) return '조치 완료';
-  if (result.riskLevel === 'CRITICAL') return '즉시 권한 회수';
-  if (result.riskLevel === 'HIGH') return '24시간 내 회수';
-  if (result.riskLevel === 'MEDIUM') return '검토 후 회수';
-  return '표준 회수 절차';
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
+import { formatDateTime } from '../utils/format';
+import {
+  analysisSourceLabel,
+  analysisTriggerLabel,
+  offboardingActionGuide,
+  OFFBOARDING_STATUS_COLOR,
+  OFFBOARDING_STATUS_LABEL,
+  RISK_ORDER,
+} from '../utils/riskLabels';
+import type { OffboardingSummary } from '../types';
 
 export default function Offboarding() {
   const navigate = useNavigate();
@@ -153,14 +116,10 @@ export default function Offboarding() {
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
-      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', lg: 'center' }} gap={2} mb={2.5}>
-        <Box>
-          <Typography variant="h4" fontWeight={700}>권한 회수 대상</Typography>
-          <Typography variant="body2" color="#64748b" mt={0.75}>
-            분석된 잔여 접근 권한을 승인, 회수, 오탐 처리하고 처리 결과를 기록합니다.
-          </Typography>
-        </Box>
-      </Stack>
+      <PageHeader
+        title="권한 회수 대상"
+        description="분석된 잔여 접근 권한을 승인, 회수, 오탐 처리하고 처리 결과를 기록합니다."
+      />
 
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -217,13 +176,13 @@ export default function Offboarding() {
                   <TableCell>
                     <Chip
                       icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                      label={automatic ? '자동 분석' : '수동 재분석'}
+                      label={analysisSourceLabel(result.analysisSource)}
                       size="small"
                       variant="outlined"
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" noWrap>{triggerLabel(result.analysisTrigger)}</Typography>
+                    <Typography variant="body2" noWrap>{analysisTriggerLabel(result.analysisTrigger)}</Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -235,13 +194,13 @@ export default function Offboarding() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={STATUS_LABEL[result.status] ?? result.status}
-                      color={STATUS_COLOR[result.status] ?? 'default'}
+                      label={OFFBOARDING_STATUS_LABEL[result.status] ?? result.status}
+                      color={OFFBOARDING_STATUS_COLOR[result.status] ?? 'default'}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={600} noWrap>{actionGuide(result)}</Typography>
+                    <Typography variant="body2" fontWeight={600} noWrap>{offboardingActionGuide(result)}</Typography>
                   </TableCell>
                   <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.startedAt)}</Typography></TableCell>
                   <TableCell align="center">

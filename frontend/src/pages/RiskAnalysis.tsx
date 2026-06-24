@@ -36,9 +36,12 @@ import {
   Warning as WarnIcon,
 } from '@mui/icons-material';
 import { offboardingApi, riskApi } from '../api';
+import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
 import RiskCriteriaHelp from '../components/common/RiskCriteriaHelp';
-import type { OffboardingSummary, RiskLevel, RiskScoreResponse } from '../types';
+import { formatDateTime } from '../utils/format';
+import { analysisSourceLabel, analysisTriggerLabel, RISK_ACTION_LABEL } from '../utils/riskLabels';
+import type { OffboardingSummary, RiskScoreResponse } from '../types';
 
 const SAMPLE_SCENARIOS = [
   { label: 'GitHub Owner + Slack 관리자 + PAT', config: { isAdmin: true, isOwner: true, hasApiToken: true, recentLogin: true, repoCount: 42, workspaceCount: 1 } },
@@ -55,43 +58,12 @@ const FEATURE_HELP: Record<string, string> = {
   workspaceCount: '접근 가능한 워크스페이스 수입니다. 여러 SaaS/워크스페이스에 걸쳐 있으면 위험도가 올라갑니다.',
 };
 
-const LEVEL_ACTION: Record<RiskLevel, string> = {
-  LOW: '표준 회수 절차',
-  MEDIUM: '관리자 검토 후 회수',
-  HIGH: '24시간 내 회수 승인',
-  CRITICAL: '즉시 회수 승인',
-};
-
 const getScoreColor = (score = 0) => {
   if (score >= 75) return '#dc2626';
   if (score >= 50) return '#ea580c';
   if (score >= 25) return '#2563eb';
   return '#15803d';
 };
-
-function triggerLabel(trigger?: string) {
-  if (!trigger) return '-';
-  if (trigger.includes('SYNC_RESIGNED_ACCOUNT_STILL_ACTIVE')) return '퇴사자 활성 SaaS 계정 감지';
-  if (trigger.includes('SYNC_INACTIVE_ACCOUNT')) return 'SaaS 동기화에서 비활성 계정 감지';
-  if (trigger.includes('SYNC_MISSING_ACCOUNT')) return '이전 동기화 대비 SaaS 계정 누락 감지';
-  if (trigger === 'MANUAL_TRIGGER') return '퇴사 처리 후 자동 분석';
-  if (trigger === 'MANUAL_ANALYSIS_REQUEST') return '관리자 재분석';
-  return trigger;
-}
-
-function sourceLabel(source?: string) {
-  if (source === 'AUTOMATIC') return '자동 분석';
-  if (source === 'MANUAL') return '수동 재분석';
-  return source || '-';
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 function DecisionMetric({
   label,
@@ -250,12 +222,12 @@ function RiskDecisionList() {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" noWrap>{triggerLabel(item.analysisTrigger)}</Typography>
+                      <Typography variant="body2" noWrap>{analysisTriggerLabel(item.analysisTrigger)}</Typography>
                     </TableCell>
                     <TableCell align="center">
                       <Chip
                         icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
-                        label={sourceLabel(item.analysisSource)}
+                        label={analysisSourceLabel(item.analysisSource)}
                         size="small"
                         variant="outlined"
                       />
@@ -263,7 +235,7 @@ function RiskDecisionList() {
                     <TableCell>
                       <Typography variant="body2" fontWeight={700}>
                         <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.riskLevel ? LEVEL_ACTION[item.riskLevel] : '관리자 검토'}
+                          {item.riskLevel ? RISK_ACTION_LABEL[item.riskLevel] : '관리자 검토'}
                         </Box>
                       </Typography>
                     </TableCell>
@@ -405,7 +377,7 @@ function RiskSimulator() {
                   <Stack alignItems="center" spacing={1}>
                     <Typography variant="h2" fontWeight={800} color={getScoreColor(result.score)}>{result.score}</Typography>
                     <RiskBadge level={result.level} />
-                    <Typography variant="body2" color="#64748b">권장 판단: {LEVEL_ACTION[result.level]}</Typography>
+                    <Typography variant="body2" color="#64748b">권장 판단: {RISK_ACTION_LABEL[result.level]}</Typography>
                   </Stack>
 
                   {([
@@ -469,15 +441,11 @@ export default function RiskAnalysis() {
 
   return (
     <Box sx={{ width: '100%', pb: 4 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} gap={1.5} mb={2.5}>
-        <Box>
-          <Typography variant="h4" fontWeight={700}>AI 리스크 분석</Typography>
-          <Typography variant="body2" color="#64748b" mt={0.75}>
-            SaaS에서 감지된 잔여 접근 권한을 점수화하고, 관리자가 승인해야 할 회수 판단을 정리합니다.
-          </Typography>
-        </Box>
-        <Chip icon={<WarnIcon />} label={`긴급 검토 ${urgentCount}건`} color={urgentCount > 0 ? 'error' : 'default'} variant="outlined" />
-      </Stack>
+      <PageHeader
+        title="AI 리스크 분석"
+        description="SaaS에서 감지된 잔여 접근 권한을 점수화하고, 관리자가 승인해야 할 회수 판단을 정리합니다."
+        actions={<Chip icon={<WarnIcon />} label={`긴급 검토 ${urgentCount}건`} color={urgentCount > 0 ? 'error' : 'default'} variant="outlined" />}
+      />
 
       <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 2.5, borderBottom: '1px solid #e2e8f0' }}>
         <Tab
