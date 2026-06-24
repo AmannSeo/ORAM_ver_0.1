@@ -673,14 +673,13 @@ function EmployeeTable(props: {
             <HeaderCell width="12%">부서</HeaderCell>
             <HeaderCell width="12%">연동 SaaS</HeaderCell>
             <HeaderCell width="8%" align="center">상태</HeaderCell>
-            <HeaderCell width="11%" align="center">계정 상태</HeaderCell>
-            <HeaderCell width="18%" align="center">조치</HeaderCell>
+            <HeaderCell width="29%" align="center">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={7} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
@@ -719,11 +718,10 @@ function EmployeeTable(props: {
                 </Button>
               </TableCell>
               <TableCell>
-                <Typography fontWeight={800} noWrap>{employee.department || '부서 미수집'}</Typography>
+                <Typography fontWeight={800} noWrap>-</Typography>
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
               <TableCell align="center"><StatusChip status={employee.status} /></TableCell>
-              <TableCell align="center"><AccountState employee={employee} /></TableCell>
               <TableCell align="center">
                 <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="nowrap">
                   <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>
@@ -796,24 +794,6 @@ function SaaSBadges({ employee }: { employee: Employee }) {
         );
       })}
     </Stack>
-  );
-}
-
-function AccountState({ employee }: { employee: Employee }) {
-  const count = employee.connectedSaas?.length ?? 0;
-  if (employee.status === 'RESIGNED') {
-    return (
-      <Box>
-        <Typography variant="body2" fontWeight={900} color="error.main" noWrap>접근 차단 필요</Typography>
-        <Typography variant="caption" color="#94a3b8" noWrap>{count}개 계정 활성</Typography>
-      </Box>
-    );
-  }
-  return (
-    <Box>
-      <Typography variant="body2" fontWeight={900} color="#0f172a" noWrap>정상</Typography>
-      <Typography variant="caption" color="#94a3b8" noWrap>{count}개 계정 연동</Typography>
-    </Box>
   );
 }
 

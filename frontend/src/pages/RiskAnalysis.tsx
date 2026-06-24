@@ -247,7 +247,7 @@ function RiskDecisionList() {
                       <Typography fontWeight={700} noWrap>{item.employee.name}</Typography>
                     </TableCell>
                     <TableCell><Typography variant="body2" color="#64748b" noWrap>{item.employee.email}</Typography></TableCell>
-                    <TableCell><Typography variant="body2" color="#64748b" noWrap>{item.employee.department || '-'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" color="#64748b" noWrap>-</Typography></TableCell>
                     <TableCell>
                       <Stack spacing={0.75} alignItems="flex-start">
                         <RiskBadge level={item.riskLevel} score={item.riskScore} />
@@ -268,9 +268,6 @@ function RiskDecisionList() {
                         <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {item.riskLevel ? LEVEL_ACTION[item.riskLevel] : '관리자 검토'}
                         </Box>
-                      </Typography>
-                      <Typography variant="caption" color="#64748b">
-                        {item.riskScore ?? 0}점 기준
                       </Typography>
                     </TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
