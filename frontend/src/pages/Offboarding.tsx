@@ -30,7 +30,6 @@ import {
   AutoAwesome as AutoIcon,
   Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
-  DeleteSweep as RevokeIcon,
   PersonSearch as ManualIcon,
   Visibility as ViewIcon,
   Warning as WarningIcon,
@@ -82,13 +81,8 @@ function formatDateTime(value?: string) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function QueueMetric({
@@ -227,22 +221,29 @@ export default function Offboarding() {
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <TableContainer component={Card} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
-        <Table sx={{ minWidth: 1660, '& th, & td': { whiteSpace: 'nowrap' } }}>
+      <TableContainer component={Card} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'hidden' }}>
+        <Table
+          sx={{
+            width: '100%',
+            tableLayout: 'fixed',
+            '& th, & td': { whiteSpace: 'nowrap', px: 1.1 },
+            '& td': { overflow: 'hidden', textOverflow: 'ellipsis' },
+          }}
+        >
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell width={72}>No.</TableCell>
-              <TableCell>이름</TableCell>
-              <TableCell>이메일</TableCell>
-              <TableCell>부서</TableCell>
-              <TableCell>위험도</TableCell>
-              <TableCell>분석 방식</TableCell>
-              <TableCell>감지 근거</TableCell>
-              <TableCell>회수 여부</TableCell>
-              <TableCell>처리 상태</TableCell>
-              <TableCell>권장 조치</TableCell>
-              <TableCell>생성 시각</TableCell>
-              <TableCell align="right">처리</TableCell>
+              <TableCell width="4%">No.</TableCell>
+              <TableCell width="7%">이름</TableCell>
+              <TableCell width="14%">이메일</TableCell>
+              <TableCell width="5%">부서</TableCell>
+              <TableCell width="8%">위험도</TableCell>
+              <TableCell width="8%">분석 방식</TableCell>
+              <TableCell width="13%">감지 근거</TableCell>
+              <TableCell width="7%">회수 여부</TableCell>
+              <TableCell width="7%">처리 상태</TableCell>
+              <TableCell width="8%">권장 조치</TableCell>
+              <TableCell width="10%">생성 시각</TableCell>
+              <TableCell width="9%" align="right">처리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -262,10 +263,10 @@ export default function Offboarding() {
                     <Typography variant="body2" fontWeight={700} color="#64748b">#{index + 1}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography fontWeight={700}>{result.employee.name}</Typography>
+                    <Typography fontWeight={700} noWrap>{result.employee.name}</Typography>
                   </TableCell>
-                  <TableCell><Typography variant="body2" color="#64748b">{result.employee.email}</Typography></TableCell>
-                  <TableCell><Typography variant="body2" color="#64748b">{result.employee.department || '-'}</Typography></TableCell>
+                  <TableCell><Typography variant="body2" color="#64748b" noWrap>{result.employee.email}</Typography></TableCell>
+                  <TableCell><Typography variant="body2" color="#64748b" noWrap>-</Typography></TableCell>
                   <TableCell>
                     <RiskBadge level={result.riskLevel} score={result.riskScore} />
                   </TableCell>
@@ -278,7 +279,7 @@ export default function Offboarding() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{triggerLabel(result.analysisTrigger)}</Typography>
+                    <Typography variant="body2" noWrap>{triggerLabel(result.analysisTrigger)}</Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -296,9 +297,9 @@ export default function Offboarding() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={600}>{actionGuide(result)}</Typography>
+                    <Typography variant="body2" fontWeight={600} noWrap>{actionGuide(result)}</Typography>
                   </TableCell>
-                  <TableCell>{formatDateTime(result.startedAt)}</TableCell>
+                  <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.startedAt)}</Typography></TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="nowrap">
                       <Tooltip title={result.revokedAll ? '이미 권한 회수가 완료되었습니다.' : '연결된 SaaS 권한 회수를 실행합니다.'}>
@@ -307,12 +308,11 @@ export default function Offboarding() {
                             size="small"
                             variant="contained"
                             color="error"
-                            startIcon={revoking ? <CircularProgress size={14} color="inherit" /> : <RevokeIcon />}
                             disabled={result.revokedAll || result.falsePositive || revoking}
                             onClick={() => handleRevoke(result)}
-                            sx={{ whiteSpace: 'nowrap' }}
+                            sx={{ minWidth: 42, px: 0.8, whiteSpace: 'nowrap' }}
                           >
-                            회수
+                            {revoking ? <CircularProgress size={14} color="inherit" /> : '회수'}
                           </Button>
                         </span>
                       </Tooltip>
@@ -322,13 +322,12 @@ export default function Offboarding() {
                             size="small"
                             variant="outlined"
                             color="inherit"
-                            startIcon={<FalsePositiveIcon />}
                             disabled={result.revokedAll || result.falsePositive || revoking}
                             onClick={() => {
                               setFalsePositiveTarget(result);
                               setFalsePositiveReason('');
                             }}
-                            sx={{ whiteSpace: 'nowrap' }}
+                            sx={{ minWidth: 42, px: 0.8, whiteSpace: 'nowrap' }}
                           >
                             오탐
                           </Button>
