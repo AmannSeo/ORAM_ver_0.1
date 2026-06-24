@@ -281,67 +281,10 @@ export default function SaasConnections() {
 
   const info = connectDialog ? SAAS_INFO[connectDialog] : null;
   const visibleConnections = connections.length > 0 ? connections : DEFAULT_CONNECTIONS;
-  const connectedConnections = visibleConnections.filter((conn) => conn.isConnected);
-  const connectedCount = connectedConnections.length;
-  const identityCount = connectedConnections.reduce((sum, conn) => sum + (conn.identityCount ?? 0), 0);
-  const openAlertCount = connectedConnections.reduce((sum, conn) => sum + (conn.openAlertCount ?? 0), 0);
-  const syncedDates = connectedConnections
-    .map((conn) => conn.lastSyncedAt)
-    .filter(Boolean)
-    .sort();
-  const lastSyncedAt = syncedDates.length > 0 ? syncedDates[syncedDates.length - 1] : undefined;
 
   return (
     <Box>
       <Typography variant="h4" fontWeight="bold" gutterBottom>SaaS 연결 관리</Typography>
-
-      <Grid container spacing={1.5} mb={2.5}>
-        <Grid item xs={6} md={3}>
-          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
-            <Typography variant="caption" color="#64748b">연결 SaaS</Typography>
-            <Typography variant="h5" fontWeight={700}>{connectedCount}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
-            <Typography variant="caption" color="#64748b">수집 계정</Typography>
-            <Typography variant="h5" fontWeight={700}>{identityCount}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 1.75,
-              borderRadius: 2.5,
-              bgcolor: openAlertCount > 0 ? '#fffbeb' : '#ecfdf5',
-              borderColor: openAlertCount > 0 ? '#fde68a' : '#a7f3d0',
-            }}
-          >
-            <Typography variant="caption" color="#64748b">미처리 접근 감지</Typography>
-            <Typography variant="h5" fontWeight={700} color={openAlertCount > 0 ? '#b45309' : '#047857'}>
-              {openAlertCount}
-            </Typography>
-            <Typography variant="caption" color="#64748b" display="block" mt={0.25}>
-              회수 대상 검토가 필요한 SaaS 계정
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2.5 }}>
-            <Typography variant="caption" color="#64748b">최근 동기화</Typography>
-            <Typography variant="body2" fontWeight={700} mt={0.75}>{formatDateTime(lastSyncedAt)}</Typography>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#f8fafc', borderColor: '#e2e8f0', borderRadius: 2.5 }}>
-        <Typography variant="subtitle2" fontWeight={700}>관리자 감지 기준</Typography>
-        <Typography variant="body2" color="#475569" mt={0.25}>
-          SaaS 동기화는 단순 계정 수집이 아니라 이전 동기화 대비 비활성/누락 계정을 감지해 권한 회수 대상과 대시보드 알림으로 연결합니다.
-          같은 이메일은 직원으로 통합하고, SaaS별 원본 계정은 각 카드의 <strong>수집 계정</strong>에서 확인합니다.
-        </Typography>
-      </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
@@ -355,9 +298,9 @@ export default function SaasConnections() {
                 borderLeft: conn.isConnected ? `4px solid #2e7d32` : `4px solid #bdbdbd` }}>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box display="flex" alignItems="center" gap={2} mb={1.5}>
-                    <Typography fontSize={40}>{meta.emoji}</Typography>
+                    <Typography fontSize={42}>{meta.emoji}</Typography>
                     <Box>
-                      <Typography variant="h6" fontWeight="bold">{meta.label}</Typography>
+                      <Typography variant="h6" fontWeight={700} sx={{ fontSize: 21 }}>{meta.label}</Typography>
                       <Chip
                         icon={conn.isConnected ? <ConnectedIcon /> : <NotConnectedIcon />}
                         label={conn.isConnected ? '연결됨' : '미연결'}
@@ -375,12 +318,12 @@ export default function SaasConnections() {
                     </Box>
                   </Box>
 
-                  <Typography variant="caption" color="text.secondary" fontWeight="bold">탐지 항목</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: 13 }}>탐지 항목</Typography>
                   {meta.detectItems.map(d => (
-                    <Typography key={d} variant="caption" display="block" color="text.secondary">• {d}</Typography>
+                    <Typography key={d} variant="caption" display="block" color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.65 }}>• {d}</Typography>
                   ))}
-                  <Typography variant="caption" color="text.secondary" fontWeight="bold" display="block" mt={1}>권한 해제</Typography>
-                  <Typography variant="caption" color={meta.revokeNote.startsWith('⚠️') ? 'warning.main' : 'text.secondary'}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mt={1} sx={{ fontSize: 13 }}>권한 해제</Typography>
+                  <Typography variant="caption" color={meta.revokeNote.startsWith('⚠️') ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 13, lineHeight: 1.65 }}>
                     {meta.revokeNote}
                   </Typography>
 
@@ -395,7 +338,7 @@ export default function SaasConnections() {
                         size="small"
                         variant="text"
                         endIcon={<OpenIcon fontSize="small" />}
-                        sx={{ px: 0.5, minWidth: 'auto' }}
+                        sx={{ px: 0.5, minWidth: 'auto', fontSize: 13 }}
                       >
                         {link.label}
                       </Button>
@@ -403,35 +346,35 @@ export default function SaasConnections() {
                   </Stack>
 
                   {conn.isConnected && (
-                    <Box mt={1.5} p={1} bgcolor="success.50" borderRadius={1}>
-                      <Typography variant="body2" color="success.dark">
+                    <Box mt={1.5} p={1.25} bgcolor="success.50" borderRadius={1}>
+                      <Typography variant="body2" color="success.dark" sx={{ fontSize: 14 }}>
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
                       {conn.saasType === 'GITHUB' && (
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
                           계정 범위: {accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
                         </Typography>
                       )}
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
                         수집 계정: {conn.identityCount ?? 0}명
                       </Typography>
                       <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
                         <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
                           마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
                         <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
-                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'}>
+                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5 }}>
                           미처리 감지: {conn.openAlertCount ?? 0}건
                         </Typography>
                       </Stack>
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5, lineHeight: 1.6 }}>
                         퇴사자 활성 계정, 비활성 계정, 이전 동기화 대비 누락 계정을 권한 회수 검토 대상으로 표시합니다.
                       </Typography>
                       {conn.connectedAt && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
                           연결일: {new Date(conn.connectedAt).toLocaleDateString('ko-KR')}
                         </Typography>
                       )}
