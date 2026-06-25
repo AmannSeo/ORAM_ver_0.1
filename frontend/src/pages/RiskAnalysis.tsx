@@ -187,21 +187,19 @@ function RiskDecisionList() {
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
                   <TableCell width="5%">No.</TableCell>
-                  <TableCell width="9%">이름</TableCell>
-                  <TableCell width="18%">이메일</TableCell>
+                  <TableCell width="10%">이름</TableCell>
+                  <TableCell width="17%">이메일</TableCell>
                   <TableCell width="8%">부서</TableCell>
-                  <TableCell width="10%">위험도</TableCell>
-                  <TableCell width="15%">감지 근거</TableCell>
-                  <TableCell width="10%" align="center">생성 경로</TableCell>
-                  <TableCell width="12%">AI 판단</TableCell>
+                  <TableCell width="11%">위험도</TableCell>
+                  <TableCell width="27%">판단 근거</TableCell>
                   <TableCell width="10%">분석 시각</TableCell>
-                  <TableCell width="10%" align="center">다음 단계</TableCell>
+                  <TableCell width="12%" align="center">다음 단계</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {results.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 6, color: '#64748b' }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#64748b' }}>
                       현재 AI 분석 후 조치가 필요한 권한 회수 대상이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -222,24 +220,24 @@ function RiskDecisionList() {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" noWrap>{analysisTriggerLabel(item.analysisTrigger)}</Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
-                        <Chip
-                          icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
-                          label={analysisSourceLabel(item.analysisSource)}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={700}>
-                        <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.riskLevel ? RISK_ACTION_LABEL[item.riskLevel] : '관리자 검토'}
-                        </Box>
-                      </Typography>
+                      <Stack spacing={0.5}>
+                        <Typography variant="body2" fontWeight={700} noWrap>
+                          {analysisTriggerLabel(item.analysisTrigger)}
+                        </Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="nowrap">
+                          <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
+                            <Chip
+                              icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
+                              label={analysisSourceLabel(item.analysisSource)}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Tooltip>
+                          <Typography variant="caption" color="#64748b" noWrap>
+                            · {item.riskLevel ? RISK_ACTION_LABEL[item.riskLevel] : '관리자 검토'}
+                          </Typography>
+                        </Stack>
+                      </Stack>
                     </TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
                     <TableCell align="center">
