@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -26,29 +26,19 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Cloud as CloudIcon,
   DeleteSweep as DeleteAllIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
 } from '@mui/icons-material';
-import { dashboardApi, employeeApi } from '../api';
+import { employeeApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
 import EmployeeFilterPanel from '../components/employees/EmployeeFilterPanel';
 import EmployeeLogPanel from '../components/employees/EmployeeLogPanel';
 import EmployeeTable from '../components/employees/EmployeeTable';
-import EmployeeVisualSummary from '../components/employees/EmployeeVisualSummary';
 import { SAAS_BADGE } from '../constants/saas';
-import type { DashboardStats, Employee, EmployeeStatus, SaasType } from '../types';
+import type { Employee, EmployeeStatus, SaasType } from '../types';
 import StatusChip from '../components/common/StatusChip';
 import { useAuthStore } from '../store/authStore';
-
-function getEmployeeSourceLabel(employee: Employee) {
-  if (employee.employeeId.startsWith('SLACK-')) return 'Slack 동기화';
-  if (employee.employeeId.startsWith('GITHUB-')) return 'GitHub 동기화';
-  if (employee.employeeId.startsWith('NOTION-')) return 'Notion 동기화';
-  if (employee.employeeId.startsWith('CSV-')) return 'CSV 자동 생성';
-  return '직접 등록/HR';
-}
 
 function isDisplayableDepartment(value?: string) {
   if (!value) return false;
@@ -79,7 +69,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
   const isResignedPage = pageMode === 'resigned';
   const [tab, setTab] = useState<'employees' | 'hr' | 'log'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -123,8 +112,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
   const [csvUploading, setCsvUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
-
   useEffect(() => {
     setFilterStatus(fixedStatus);
     setFilterDept('');
@@ -159,12 +146,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
   };
 
   useEffect(load, [page, filterStatus, filterDept, filterSaas]);
-
-  useEffect(() => {
-    dashboardApi.getStats()
-      .then(setDashboardStats)
-      .catch(() => setDashboardStats(null));
-  }, []);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -365,13 +346,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
 
       {tab === 'employees' && (
         <>
-          <EmployeeVisualSummary
-            stats={dashboardStats}
-            totalElements={totalElements}
-            currentPageLinkedCount={currentPageSaasLinkedCount}
-            currentPageCount={employees.length}
-          />
-
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
           {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>}
 

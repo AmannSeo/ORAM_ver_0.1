@@ -179,19 +179,19 @@ export default function EmployeeTable(props: {
           borderTop: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           gap: 1.5,
           flexWrap: 'wrap',
           bgcolor: '#ffffff',
         }}
       >
-        <Typography variant="body2" color="#64748b">
-          총 {props.totalElements.toLocaleString()}명 · Page {currentPage} of {totalPages}
-        </Typography>
-
         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-          <PageButton disabled={!canGoPrev} onClick={() => props.setPage(0)} icon={<FirstPageIcon fontSize="small" />} />
-          <PageButton disabled={!canGoPrev} onClick={() => props.setPage(props.page - 1)} icon={<PrevIcon fontSize="small" />} />
+          {totalPages > 1 && (
+            <>
+              <PageButton disabled={!canGoPrev} onClick={() => props.setPage(0)} icon={<FirstPageIcon fontSize="small" />} />
+              <PageButton disabled={!canGoPrev} onClick={() => props.setPage(props.page - 1)} icon={<PrevIcon fontSize="small" />} />
+            </>
+          )}
           {pageItems.map((item, index) => (
             item === 'ellipsis' ? (
               <Box key={`ellipsis-${index}`} sx={{ width: 28, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>...</Box>
@@ -205,8 +205,12 @@ export default function EmployeeTable(props: {
               </PageButton>
             )
           ))}
-          <PageButton disabled={!canGoNext} onClick={() => props.setPage(props.page + 1)} icon={<NextIcon fontSize="small" />} />
-          <PageButton disabled={!canGoNext} onClick={() => props.setPage(totalPages - 1)} icon={<LastPageIcon fontSize="small" />} />
+          {totalPages > 1 && (
+            <>
+              <PageButton disabled={!canGoNext} onClick={() => props.setPage(props.page + 1)} icon={<NextIcon fontSize="small" />} />
+              <PageButton disabled={!canGoNext} onClick={() => props.setPage(totalPages - 1)} icon={<LastPageIcon fontSize="small" />} />
+            </>
+          )}
         </Stack>
       </Box>
     </TableContainer>
