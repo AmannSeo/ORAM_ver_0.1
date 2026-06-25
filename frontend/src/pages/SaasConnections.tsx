@@ -32,6 +32,7 @@ export default function SaasConnections() {
 
   // 연결 다이얼로그
   const [connectDialog, setConnectDialog] = useState<SaasType | null>(null);
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [token, setToken] = useState('');
   const [accountScope, setAccountScope] = useState('ORGANIZATION');
   const [showToken, setShowToken] = useState(false);
@@ -53,6 +54,9 @@ export default function SaasConnections() {
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
+
+  const toggleDetails = (saasType: SaasType) =>
+    setExpandedDetails((prev) => ({ ...prev, [saasType]: !prev[saasType] }));
 
   const openConnect = (saasType: SaasType) => {
     setToken('');
@@ -226,37 +230,60 @@ export default function SaasConnections() {
 
                   {conn.isConnected && (
                     <Box mt={1.5} p={1.25} bgcolor="success.50" borderRadius={1}>
+                      {/* 핵심 정보: 항상 노출 */}
                       <Typography variant="body2" color="success.dark" sx={{ fontSize: 14 }}>
                         <strong>{conn.workspaceName}</strong>
                       </Typography>
-                      {conn.saasType === 'GITHUB' && (
-                        <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
-                          계정 범위: {accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
-                        </Typography>
-                      )}
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
                         수집 계정: {conn.identityCount ?? 0}명
                       </Typography>
-                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
-                        <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
-                          마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
+
+                      {/* 상세 토글 버튼 */}
+                      <Box display="flex" justifyContent="flex-end" mt={0.25}>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => toggleDetails(conn.saasType)}
+                          endIcon={expandedDetails[conn.saasType] ? <CollapseIcon fontSize="small" /> : <ExpandIcon fontSize="small" />}
+                          sx={{ px: 0.75, minWidth: 'auto', fontSize: 12.5 }}
+                          aria-expanded={Boolean(expandedDetails[conn.saasType])}
+                        >
+                          상세
+                        </Button>
+                      </Box>
+
+                      {/* 상세 정보: 클릭 시 확장 */}
+                      <Collapse in={Boolean(expandedDetails[conn.saasType])}>
+                        <Divider sx={{ my: 1 }} />
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: 12.5, mb: 0.5 }}>
+                          연결 정보
                         </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
-                        <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
-                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5 }}>
-                          미처리 감지: {conn.openAlertCount ?? 0}건
+                        {conn.saasType === 'GITHUB' && (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
+                            계정 범위: {accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
+                          </Typography>
+                        )}
+                        <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
+                          <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
+                            마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
+                          </Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
+                          <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
+                          <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5 }}>
+                            미처리 감지: {conn.openAlertCount ?? 0}건
+                          </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" display="block" mt={0.5} sx={{ fontSize: 12.5, lineHeight: 1.6 }}>
+                          퇴사자 활성 계정, 비활성 계정, 이전 동기화 대비 누락 계정을 권한 회수 검토 대상으로 표시합니다.
                         </Typography>
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5, lineHeight: 1.6 }}>
-                        퇴사자 활성 계정, 비활성 계정, 이전 동기화 대비 누락 계정을 권한 회수 검토 대상으로 표시합니다.
-                      </Typography>
-                      {conn.connectedAt && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
-                          연결일: {new Date(conn.connectedAt).toLocaleDateString('ko-KR')}
-                        </Typography>
-                      )}
+                        {conn.connectedAt && (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
+                            연결일: {new Date(conn.connectedAt).toLocaleDateString('ko-KR')}
+                          </Typography>
+                        )}
+                      </Collapse>
                     </Box>
                   )}
                 </CardContent>
