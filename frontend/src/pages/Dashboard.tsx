@@ -74,7 +74,7 @@ function downloadDashboardReport(stats: DashboardStats, alerts: SaasSyncAlert[],
   rows.push('');
 
   addCsvRow(rows, ['권한 회수 대상']);
-  addCsvRow(rows, ['No', '이름', '이메일', '부서', '위험도', '점수', '분석 방식', '회수 상태']);
+  addCsvRow(rows, ['No', '이름', '이메일', '부서', '위험도', '점수', '생성 경로', '회수 상태']);
   if (targets.length === 0) {
     addCsvRow(rows, ['-', '현재 권한 회수 대상이 없습니다.', '', '', '', '', '', '']);
   } else {

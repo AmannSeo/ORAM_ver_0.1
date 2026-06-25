@@ -140,7 +140,7 @@ export default function Offboarding() {
               <TableCell width="14%">이메일</TableCell>
               <TableCell width="5%">부서</TableCell>
               <TableCell width="8%">위험도</TableCell>
-              <TableCell width="8%">분석 방식</TableCell>
+              <TableCell width="8%">생성 경로</TableCell>
               <TableCell width="13%">감지 근거</TableCell>
               <TableCell width="7%">회수 여부</TableCell>
               <TableCell width="7%">처리 상태</TableCell>

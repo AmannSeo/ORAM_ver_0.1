@@ -381,7 +381,7 @@ export default function OffboardingDetailPage() {
                   </Box>
                   <InfoRow label="권장 판단" value={LEVEL_ACTION[detail.riskLevel || ''] || '관리자 검토'} />
                   <InfoRow label="감지 근거" value={analysisTriggerLabel(detail.analysisTrigger, true)} />
-                  <InfoRow label="분석 방식" value={automatic ? '자동 분석' : '수동 재분석'} />
+                  <InfoRow label="생성 경로" value={automatic ? '시스템 감지' : '관리자 실행'} />
                   <InfoRow label="분석 엔진" value={detail.analysisEngine || 'ORAM Risk Fusion'} />
                   <InfoRow label="분석 시각" value={formatDateTime(detail.startedAt)} />
                 </Stack>

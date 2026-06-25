@@ -40,7 +40,7 @@ import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
 import RiskCriteriaHelp from '../components/common/RiskCriteriaHelp';
 import { formatDateTime } from '../utils/format';
-import { analysisSourceLabel, analysisTriggerLabel, RISK_ACTION_LABEL } from '../utils/riskLabels';
+import { analysisSourceHelp, analysisSourceLabel, analysisTriggerLabel, RISK_ACTION_LABEL } from '../utils/riskLabels';
 import type { OffboardingSummary, RiskScoreResponse } from '../types';
 
 const SAMPLE_SCENARIOS = [
@@ -154,7 +154,7 @@ function RiskDecisionList() {
             label="자동 감지"
             value={metrics.automatic}
             tone="success"
-            help="직원 퇴사 처리, SaaS 비활성 계정, 누락 계정, 퇴사자 활성 계정 감지처럼 시스템 이벤트로 자동 분석된 대상 수입니다."
+            help="SaaS 동기화, 비활성 계정, 누락 계정, 퇴사자 활성 계정처럼 시스템 이벤트로 생성된 분석 대상 수입니다."
           />
         </Grid>
         <Grid item xs={6} md={3}>
@@ -179,7 +179,7 @@ function RiskDecisionList() {
                 점수, 감지 근거, 권장 판단을 기준으로 권한 회수 승인 여부를 결정합니다.
               </Typography>
             </Box>
-            <Chip icon={<AutoIcon />} label="자동 분석 결과 포함" color="primary" variant="outlined" />
+            <Chip icon={<AutoIcon />} label="시스템 감지 항목 포함" color="primary" variant="outlined" />
           </Stack>
 
           <TableContainer sx={{ overflowX: 'hidden' }}>
@@ -192,7 +192,7 @@ function RiskDecisionList() {
                   <TableCell width="8%">부서</TableCell>
                   <TableCell width="10%">위험도</TableCell>
                   <TableCell width="15%">감지 근거</TableCell>
-                  <TableCell width="10%" align="center">분석 방식</TableCell>
+                  <TableCell width="10%" align="center">생성 경로</TableCell>
                   <TableCell width="12%">AI 판단</TableCell>
                   <TableCell width="10%">분석 시각</TableCell>
                   <TableCell width="10%" align="center">다음 단계</TableCell>
@@ -225,12 +225,14 @@ function RiskDecisionList() {
                       <Typography variant="body2" noWrap>{analysisTriggerLabel(item.analysisTrigger)}</Typography>
                     </TableCell>
                     <TableCell align="center">
-                      <Chip
-                        icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
-                        label={analysisSourceLabel(item.analysisSource)}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
+                        <Chip
+                          icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
+                          label={analysisSourceLabel(item.analysisSource)}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Tooltip>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={700}>

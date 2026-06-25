@@ -197,7 +197,7 @@ export default function Employees() {
     try {
       const result = await employeeApi.resign(resignDialog.id);
       setResignDialog(null);
-      setSuccessMessage('퇴사 처리와 SaaS 권한 자동 분석이 완료되었습니다.');
+      setSuccessMessage('퇴사 처리와 SaaS 권한 점검이 완료되었습니다.');
       load();
       navigate(`/offboarding/${result.offboardingResultId}`);
     } catch {
@@ -545,7 +545,7 @@ function EmployeeDialogs(props: any) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setResignDialog(null)} disabled={Boolean(resigningEmployeeId)}>취소</Button>
-          <Button variant="contained" color="error" onClick={handleResign} disabled={Boolean(resigningEmployeeId)}>{resigningEmployeeId ? '자동 분석 중...' : '퇴사 처리'}</Button>
+          <Button variant="contained" color="error" onClick={handleResign} disabled={Boolean(resigningEmployeeId)}>{resigningEmployeeId ? '권한 점검 중...' : '퇴사 처리'}</Button>
         </DialogActions>
       </Dialog>
 
