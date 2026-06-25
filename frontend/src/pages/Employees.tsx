@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -60,14 +60,17 @@ function displayDepartment(department?: string) {
 }
 
 type EmployeesPageMode = 'active' | 'resigned';
+type EmployeesTab = 'employees' | 'hr' | 'log';
 
 export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { token, user } = useAuthStore();
   const pageMode: EmployeesPageMode = mode;
   const fixedStatus = pageMode === 'resigned' ? 'RESIGNED' : 'ACTIVE';
   const isResignedPage = pageMode === 'resigned';
-  const [tab, setTab] = useState<'employees' | 'hr' | 'log'>('employees');
+  const requestedTab = (location.state as { tab?: EmployeesTab } | null)?.tab;
+  const [tab, setTab] = useState<EmployeesTab>(requestedTab || 'employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,8 +119,8 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
     setFilterStatus(fixedStatus);
     setFilterDept('');
     setPage(0);
-    setTab('employees');
-  }, [fixedStatus]);
+    setTab(requestedTab || 'employees');
+  }, [fixedStatus, requestedTab]);
 
   const load = (overrides?: { page?: number }) => {
     const requestPage = overrides?.page ?? page;
@@ -336,8 +339,20 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
         >
           퇴직자 목록
         </Button>
-        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
-        <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
+        <Button
+          variant={!isResignedPage && tab === 'hr' ? 'contained' : 'outlined'}
+          onClick={() => { setTab('hr'); navigate('/employees', { state: { tab: 'hr' } }); }}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          HR 연동
+        </Button>
+        <Button
+          variant={!isResignedPage && tab === 'log' ? 'contained' : 'outlined'}
+          onClick={() => { setTab('log'); navigate('/employees', { state: { tab: 'log' } }); }}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          로그
+        </Button>
       </Stack>
 
       {tab === 'employees' && (
