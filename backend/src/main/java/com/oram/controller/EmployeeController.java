@@ -161,8 +161,10 @@ public class EmployeeController {
     }
 
     @PostMapping("/delete-all")
-    public ResponseEntity<Map<String, Object>> deleteAllEmployees(Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
+    public ResponseEntity<Map<String, Object>> deleteAllEmployees(
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = resolveAuthenticatedEmail(authentication, request);
         var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
 
         if (user == null || user.getRole() != UserRole.ADMIN) {

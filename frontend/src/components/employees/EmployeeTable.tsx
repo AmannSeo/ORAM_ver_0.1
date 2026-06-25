@@ -51,6 +51,16 @@ function renderSaasTooltip(account: EmployeeSaasAccount) {
   return `${meta.label} / ${account.displayName || account.externalUsername || account.externalEmail || '-'} / ${status}`;
 }
 
+function displayDepartment(department?: string) {
+  if (!department) return '-';
+  const normalized = department.trim();
+  if (!normalized || normalized === '-') return '-';
+
+  const upper = normalized.toUpperCase();
+  if (['SLACK', 'GITHUB', 'NOTION'].some((saas) => upper.includes(saas))) return '-';
+  return normalized;
+}
+
 export default function EmployeeTable(props: {
   employees: Employee[];
   page: number;
@@ -121,7 +131,7 @@ export default function EmployeeTable(props: {
                 </Button>
               </TableCell>
               <TableCell>
-                <Typography fontWeight={800} noWrap>-</Typography>
+                <Typography fontWeight={800} noWrap>{displayDepartment(employee.department)}</Typography>
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
               <TableCell align="center"><StatusChip status={employee.status} /></TableCell>
