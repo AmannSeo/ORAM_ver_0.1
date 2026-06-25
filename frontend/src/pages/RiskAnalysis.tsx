@@ -313,10 +313,10 @@ function RiskSimulator() {
 
               <Stack spacing={1.25}>
                 {([
-                  { key: 'isAdmin', label: '관리자 권한', weight: '25점' },
-                  { key: 'isOwner', label: 'Owner 권한', weight: '20점' },
-                  { key: 'hasApiToken', label: 'API 토큰/PAT 보유', weight: '20점' },
-                  { key: 'recentLogin', label: '최근 30일 로그인', weight: '15점' },
+                  { key: 'isAdmin', label: '관리자 권한', weight: '영향 매우 큼' },
+                  { key: 'isOwner', label: 'Owner 권한', weight: '영향 큼' },
+                  { key: 'hasApiToken', label: 'API 토큰/PAT 보유', weight: '영향 큼' },
+                  { key: 'recentLogin', label: '최근 30일 로그인', weight: '영향 보통' },
                 ] as const).map(({ key, label, weight }) => (
                   <Stack key={key} direction="row" alignItems="center" justifyContent="space-between" gap={1}>
                     <Stack direction="row" alignItems="center">
@@ -335,7 +335,7 @@ function RiskSimulator() {
                 <Box>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography variant="body2">저장소 수: <strong>{features.repoCount}</strong></Typography>
-                    <Chip label="최대 10점" size="small" variant="outlined" />
+                    <Chip label="영향 작음" size="small" variant="outlined" />
                   </Stack>
                   <Slider value={features.repoCount} onChange={(_, value) => setFeatures({ ...features, repoCount: value as number })} min={0} max={50} />
                 </Box>
@@ -343,7 +343,7 @@ function RiskSimulator() {
                 <Box>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography variant="body2">워크스페이스 수: <strong>{features.workspaceCount}</strong></Typography>
-                    <Chip label="최대 10점" size="small" variant="outlined" />
+                    <Chip label="영향 작음" size="small" variant="outlined" />
                   </Stack>
                   <Slider value={features.workspaceCount} onChange={(_, value) => setFeatures({ ...features, workspaceCount: value as number })} min={0} max={10} />
                 </Box>
@@ -380,32 +380,40 @@ function RiskSimulator() {
                     <Typography variant="h2" fontWeight={800} color={getScoreColor(result.score)}>{result.score}</Typography>
                     <RiskBadge level={result.level} />
                     <Typography variant="body2" color="#64748b">권장 판단: {RISK_ACTION_LABEL[result.level]}</Typography>
+                    {result.engine && (
+                      <Chip label={`엔진: ${result.engine}`} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                    )}
                   </Stack>
 
-                  {([
-                    ['관리자 권한', result.breakdown.adminWeight, 25],
-                    ['Owner 권한', result.breakdown.ownerWeight, 20],
-                    ['API 토큰', result.breakdown.apiTokenWeight, 20],
-                    ['최근 로그인', result.breakdown.recentLoginWeight, 15],
-                    ['저장소 수', result.breakdown.repoWeight, 10],
-                    ['워크스페이스 수', result.breakdown.workspaceWeight, 10],
-                  ] as [string, number, number][]).map(([label, value, max]) => (
-                    <Box key={label}>
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="caption" color="#64748b">{label}</Typography>
-                        <Typography variant="caption" fontWeight={700}>{value}/{max}점</Typography>
-                      </Stack>
-                      <LinearProgress
-                        variant="determinate"
-                        value={(value / max) * 100}
-                        sx={{ mt: 0.5, bgcolor: '#e5e7eb', '& .MuiLinearProgress-bar': { bgcolor: getScoreColor(result.score) } }}
-                      />
-                    </Box>
-                  ))}
+                  <Typography variant="subtitle2" fontWeight={700}>피처별 SHAP 기여도(점)</Typography>
+                  {(() => {
+                    const rows: [string, number][] = [
+                      ['관리자 권한', result.breakdown.adminWeight],
+                      ['Owner 권한', result.breakdown.ownerWeight],
+                      ['API 토큰/PAT', result.breakdown.apiTokenWeight],
+                      ['최근 로그인', result.breakdown.recentLoginWeight],
+                      ['저장소 접근 범위', result.breakdown.repoWeight],
+                      ['워크스페이스 접근 범위', result.breakdown.workspaceWeight],
+                    ];
+                    const maxVal = Math.max(1, ...rows.map((r) => r[1]));
+                    return rows.map(([label, value]) => (
+                      <Box key={label}>
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="caption" color="#64748b">{label}</Typography>
+                          <Typography variant="caption" fontWeight={700}>+{value}점</Typography>
+                        </Stack>
+                        <LinearProgress
+                          variant="determinate"
+                          value={Math.min(100, (value / maxVal) * 100)}
+                          sx={{ mt: 0.5, bgcolor: '#e5e7eb', '& .MuiLinearProgress-bar': { bgcolor: getScoreColor(result.score) } }}
+                        />
+                      </Box>
+                    ));
+                  })()}
 
                   {result.explanations && result.explanations.length > 0 && (
                     <Box>
-                      <Typography variant="subtitle2" fontWeight={700} mb={1}>상위 판단 근거</Typography>
+                      <Typography variant="subtitle2" fontWeight={700} mb={1}>상위 판단 근거 (TreeSHAP)</Typography>
                       <Stack spacing={1}>
                         {result.explanations.filter((item) => item.contribution > 0).slice(0, 4).map((item) => (
                           <Paper key={item.feature} variant="outlined" sx={{ p: 1.25, borderRadius: 2 }}>

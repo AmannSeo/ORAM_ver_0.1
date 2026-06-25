@@ -13,3 +13,9 @@ backend/target/
 .env.*
 
 *.log
+
+# Python (ai-service)
+.venv/
+ai-service/.venv/
+__pycache__/
+*.pyc
