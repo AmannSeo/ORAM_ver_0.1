@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
   Chip,
+  InputAdornment,
   LinearProgress,
   Paper,
   Stack,
@@ -13,13 +14,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
 import {
+  Download as DownloadIcon,
   FirstPage as FirstPageIcon,
   KeyboardArrowLeft as PrevIcon,
   KeyboardArrowRight as NextIcon,
   LastPage as LastPageIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { employeeApi } from '../../api';
 import { formatDateTime } from '../../utils/format';
@@ -78,6 +82,7 @@ export default function EmployeeLogPanel() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
@@ -85,6 +90,20 @@ export default function EmployeeLogPanel() {
   const pageItems = getPageItems(currentPage, totalPages);
   const canGoPrev = page > 0;
   const canGoNext = currentPage < totalPages;
+  const filteredLogs = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return logs;
+    return logs.filter((log) => [
+      formatDateTime(log.createdAt),
+      log.actorName,
+      log.actorEmail,
+      actionLabel(log.action).label,
+      targetDisplay(log),
+      log.targetType,
+      summarizeDetail(log),
+      log.detail,
+    ].filter(Boolean).some((value) => String(value).toLowerCase().includes(keyword)));
+  }, [logs, query]);
 
   useEffect(() => {
     setLoading(true);
@@ -103,32 +122,92 @@ export default function EmployeeLogPanel() {
       .finally(() => setLoading(false));
   }, [page]);
 
+  const downloadCsv = () => {
+    const rows = [
+      ['일시', '작업자', '작업자 이메일', '작업', '대상', '대상 유형', '요약'],
+      ...filteredLogs.map((log) => [
+        formatDateTime(log.createdAt),
+        log.actorName || '시스템',
+        log.actorEmail || '',
+        actionLabel(log.action).label,
+        targetDisplay(log),
+        log.targetType || '',
+        summarizeDetail(log),
+      ]),
+    ];
+    const csv = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `oram-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: 'white', overflow: 'hidden' }}>
+      <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'flex-start' }} gap={1.5}>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700} color="#0f172a">감사 로그</Typography>
+            <Typography variant="body2" color="#64748b" mt={0.25}>
+              권한 점검 생성, AI 자동 감지, 권한 회수, 오탐 처리처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.
+            </Typography>
+          </Box>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+            <TextField
+              size="small"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="이름, 이메일, 작업, 요약 검색"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ minWidth: { xs: '100%', sm: 280 } }}
+            />
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={downloadCsv}
+              disabled={filteredLogs.length === 0}
+              sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}
+            >
+              엑셀 다운로드
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
       {loading && <LinearProgress />}
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
       <TableContainer>
-        <Table size="small">
+        <Table size="small" sx={{ tableLayout: 'fixed', '& th, & td': { px: 1.25 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell sx={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>대상</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: 13 }}>요약</TableCell>
+              <TableCell sx={{ width: '17%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
+              <TableCell sx={{ width: '19%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
+              <TableCell sx={{ width: '15%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
+              <TableCell sx={{ width: '22%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>대상</TableCell>
+              <TableCell sx={{ width: '27%', fontWeight: 700, fontSize: 13 }}>요약</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {!loading && logs.length === 0 && (
+            {!loading && filteredLogs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <Typography color="text.secondary" fontSize={14}>
-                    표시할 감사 로그가 없습니다.
+                    {query ? '검색 조건에 맞는 감사 로그가 없습니다.' : '표시할 감사 로그가 없습니다.'}
                   </Typography>
                 </TableCell>
               </TableRow>
             )}
-            {logs.map((log) => {
+            {filteredLogs.map((log) => {
               const meta = actionLabel(log.action);
               return (
                 <TableRow key={log.id} hover>
@@ -154,13 +233,13 @@ export default function EmployeeLogPanel() {
                       {targetDisplay(log)}
                     </Typography>
                     {log.targetType && (
-                      <Typography fontSize={11} color="text.secondary">
+                      <Typography fontSize={11} color="text.secondary" noWrap>
                         {log.targetType}{isUuid(log.targetId) ? ` · ${log.targetId.slice(0, 8)}` : ''}
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13, color: '#475569', maxWidth: 420 }}>
-                    <Typography fontSize={13}>{summarizeDetail(log)}</Typography>
+                  <TableCell sx={{ fontSize: 13, color: '#475569' }}>
+                    <Typography fontSize={13} noWrap>{summarizeDetail(log)}</Typography>
                   </TableCell>
                 </TableRow>
               );
