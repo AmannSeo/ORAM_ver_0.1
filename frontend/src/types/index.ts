@@ -58,6 +58,7 @@ export interface Employee {
   department: string;
   status: EmployeeStatus;
   createdAt: string;
+  resignedAt?: string;
   connectedSaas?: EmployeeSaasAccount[];
 }
 

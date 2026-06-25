@@ -391,12 +391,25 @@ export default function OffboardingDetailPage() {
 
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Typography variant="h6" fontWeight={700}>대상 직원</Typography>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6" fontWeight={700}>대상 직원</Typography>
+                  {detail.startedAt && (
+                    <Typography variant="caption" color="#64748b">퇴직 시간: {formatDateTime(detail.startedAt)}</Typography>
+                  )}
+                </Stack>
                 <Divider sx={{ my: 2 }} />
                 <Stack spacing={1.75}>
                   <InfoRow label="이름" value={detail.employee.name} />
                   <InfoRow label="이메일" value={detail.employee.email} />
-                  <InfoRow label="부서" value={detail.employee.department} />
+                  <InfoRow
+                    label="부서"
+                    value={
+                      detail.employee.department
+                        && !['SLACK', 'GITHUB', 'NOTION'].some((s) => detail.employee.department.toUpperCase().includes(s))
+                        ? detail.employee.department
+                        : '-'
+                    }
+                  />
                 </Stack>
               </CardContent>
             </Card>

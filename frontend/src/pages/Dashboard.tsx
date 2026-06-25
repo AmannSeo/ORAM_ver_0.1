@@ -195,12 +195,13 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
             <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'nowrap', px: 1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                  <TableCell width="8%">No.</TableCell>
-                  <TableCell width="17%">이름</TableCell>
-                  <TableCell width="31%">이메일</TableCell>
-                  <TableCell width="16%">위험도</TableCell>
-                  <TableCell width="14%" align="center">분석</TableCell>
-                  <TableCell width="14%" align="center">상태</TableCell>
+                  <TableCell width="7%">No.</TableCell>
+                  <TableCell width="16%">이름</TableCell>
+                  <TableCell width="22%">이메일</TableCell>
+                  <TableCell width="15%">위험도</TableCell>
+                  <TableCell width="12%" align="center">분석</TableCell>
+                  <TableCell width="13%" align="center">상태</TableCell>
+                  <TableCell width="15%" align="center">퇴직 시간</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -219,6 +220,9 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
                     </TableCell>
                     <TableCell align="center">
                       <Chip size="small" label={item.revokedAll ? '회수 완료' : '미회수'} color={item.revokedAll ? 'success' : 'warning'} variant="outlined" />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="caption" color="#64748b" noWrap>{formatDateTime(item.startedAt)}</Typography>
                     </TableCell>
                   </TableRow>
                 ))}

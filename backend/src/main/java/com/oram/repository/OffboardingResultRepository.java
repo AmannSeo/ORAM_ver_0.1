@@ -14,6 +14,7 @@ import java.util.UUID;
 public interface OffboardingResultRepository extends JpaRepository<OffboardingResult, UUID> {
     List<OffboardingResult> findByEmployee_Id(UUID employeeId);
     Optional<OffboardingResult> findTopByEmployee_IdOrderByCreatedAtDesc(UUID employeeId);
+    Optional<OffboardingResult> findTopByEmployee_IdOrderByCreatedAtAsc(UUID employeeId);
     long countByStatus(OffboardingStatus status);
     long countByRiskLevel(RiskLevel riskLevel);
 

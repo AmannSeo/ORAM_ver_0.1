@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import StatusChip from '../common/StatusChip';
 import { SAAS_BADGE } from '../../constants/saas';
+import { formatDateTime } from '../../utils/format';
 import type { Employee, EmployeeSaasAccount, SaasType } from '../../types';
 
 const AVATAR_COLORS = ['#2563eb', '#059669', '#475569', '#d97706'];
@@ -95,13 +96,14 @@ export default function EmployeeTable(props: {
             <HeaderCell width="12%">부서</HeaderCell>
             <HeaderCell width="12%">연동 SaaS</HeaderCell>
             <HeaderCell width="8%" align="center">상태</HeaderCell>
-            <HeaderCell width="29%" align="center">조치</HeaderCell>
+            <HeaderCell width="10%" align="center">퇴직 시간</HeaderCell>
+            <HeaderCell width="19%" align="center">조치</HeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.employees.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
+              <TableCell colSpan={8} align="center" sx={{ py: 7, color: '#94a3b8' }}>조건에 맞는 직원이 없습니다.</TableCell>
             </TableRow>
           )}
           {props.employees.map((employee, index) => (
@@ -144,6 +146,11 @@ export default function EmployeeTable(props: {
               </TableCell>
               <TableCell><SaaSBadges employee={employee} /></TableCell>
               <TableCell align="center"><StatusChip status={employee.status} /></TableCell>
+              <TableCell align="center">
+                <Typography variant="body2" color="#64748b" noWrap>
+                  {employee.status === 'RESIGNED' ? formatDateTime(employee.resignedAt) : '-'}
+                </Typography>
+              </TableCell>
               <TableCell align="center">
                 <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="nowrap">
                   <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => props.openEditDialog(employee)} sx={compactButtonSx}>수정</Button>

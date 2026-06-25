@@ -26,6 +26,7 @@ public class EmployeeDto {
         private String department;
         private EmployeeStatus status;
         private LocalDateTime createdAt;
+        private LocalDateTime resignedAt;
         private java.util.List<SaasAccount> connectedSaas;
     }
 
