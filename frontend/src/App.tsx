@@ -42,6 +42,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="employees" element={<Employees />} />
             <Route path="employees/:id" element={<Employees />} />
+            <Route path="resigned-employees" element={<Employees mode="resigned" />} />
             <Route path="saas-connections" element={<SaasConnections />} />
             <Route path="risk-analysis" element={<RiskAnalysis />} />
             <Route path="offboarding" element={<Offboarding />} />

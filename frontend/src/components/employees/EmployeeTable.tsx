@@ -11,7 +11,6 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   Tooltip,
   Typography,
@@ -20,6 +19,10 @@ import {
   BarChart as AnalyzeIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  FirstPage as FirstPageIcon,
+  KeyboardArrowLeft as PrevIcon,
+  KeyboardArrowRight as NextIcon,
+  LastPage as LastPageIcon,
   PersonOff as ResignIcon,
   WarningAmber as PriorityIcon,
 } from '@mui/icons-material';
@@ -75,6 +78,12 @@ export default function EmployeeTable(props: {
   analyzeEmployee: (employee: Employee) => void;
   openDetailDialog: (employee: Employee) => void;
 }) {
+  const totalPages = Math.max(1, Math.ceil(props.totalElements / props.rowsPerPage));
+  const currentPage = props.page + 1;
+  const pageItems = getPageItems(currentPage, totalPages);
+  const canGoPrev = props.page > 0;
+  const canGoNext = currentPage < totalPages;
+
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3, overflowX: 'hidden', bgcolor: 'white', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
       <Table sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { px: 1.1 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
@@ -163,8 +172,99 @@ export default function EmployeeTable(props: {
           ))}
         </TableBody>
       </Table>
-      <TablePagination rowsPerPageOptions={[10]} component="div" count={props.totalElements} rowsPerPage={props.rowsPerPage} page={props.page} onPageChange={(_, nextPage) => props.setPage(nextPage)} />
+      <Box
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          flexWrap: 'wrap',
+          bgcolor: '#ffffff',
+        }}
+      >
+        <Typography variant="body2" color="#64748b">
+          총 {props.totalElements.toLocaleString()}명 · Page {currentPage} of {totalPages}
+        </Typography>
+
+        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+          <PageButton disabled={!canGoPrev} onClick={() => props.setPage(0)} icon={<FirstPageIcon fontSize="small" />} />
+          <PageButton disabled={!canGoPrev} onClick={() => props.setPage(props.page - 1)} icon={<PrevIcon fontSize="small" />} />
+          {pageItems.map((item, index) => (
+            item === 'ellipsis' ? (
+              <Box key={`ellipsis-${index}`} sx={{ width: 28, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>...</Box>
+            ) : (
+              <PageButton
+                key={item}
+                active={item === currentPage}
+                onClick={() => props.setPage(item - 1)}
+              >
+                {item}
+              </PageButton>
+            )
+          ))}
+          <PageButton disabled={!canGoNext} onClick={() => props.setPage(props.page + 1)} icon={<NextIcon fontSize="small" />} />
+          <PageButton disabled={!canGoNext} onClick={() => props.setPage(totalPages - 1)} icon={<LastPageIcon fontSize="small" />} />
+        </Stack>
+      </Box>
     </TableContainer>
+  );
+}
+
+function getPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  if (currentPage <= 4) return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  if (currentPage >= totalPages - 3) return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
+}
+
+function PageButton({
+  children,
+  icon,
+  active,
+  disabled,
+  onClick,
+}: {
+  children?: ReactNode;
+  icon?: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant={active ? 'contained' : 'outlined'}
+      disabled={disabled}
+      onClick={onClick}
+      sx={{
+        minWidth: 34,
+        width: icon && !children ? 34 : 'auto',
+        height: 34,
+        px: children ? 1.25 : 0,
+        borderRadius: 1.5,
+        color: active ? 'white' : '#475569',
+        bgcolor: active ? '#334155' : '#f8fafc',
+        borderColor: active ? '#334155' : '#e2e8f0',
+        fontWeight: 700,
+        fontSize: 13,
+        boxShadow: active ? '0 6px 14px rgba(15, 23, 42, 0.12)' : 'none',
+        '&:hover': {
+          bgcolor: active ? '#334155' : '#eef2f7',
+          borderColor: active ? '#334155' : '#cbd5e1',
+          boxShadow: active ? '0 6px 14px rgba(15, 23, 42, 0.12)' : 'none',
+        },
+        '&.Mui-disabled': {
+          bgcolor: '#f8fafc',
+          borderColor: '#eef2f7',
+          color: '#cbd5e1',
+        },
+      }}
+    >
+      {icon || children}
+    </Button>
   );
 }
 

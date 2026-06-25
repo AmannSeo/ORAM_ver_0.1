@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -69,10 +69,14 @@ function displayDepartment(department?: string) {
   return isDisplayableDepartment(department) ? department!.trim() : '-';
 }
 
-export default function Employees() {
+type EmployeesPageMode = 'active' | 'resigned';
+
+export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMode }) {
   const navigate = useNavigate();
   const { token, user } = useAuthStore();
-  const [searchParams] = useSearchParams();
+  const pageMode: EmployeesPageMode = mode;
+  const fixedStatus = pageMode === 'resigned' ? 'RESIGNED' : 'ACTIVE';
+  const isResignedPage = pageMode === 'resigned';
   const [tab, setTab] = useState<'employees' | 'hr' | 'log'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -82,7 +86,7 @@ export default function Employees() {
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
+  const [filterStatus, setFilterStatus] = useState<string>(fixedStatus);
   const [filterDept, setFilterDept] = useState('');
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [filterSaas, setFilterSaas] = useState<SaasType | ''>('');
@@ -120,6 +124,14 @@ export default function Employees() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
+
+  useEffect(() => {
+    setFilterStatus(fixedStatus);
+    setFilterDept('');
+    setPage(0);
+    setTab('employees');
+  }, [fixedStatus]);
+
   const load = (overrides?: { page?: number }) => {
     const requestPage = overrides?.page ?? page;
     setLoading(true);
@@ -288,9 +300,9 @@ export default function Employees() {
   return (
     <Box sx={{ width: '100%' }}>
       <PageHeader
-        title="직원 권한 관리"
-        description="직원별 SaaS 계정, 접근 상태, 오프보딩 조치를 한 화면에서 관리합니다."
-        actions={
+        title={isResignedPage ? '퇴직자 목록' : '직원 권한 관리'}
+        description={isResignedPage ? '퇴사 처리된 직원과 남아 있는 SaaS 접근 권한 상태를 확인합니다.' : '재직자 기준으로 SaaS 계정, 접근 상태, 퇴사 처리를 관리합니다.'}
+        actions={!isResignedPage ? (
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1}
@@ -325,13 +337,30 @@ export default function Employees() {
             전체 삭제
           </Button>
         </Stack>
-        }
+        ) : undefined}
       />
 
-      <Stack direction="row" spacing={1} mb={2.5}>
-        <Button variant={tab === 'employees' ? 'contained' : 'outlined'} onClick={() => setTab('employees')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>직원 목록</Button>
-        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
-        <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
+      <Stack direction="row" spacing={1} mb={2.5} flexWrap="wrap" useFlexGap>
+        <Button
+          variant={!isResignedPage && tab === 'employees' ? 'contained' : 'outlined'}
+          onClick={() => { setTab('employees'); navigate('/employees'); }}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          직원 목록
+        </Button>
+        <Button
+          variant={isResignedPage ? 'contained' : 'outlined'}
+          onClick={() => navigate('/resigned-employees')}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          퇴직자 목록
+        </Button>
+        {!isResignedPage && (
+          <>
+            <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
+            <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
+          </>
+        )}
       </Stack>
 
       {tab === 'employees' && (
@@ -358,6 +387,7 @@ export default function Employees() {
             departmentOptions={departmentOptions}
             runSearch={runSearch}
             setPage={setPage}
+            showStatusFilter={false}
           />
 
           {loading ? <LinearProgress /> : (
