@@ -49,6 +49,21 @@ function getEmployeeSourceLabel(employee: Employee) {
   return '직접 등록/HR';
 }
 
+function isDisplayableDepartment(value?: string) {
+  if (!value) return false;
+  const normalized = value.trim();
+  if (!normalized || normalized === '-') return false;
+
+  const upper = normalized.toUpperCase();
+  return !['SLACK', 'GITHUB', 'NOTION'].some((saas) => upper.includes(saas));
+}
+
+function extractDepartmentOptions(employees: Employee[]) {
+  return employees
+    .map((employee) => employee.department?.trim())
+    .filter((department): department is string => isDisplayableDepartment(department));
+}
+
 export default function Employees() {
   const navigate = useNavigate();
   const { token, user } = useAuthStore();
@@ -64,6 +79,7 @@ export default function Employees() {
   const [totalElements, setTotalElements] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
   const [filterDept, setFilterDept] = useState('');
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [filterSaas, setFilterSaas] = useState<SaasType | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [analyzingEmployeeId, setAnalyzingEmployeeId] = useState<string | null>(null);
@@ -99,24 +115,24 @@ export default function Employees() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
-  const departmentOptions = useMemo(
-    () => Array.from(new Set(employees.map((employee) => employee.department).filter(Boolean))).sort(),
-    [employees]
-  );
-
-  const load = () => {
+  const load = (overrides?: { page?: number }) => {
+    const requestPage = overrides?.page ?? page;
     setLoading(true);
     employeeApi.getAll({
       status: filterStatus || undefined,
       department: filterDept || undefined,
       saasType: filterSaas || undefined,
       q: searchQuery || undefined,
-      page,
+      page: requestPage,
       size: rowsPerPage,
     })
       .then((data) => {
         setEmployees(data.content);
         setTotalElements(data.totalElements);
+        const nextDepartments = extractDepartmentOptions(data.content);
+        if (nextDepartments.length > 0) {
+          setDepartmentOptions((current) => Array.from(new Set([...current, ...nextDepartments])).sort());
+        }
         setError(null);
       })
       .catch((err: any) => {
@@ -125,7 +141,7 @@ export default function Employees() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, filterStatus, filterSaas]);
+  useEffect(load, [page, filterStatus, filterDept, filterSaas]);
 
   useEffect(() => {
     dashboardApi.getStats()
@@ -140,7 +156,7 @@ export default function Employees() {
   }, [successMessage]);
 
   const runSearch = () => {
-    if (page === 0) load();
+    if (page === 0) load({ page: 0 });
     else setPage(0);
   };
 
