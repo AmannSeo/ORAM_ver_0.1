@@ -6,6 +6,7 @@ import type {
   Employee,
   EmployeePageResponse,
   CreateEmployeeRequest,
+  AuditLogPageResponse,
   SaasConnection,
   SaasIdentity,
   SaasSyncUsersResponse,
@@ -65,6 +66,8 @@ export const employeeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
+  getAuditLogs: (params?: { page?: number; size?: number }) =>
+    api.get<AuditLogPageResponse>('/employees/audit-logs', { params }).then((r) => r.data),
 };
 
 export const saasApi = {

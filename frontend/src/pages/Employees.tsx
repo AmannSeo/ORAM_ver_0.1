@@ -34,6 +34,7 @@ import {
 import { dashboardApi, employeeApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
 import EmployeeFilterPanel from '../components/employees/EmployeeFilterPanel';
+import EmployeeLogPanel from '../components/employees/EmployeeLogPanel';
 import EmployeeTable from '../components/employees/EmployeeTable';
 import EmployeeVisualSummary from '../components/employees/EmployeeVisualSummary';
 import { SAAS_BADGE } from '../constants/saas';
@@ -68,7 +69,7 @@ export default function Employees() {
   const navigate = useNavigate();
   const { token, user } = useAuthStore();
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<'employees' | 'hr'>('employees');
+  const [tab, setTab] = useState<'employees' | 'hr' | 'log'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -326,6 +327,7 @@ export default function Employees() {
       <Stack direction="row" spacing={1} mb={2.5}>
         <Button variant={tab === 'employees' ? 'contained' : 'outlined'} onClick={() => setTab('employees')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>직원 목록</Button>
         <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
+        <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
       </Stack>
 
       {tab === 'employees' && (
@@ -390,6 +392,8 @@ export default function Employees() {
           <Alert severity="success">현재 PoC에서 Webhook 엔드포인트가 활성화되어 있습니다.</Alert>
         </Paper>
       )}
+
+      {tab === 'log' && <EmployeeLogPanel />}
 
       <EmployeeDialogs
         addDialog={addDialog}

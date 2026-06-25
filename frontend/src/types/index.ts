@@ -193,6 +193,26 @@ export interface RevokePlanResponse {
   items: RevokePlanItem[];
 }
 
+// Audit Log
+export interface AuditLog {
+  id: string;
+  createdAt: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  detail: string;
+}
+
+export interface AuditLogPageResponse {
+  content: AuditLog[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 // Risk
 export interface RiskScoreRequest {
   isAdmin: boolean;

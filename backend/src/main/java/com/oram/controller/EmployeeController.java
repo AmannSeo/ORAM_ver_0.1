@@ -1,15 +1,20 @@
 package com.oram.controller;
 
+import com.oram.dto.AuditLogDto;
 import com.oram.dto.EmployeeDto;
+import com.oram.entity.AuditLog;
 import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
+import com.oram.repository.AuditLogRepository;
 import com.oram.repository.UserRepository;
 import com.oram.security.JwtTokenProvider;
 import com.oram.service.EmployeeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,6 +38,7 @@ public class EmployeeController {
     private final EmployeeService employeeService;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuditLogRepository auditLogRepository;
 
     @GetMapping
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
@@ -115,6 +122,35 @@ public class EmployeeController {
         }
 
         return null;
+    }
+
+    @GetMapping("/audit-logs")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AuditLogDto.PageResponse> getAuditLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<AuditLog> logPage = auditLogRepository.findByTargetTypeInOrderByCreatedAtDesc(
+                List.of("EMPLOYEE", "OFFBOARDING_RESULT"), pageable);
+        List<AuditLogDto.Response> content = logPage.getContent().stream()
+                .map(log -> AuditLogDto.Response.builder()
+                        .id(log.getId().toString())
+                        .createdAt(log.getCreatedAt() != null ? log.getCreatedAt().toString() : null)
+                        .actorName(log.getUser() != null ? log.getUser().getName() : null)
+                        .actorEmail(log.getUser() != null ? log.getUser().getEmail() : null)
+                        .action(log.getAction())
+                        .targetType(log.getTargetType())
+                        .targetId(log.getTargetId())
+                        .detail(log.getDetail())
+                        .build())
+                .toList();
+        return ResponseEntity.ok(AuditLogDto.PageResponse.builder()
+                .content(content)
+                .page(logPage.getNumber())
+                .size(logPage.getSize())
+                .totalElements(logPage.getTotalElements())
+                .totalPages(logPage.getTotalPages())
+                .build());
     }
 
     @DeleteMapping("/{id}")
