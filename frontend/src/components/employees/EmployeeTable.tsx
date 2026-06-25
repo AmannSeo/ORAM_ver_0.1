@@ -49,9 +49,16 @@ function isPriorityTarget(employee: Employee) {
   return (employee.status === 'RESIGNED' && saasCount > 0) || (employee.status === 'ACTIVE' && saasCount >= 3);
 }
 
-function renderSaasTooltip(account: EmployeeSaasAccount) {
+function renderSaasTooltip(account: EmployeeSaasAccount, isResigned: boolean) {
   const meta = SAAS_BADGE[account.saasType];
-  const status = account.accessRevoked ? '회수됨' : account.status === 'RESIGNED' ? '비활성' : '활성';
+  // 수집 계정 목록과 동일한 상태 기준: 퇴사자인데 미회수면 '활성'이 아니라 '미회수'(잔여 접근)
+  const status = account.accessRevoked
+    ? '회수됨'
+    : isResigned
+      ? '미회수'
+      : account.status === 'ACTIVE'
+        ? '활성'
+        : '비활성';
   return `${meta.label} / ${account.displayName || account.externalUsername || account.externalEmail || '-'} / ${status}`;
 }
 
@@ -297,7 +304,7 @@ function SaaSBadges({ employee }: { employee: Employee }) {
         const meta = SAAS_BADGE[account.saasType];
         const revoked = account.accessRevoked;
         return (
-          <Tooltip key={account.id} title={renderSaasTooltip(account)}>
+          <Tooltip key={account.id} title={renderSaasTooltip(account, employee.status === 'RESIGNED')}>
             <Chip
               label={meta.short}
               size="small"
