@@ -23,8 +23,10 @@ export default function EmployeeFilterPanel(props: {
   setSearchQuery: (value: string) => void;
   runSearch: () => void;
   setPage: (value: number) => void;
+  showStatusFilter?: boolean;
 }) {
   const hasDepartmentOptions = props.departmentOptions.length > 0;
+  const showStatusFilter = props.showStatusFilter ?? true;
 
   return (
     <Paper
@@ -39,25 +41,27 @@ export default function EmployeeFilterPanel(props: {
       }}
     >
       <Grid container spacing={1.5} alignItems="flex-end">
-        <Grid item xs={12} sm={6} lg={1.6}>
-          <FormControl size="small" fullWidth>
-            <InputLabel>상태</InputLabel>
-            <Select
-              value={props.filterStatus}
-              label="상태"
-              onChange={(event) => {
-                props.setFilterStatus(event.target.value);
-                props.setPage(0);
-              }}
-            >
-              <MenuItem value="">전체</MenuItem>
-              <MenuItem value="ACTIVE">재직 중</MenuItem>
-              <MenuItem value="RESIGNED">퇴사</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+        {showStatusFilter && (
+          <Grid item xs={12} sm={6} lg={1.6}>
+            <FormControl size="small" fullWidth>
+              <InputLabel>상태</InputLabel>
+              <Select
+                value={props.filterStatus}
+                label="상태"
+                onChange={(event) => {
+                  props.setFilterStatus(event.target.value);
+                  props.setPage(0);
+                }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="ACTIVE">재직 중</MenuItem>
+                <MenuItem value="RESIGNED">퇴사</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
 
-        <Grid item xs={12} sm={6} lg={1.8}>
+        <Grid item xs={12} sm={6} lg={showStatusFilter ? 1.8 : 2.4}>
           <FormControl size="small" fullWidth>
             <InputLabel>SaaS</InputLabel>
             <Select
@@ -76,7 +80,7 @@ export default function EmployeeFilterPanel(props: {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={6} lg={2.6}>
+        <Grid item xs={12} sm={6} lg={showStatusFilter ? 2.6 : 3}>
           <FormControl size="small" fullWidth disabled={!hasDepartmentOptions}>
             <InputLabel>부서</InputLabel>
             <Select
@@ -97,7 +101,7 @@ export default function EmployeeFilterPanel(props: {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={6} lg={4.2}>
+        <Grid item xs={12} sm={6} lg={showStatusFilter ? 4.2 : 4.8}>
           <TextField
             size="small"
             label="직원 검색"
@@ -111,7 +115,7 @@ export default function EmployeeFilterPanel(props: {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} lg={1.8}>
+        <Grid item xs={12} sm={6} lg={showStatusFilter ? 1.8 : 1.8}>
           <Button
             variant="contained"
             startIcon={<SearchIcon />}

@@ -367,7 +367,7 @@ export default function Dashboard() {
           <StatCard title="연결 SaaS" value={stats.connectedSaasCount} description="현재 연동된 서비스" icon={<CloudIcon />} tone="info" onClick={() => navigate('/saas-connections')} />
         </Grid>
         <Grid item xs={12} sm={6} lg={2.4}>
-          <StatCard title="퇴사자" value={stats.resignedEmployees} description="퇴사 상태 직원" icon={<GroupsIcon />} tone="warning" onClick={() => navigate('/employees?status=RESIGNED')} />
+          <StatCard title="퇴사자" value={stats.resignedEmployees} description="퇴사 상태 직원" icon={<GroupsIcon />} tone="warning" onClick={() => navigate('/resigned-employees')} />
         </Grid>
       </Grid>
 

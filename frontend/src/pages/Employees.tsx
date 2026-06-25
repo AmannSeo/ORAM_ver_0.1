@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -26,29 +26,18 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Cloud as CloudIcon,
   DeleteSweep as DeleteAllIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
 } from '@mui/icons-material';
-import { dashboardApi, employeeApi } from '../api';
+import { employeeApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
 import EmployeeFilterPanel from '../components/employees/EmployeeFilterPanel';
-import EmployeeLogPanel from '../components/employees/EmployeeLogPanel';
 import EmployeeTable from '../components/employees/EmployeeTable';
-import EmployeeVisualSummary from '../components/employees/EmployeeVisualSummary';
 import { SAAS_BADGE } from '../constants/saas';
-import type { DashboardStats, Employee, EmployeeStatus, SaasType } from '../types';
+import type { Employee, EmployeeStatus, SaasType } from '../types';
 import StatusChip from '../components/common/StatusChip';
 import { useAuthStore } from '../store/authStore';
-
-function getEmployeeSourceLabel(employee: Employee) {
-  if (employee.employeeId.startsWith('SLACK-')) return 'Slack 동기화';
-  if (employee.employeeId.startsWith('GITHUB-')) return 'GitHub 동기화';
-  if (employee.employeeId.startsWith('NOTION-')) return 'Notion 동기화';
-  if (employee.employeeId.startsWith('CSV-')) return 'CSV 자동 생성';
-  return '직접 등록/HR';
-}
 
 function isDisplayableDepartment(value?: string) {
   if (!value) return false;
@@ -69,20 +58,26 @@ function displayDepartment(department?: string) {
   return isDisplayableDepartment(department) ? department!.trim() : '-';
 }
 
-export default function Employees() {
+type EmployeesPageMode = 'active' | 'resigned';
+type EmployeesTab = 'employees' | 'hr';
+
+export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { token, user } = useAuthStore();
-  const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<'employees' | 'hr' | 'log'>('employees');
+  const pageMode: EmployeesPageMode = mode;
+  const fixedStatus = pageMode === 'resigned' ? 'RESIGNED' : 'ACTIVE';
+  const isResignedPage = pageMode === 'resigned';
+  const requestedTab = (location.state as { tab?: EmployeesTab } | null)?.tab;
+  const [tab, setTab] = useState<EmployeesTab>(requestedTab || 'employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<string>(searchParams.get('status') || '');
+  const [filterStatus, setFilterStatus] = useState<string>(fixedStatus);
   const [filterDept, setFilterDept] = useState('');
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [filterSaas, setFilterSaas] = useState<SaasType | ''>('');
@@ -119,7 +114,13 @@ export default function Employees() {
   const [csvUploading, setCsvUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentPageSaasLinkedCount = useMemo(() => employees.filter((employee) => (employee.connectedSaas?.length ?? 0) > 0).length, [employees]);
+  useEffect(() => {
+    setFilterStatus(fixedStatus);
+    setFilterDept('');
+    setPage(0);
+    setTab(requestedTab || 'employees');
+  }, [fixedStatus, requestedTab]);
+
   const load = (overrides?: { page?: number }) => {
     const requestPage = overrides?.page ?? page;
     setLoading(true);
@@ -147,12 +148,6 @@ export default function Employees() {
   };
 
   useEffect(load, [page, filterStatus, filterDept, filterSaas]);
-
-  useEffect(() => {
-    dashboardApi.getStats()
-      .then(setDashboardStats)
-      .catch(() => setDashboardStats(null));
-  }, []);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -288,9 +283,9 @@ export default function Employees() {
   return (
     <Box sx={{ width: '100%' }}>
       <PageHeader
-        title="직원 권한 관리"
-        description="직원별 SaaS 계정, 접근 상태, 오프보딩 조치를 한 화면에서 관리합니다."
-        actions={
+        title={isResignedPage ? '퇴직자 목록' : '직원 권한 관리'}
+        description={isResignedPage ? '퇴사 처리된 직원과 남아 있는 SaaS 접근 권한 상태를 확인합니다.' : '재직자 기준으로 SaaS 계정, 접근 상태, 퇴사 처리를 관리합니다.'}
+        actions={!isResignedPage && tab === 'employees' ? (
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1}
@@ -325,24 +320,35 @@ export default function Employees() {
             전체 삭제
           </Button>
         </Stack>
-        }
+        ) : undefined}
       />
 
-      <Stack direction="row" spacing={1} mb={2.5}>
-        <Button variant={tab === 'employees' ? 'contained' : 'outlined'} onClick={() => setTab('employees')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>직원 목록</Button>
-        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
-        <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
+      <Stack direction="row" spacing={1} mb={2.5} flexWrap="wrap" useFlexGap>
+        <Button
+          variant={!isResignedPage && tab === 'employees' ? 'contained' : 'outlined'}
+          onClick={() => { setTab('employees'); navigate('/employees'); }}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          직원 목록
+        </Button>
+        <Button
+          variant={isResignedPage ? 'contained' : 'outlined'}
+          onClick={() => navigate('/resigned-employees')}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          퇴직자 목록
+        </Button>
+        <Button
+          variant={!isResignedPage && tab === 'hr' ? 'contained' : 'outlined'}
+          onClick={() => { setTab('hr'); navigate('/employees', { state: { tab: 'hr' } }); }}
+          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
+        >
+          HR 연동
+        </Button>
       </Stack>
 
       {tab === 'employees' && (
         <>
-          <EmployeeVisualSummary
-            stats={dashboardStats}
-            totalElements={totalElements}
-            currentPageLinkedCount={currentPageSaasLinkedCount}
-            currentPageCount={employees.length}
-          />
-
           {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
           {successMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>{successMessage}</Alert>}
 
@@ -358,6 +364,7 @@ export default function Employees() {
             departmentOptions={departmentOptions}
             runSearch={runSearch}
             setPage={setPage}
+            showStatusFilter={false}
           />
 
           {loading ? <LinearProgress /> : (
@@ -396,8 +403,6 @@ export default function Employees() {
           <Alert severity="success">현재 PoC에서 Webhook 엔드포인트가 활성화되어 있습니다.</Alert>
         </Paper>
       )}
-
-      {tab === 'log' && <EmployeeLogPanel />}
 
       <EmployeeDialogs
         addDialog={addDialog}

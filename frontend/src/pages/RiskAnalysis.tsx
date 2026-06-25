@@ -607,13 +607,11 @@ export default function RiskAnalysis() {
             </Badge>
           }
         />
-        <Tab label="점수 시뮬레이터" />
         <Tab label="모델 학습" />
       </Tabs>
 
       {tab === 0 && <RiskDecisionList />}
-      {tab === 1 && <RiskSimulator />}
-      {tab === 2 && <RetrainPanel />}
+      {tab === 1 && <RetrainPanel />}
     </Box>
   );
 }

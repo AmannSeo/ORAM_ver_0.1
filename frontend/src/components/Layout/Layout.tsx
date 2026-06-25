@@ -27,6 +27,7 @@ import {
   Logout as LogoutIcon,
   Menu as MenuIcon,
   People as PeopleIcon,
+  ReceiptLong as AuditLogIcon,
   Security as SecurityIcon,
   Shield as ShieldIcon,
 } from '@mui/icons-material';
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { label: 'AI 리스크 분석', path: '/risk-analysis', icon: <SecurityIcon /> },
   { label: '권한 회수 대상', path: '/offboarding', icon: <AssignmentIcon /> },
   { label: 'SaaS 연결 관리', path: '/saas-connections', icon: <CloudIcon /> },
+  { label: '감사 로그', path: '/audit-logs', icon: <AuditLogIcon /> },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
