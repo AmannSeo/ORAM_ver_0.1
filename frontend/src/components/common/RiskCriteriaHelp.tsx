@@ -8,33 +8,65 @@ const LEVEL_ROWS = [
   { label: 'CRITICAL', range: '75-100점', action: '즉시 회수 필요', bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
 ];
 
-const SCORE_ROWS = [
-  { label: '관리자 권한', score: '+18점' },
-  { label: 'Owner 권한', score: '+16점' },
-  { label: 'API 토큰/PAT', score: '+14점' },
-  { label: '최근 로그인', score: '+8점' },
-  { label: '저장소 접근 범위', score: '최대 +8점' },
-  { label: '워크스페이스 범위', score: '최대 +6점' },
-  { label: '이상 접근 특성', score: '추가 반영' },
+const SCORE_GROUPS = [
+  {
+    title: '권한 강도',
+    control: 'CIS Control 6 (접근 통제)',
+    rows: [
+      { label: '관리자 권한', score: '영향 매우 큼' },
+      { label: 'Owner 권한', score: '영향 큼' },
+      { label: 'API 토큰/PAT 보유', score: '영향 큼' },
+    ],
+  },
+  {
+    title: '계정 상태',
+    control: 'CIS Control 5 (계정 관리)',
+    rows: [
+      { label: '최근 로그인', score: '영향 보통' },
+    ],
+  },
+  {
+    title: '접근 범위',
+    control: 'CIS Control 6 (접근 통제)',
+    rows: [
+      { label: '저장소 접근 범위', score: '영향 작음' },
+      { label: '워크스페이스 범위', score: '영향 작음' },
+    ],
+  },
 ];
 
 function ScoreFactorsContent() {
   return (
-    <Box sx={{ p: 0.5, maxWidth: 320 }}>
+    <Box sx={{ p: 0.5, maxWidth: 340 }}>
       <Typography variant="subtitle2" fontWeight={800} mb={1}>
-        점수 산정 요소
+        점수 산정 요소 (6개 피처)
       </Typography>
-      <Stack spacing={0.65}>
-        {SCORE_ROWS.map((row) => (
-          <Stack key={row.label} direction="row" justifyContent="space-between" gap={2}>
-            <Typography variant="caption">{row.label}</Typography>
-            <Typography variant="caption" fontWeight={800}>{row.score}</Typography>
-          </Stack>
+      <Stack spacing={1}>
+        {SCORE_GROUPS.map((group) => (
+          <Box key={group.title}>
+            <Typography variant="caption" fontWeight={800} display="block">
+              {group.title}
+              <Typography component="span" variant="caption" sx={{ ml: 0.5, color: '#94a3b8', fontWeight: 600 }}>
+                · {group.control}
+              </Typography>
+            </Typography>
+            <Stack spacing={0.4} mt={0.4}>
+              {group.rows.map((row) => (
+                <Stack key={row.label} direction="row" justifyContent="space-between" gap={2}>
+                  <Typography variant="caption">{row.label}</Typography>
+                  <Typography variant="caption" fontWeight={800}>{row.score}</Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </Box>
         ))}
       </Stack>
-      <Typography variant="caption" display="block" mt={1}>
-        수집된 SaaS 권한을 집계한 뒤 XGBoost 모델 또는 fallback 가중치로 0-100점 범위에서 계산합니다.
-      </Typography>
+      <Box sx={{ borderTop: '1px solid rgba(148,163,184,0.4)', mt: 1.25, pt: 1 }}>
+        <Typography variant="caption" display="block">
+          XGBoost가 6개 피처의 조합을 학습해 0~100점을 예측하며(단일 권한으로 확정하지 않음), 각 피처의 기여도는 SHAP으로 설명합니다.
+          AI 서버 미가동 시 근사 가중치로 계산합니다.
+        </Typography>
+      </Box>
     </Box>
   );
 }

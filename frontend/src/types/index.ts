@@ -236,12 +236,6 @@ export interface RiskScoreResponse {
     recentLoginWeight: number;
     repoWeight: number;
     workspaceWeight: number;
-    threatIpWeight?: number;
-    automationWeight?: number;
-    blastRadiusWeight?: number;
-    privilegeSpreadWeight?: number;
-    contextualAnomalyWeight?: number;
-    largeDataExportWeight?: number;
   };
   explanations?: {
     feature: string;

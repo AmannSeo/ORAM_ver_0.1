@@ -125,16 +125,30 @@ Vite가 `/api` 요청을 `http://localhost:8080`으로 프록시합니다.
 
 ---
 
-## 4. XGBoost Model (Optional)
+## 4. AI Model Server (ai-service)
+
+6피처 XGBoost 모델 추론 + 진짜 TreeSHAP 설명 + Champion–Challenger 재학습을 담당하는
+FastAPI 서비스입니다. 백엔드가 `oram.ai.model-url`(기본 `http://127.0.0.1:8090`)로 호출합니다.
 
 ```bash
-cd scripts
-pip install xgboost scikit-learn pandas numpy
-python train_risk_model.py
+cd ai-service
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+
+# 1) 모델 학습 (최초 1회) — models/xgboost_model.json 생성
+python train_model.py
+
+# 2) 서버 실행
+uvicorn app:app --host 127.0.0.1 --port 8090
 ```
 
-모델 파일 `oram_risk_model.json`이 생성됩니다.
-Spring Boot의 `XGBoostRiskAnalyzer.java`를 실제 xgboost4j를 사용하도록 교체할 수 있습니다.
+- 점수/SHAP: `POST /predict`, 모델 상태: `GET /model-status`
+- 재학습/승격: `POST /retrain`, `POST /promote` (관리자 결정이 쌓이면 실데이터로 재학습)
+- 서버가 꺼져 있으면 백엔드는 동일 규칙의 Java 근사 가중치로 폴백합니다(점수는 나오되 SHAP·재학습은 비활성).
+
+> 배포 시: 백엔드 환경변수 `AI_MODEL_URL`을 배포된 ai-service 주소로 지정하고,
+> 콜드스타트 대비 `AI_MODEL_REQUEST_TIMEOUT_MS=60000` 권장.
 
 ---
 
@@ -191,8 +205,15 @@ ORAM_ver_0.1/
 │       ├── pages/             # 5개 페이지
 │       ├── store/             # Zustand 상태관리
 │       └── types/             # TypeScript 타입
+├── ai-service/                # AI 모델 서버 (FastAPI)
+│   ├── app.py                 # /predict, /retrain, /promote, /model-status
+│   ├── train_model.py         # 6피처 모델 학습(상호작용+노이즈 목업)
+│   ├── retrainer.py           # Champion–Challenger 재학습
+│   └── models/
+│       ├── feature_schema.py      # 6피처 중앙 정의
+│       └── xgboost_risk_engine.py # 추론 + TreeSHAP 엔진
 ├── scripts/
-│   └── train_risk_model.py    # XGBoost 모델 훈련
+│   └── train_risk_model.py    # (구버전) 단독 XGBoost 학습 스크립트
 └── README.md
 ```
 

@@ -31,7 +31,7 @@ ORAM (Offboarding & Revocation Access Manager) is an Agentless SaaS Access Manag
 │  │                                               │           │  │
 │  │  ┌─────────────────────────────────┐          │           │  │
 │  │  │   Risk Analysis Layer           │          │           │  │
-│  │  │   XGBoost Scorer (PoC: weighted)│          │           │  │
+│  │  │   XGBoost Scorer + TreeSHAP     │          │           │  │
 │  │  └─────────────────────────────────┘          │           │  │
 │  └────────────────────────────────────────┬───────┘           │  │
 │                                           │ JPA               │  │
@@ -86,9 +86,10 @@ SaaSConnector (interface)
 ```
 
 ### Risk Analysis Layer
-- `RiskFeatures` 입력 객체 수집
-- `XGBoostRiskAnalyzer`가 가중치 기반 스코어 산출 (PoC)
-- 실제 운영 시 `xgboost4j` 또는 Python 마이크로서비스 교체 가능
+- `RiskFeatures` 입력 객체 수집 (실수집 6피처: admin/owner/apiToken/recentLogin/repoCount/workspaceCount)
+- `XGBoostRiskAnalyzer`가 Python 모델 서버(`ai-service`)를 호출해 0~100 위험 점수와 **TreeSHAP 기여도**를 받음
+- 모델 서버 미가동 시 동일 규칙의 Java 근사 가중치로 폴백
+- 관리자 결정(`revokedAll`/`falsePositive`)을 라벨로 **Champion–Challenger 재학습** 가능 (`/retrain`·`/promote`)
 
 ---
 
