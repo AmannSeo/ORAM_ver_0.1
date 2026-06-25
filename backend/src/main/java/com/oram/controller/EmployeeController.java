@@ -7,6 +7,8 @@ import com.oram.enums.UserRole;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
 import com.oram.repository.AuditLogRepository;
+import com.oram.repository.EmployeeRepository;
+import com.oram.repository.OffboardingResultRepository;
 import com.oram.repository.UserRepository;
 import com.oram.security.JwtTokenProvider;
 import com.oram.service.EmployeeService;
@@ -39,6 +41,8 @@ public class EmployeeController {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogRepository auditLogRepository;
+    private final EmployeeRepository employeeRepository;
+    private final OffboardingResultRepository offboardingResultRepository;
 
     @GetMapping
     public ResponseEntity<EmployeeDto.PageResponse> getEmployees(
@@ -125,10 +129,18 @@ public class EmployeeController {
     }
 
     @GetMapping("/audit-logs")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AuditLogDto.PageResponse> getAuditLogs(
+            Authentication authentication,
+            HttpServletRequest request,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        String email = resolveAuthenticatedEmail(authentication, request);
+        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+
         PageRequest pageable = PageRequest.of(page, size);
         Page<AuditLog> logPage = auditLogRepository.findByTargetTypeInOrderByCreatedAtDesc(
                 List.of("EMPLOYEE", "OFFBOARDING_RESULT"), pageable);
@@ -141,6 +153,7 @@ public class EmployeeController {
                         .action(log.getAction())
                         .targetType(log.getTargetType())
                         .targetId(log.getTargetId())
+                        .targetLabel(resolveAuditTargetLabel(log))
                         .detail(log.getDetail())
                         .build())
                 .toList();
@@ -151,6 +164,34 @@ public class EmployeeController {
                 .totalElements(logPage.getTotalElements())
                 .totalPages(logPage.getTotalPages())
                 .build());
+    }
+
+    private String resolveAuditTargetLabel(AuditLog log) {
+        if (log.getTargetLabel() != null && !log.getTargetLabel().isBlank()) {
+            return log.getTargetLabel();
+        }
+
+        if (log.getTargetId() == null || log.getTargetId().isBlank()) {
+            return "-";
+        }
+
+        try {
+            UUID id = UUID.fromString(log.getTargetId());
+            if ("EMPLOYEE".equals(log.getTargetType())) {
+                return employeeRepository.findById(id)
+                        .map(employee -> employee.getName() + " / " + employee.getEmail())
+                        .orElse(log.getTargetId());
+            }
+            if ("OFFBOARDING_RESULT".equals(log.getTargetType())) {
+                return offboardingResultRepository.findById(id)
+                        .map(result -> result.getEmployee().getName() + " / " + result.getEmployee().getEmail())
+                        .orElse(log.getTargetId());
+            }
+        } catch (Exception ignored) {
+            // Non-UUID targets such as SaaS names are displayed as-is.
+        }
+
+        return log.getTargetId();
     }
 
     @DeleteMapping("/{id}")
@@ -167,9 +208,9 @@ public class EmployeeController {
         String email = resolveAuthenticatedEmail(authentication, request);
         var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
 
-        if (user == null || user.getRole() != UserRole.ADMIN) {
+        if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "error", "Only ADMIN can delete all employees.",
+                    "error", "Only ADMIN or SECURITY_MANAGER can delete all employees.",
                     "email", email != null ? email : "anonymous",
                     "role", user != null ? user.getRole().name() : "unknown"
             ));

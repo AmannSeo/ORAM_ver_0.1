@@ -49,6 +49,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/saas-connections/oauth/callback/**").permitAll()
                 .requestMatchers("/api/hr/webhook/**").permitAll()   // 웹훅: 자체 시크릿으로 인증
                 .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees/audit-logs").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/employees/delete-all").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/employees/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/employees/**").permitAll()

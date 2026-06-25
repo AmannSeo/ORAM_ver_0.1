@@ -202,6 +202,7 @@ export interface AuditLog {
   action: string;
   targetType: string;
   targetId: string;
+  targetLabel?: string;
   detail: string;
 }
 

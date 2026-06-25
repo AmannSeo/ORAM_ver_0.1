@@ -33,6 +33,9 @@ public class AuditLog {
     @Column(name = "target_id", length = 255)
     private String targetId;
 
+    @Column(name = "target_label", length = 255)
+    private String targetLabel;
+
     @Column(columnDefinition = "TEXT")
     private String detail;
 

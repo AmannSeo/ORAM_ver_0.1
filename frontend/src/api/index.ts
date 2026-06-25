@@ -80,8 +80,21 @@ export const employeeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
-  getAuditLogs: (params?: { page?: number; size?: number }) =>
-    api.get<AuditLogPageResponse>('/employees/audit-logs', { params }).then((r) => r.data),
+  getAuditLogs: (params?: { page?: number; size?: number }) => {
+    const token = useAuthStore.getState().token;
+    return api.get<AuditLogPageResponse>(
+      '/employees/audit-logs',
+      token
+        ? {
+            params,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-ORAM-Auth-Token': token,
+            },
+          }
+        : { params }
+    ).then((r) => r.data);
+  },
 };
 
 export const saasApi = {

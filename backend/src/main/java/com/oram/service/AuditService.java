@@ -20,12 +20,18 @@ public class AuditService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(User user, String action, String targetType, String targetId, String detail) {
+        log(user, action, targetType, targetId, detail, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void log(User user, String action, String targetType, String targetId, String detail, String targetLabel) {
         try {
             AuditLog entry = AuditLog.builder()
                     .user(user)
                     .action(action)
                     .targetType(targetType)
                     .targetId(targetId)
+                    .targetLabel(targetLabel)
                     .detail(detail)
                     .ipAddress(getClientIp())
                     .build();

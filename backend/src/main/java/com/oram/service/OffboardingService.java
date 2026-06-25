@@ -121,7 +121,8 @@ public class OffboardingService {
                     "EMPLOYEE", employee.getId().toString(),
                     "Offboarding analysis completed. Reason: " + triggerReason
                             + ", Risk: " + scoreResponse.getScore() + "/" + scoreResponse.getLevel()
-                            + ", Engine: " + scoreResponse.getEngine());
+                            + ", Engine: " + scoreResponse.getEngine(),
+                    auditTargetLabel(employee));
 
             log.info("Offboarding analysis completed for {}. Reason={}, Score={}, Level={}, Engine={}",
                     employee.getEmail(), triggerReason, scoreResponse.getScore(),
@@ -222,7 +223,8 @@ public class OffboardingService {
                     revokedSaas.add(connection.getSaasType());
                     markIdentitiesRevoked(employee, connection.getSaasType(), revokeResult.message());
                     auditService.log(reviewedBy, "REVOKE_ACCESS", "EMPLOYEE", employee.getId().toString(),
-                            "Revoked " + connection.getSaasType() + " access for " + employee.getEmail());
+                            "Revoked " + connection.getSaasType() + " access for " + employee.getEmail(),
+                            auditTargetLabel(employee));
                 }
 
                 items.add(toRevokeResultItem(connection.getSaasType(), revokeResult));
@@ -269,7 +271,8 @@ public class OffboardingService {
         resultRepository.save(result);
 
         auditService.log(reviewedBy, "MARK_FALSE_POSITIVE", "OFFBOARDING_RESULT", resultId.toString(),
-                "Marked offboarding risk as false positive. Reason: " + resolvedReason);
+                "Marked offboarding risk as false positive. Reason: " + resolvedReason,
+                auditTargetLabel(result.getEmployee()));
 
         return OffboardingDto.FalsePositiveResponse.builder()
                 .message("오탐으로 처리했습니다. 이 항목은 권한 회수 대상과 AI 리스크 목록에서 제외됩니다.")
@@ -425,6 +428,13 @@ public class OffboardingService {
                 .reason(revokeResult.message())
                 .resources(revokeResult.revokedResources())
                 .build();
+    }
+
+    private String auditTargetLabel(Employee employee) {
+        if (employee == null) {
+            return "-";
+        }
+        return employee.getName() + " / " + employee.getEmail();
     }
 
     private void markIdentitiesRevoked(Employee employee, SaasType saasType, String message) {

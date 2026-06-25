@@ -21,6 +21,7 @@ public class AuditLogDto {
         private String action;
         private String targetType;
         private String targetId;
+        private String targetLabel;
         private String detail;
     }
 
