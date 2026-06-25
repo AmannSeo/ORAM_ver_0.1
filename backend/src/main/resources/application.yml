@@ -44,8 +44,7 @@ oram:
   # Periodically checks connected SaaS accounts and creates alerts when a known account disappears.
   saas-sync:
     enabled: ${SAAS_SYNC_ENABLED:true}
-    initial-delay-ms: ${SAAS_SYNC_INITIAL_DELAY_MS:30000}
-    fixed-delay-ms: ${SAAS_SYNC_FIXED_DELAY_MS:60000}
+    cron: ${SAAS_SYNC_CRON:0 0 0,12 * * *}   # 매일 0시, 12시
 
   ai:
     model-url: ${AI_MODEL_URL:http://127.0.0.1:8090}

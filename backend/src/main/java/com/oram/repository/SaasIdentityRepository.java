@@ -18,6 +18,7 @@ public interface SaasIdentityRepository extends JpaRepository<SaasIdentity, UUID
     List<SaasIdentity> findByEmployeeId(UUID employeeId);
     List<SaasIdentity> findByEmployeeIdAndSaasType(UUID employeeId, SaasType saasType);
     long countBySaasType(SaasType saasType);
+    long countBySaasTypeAndAccessRevokedFalse(SaasType saasType);
     @Query("select max(i.lastSyncedAt) from SaasIdentity i where i.saasType = :saasType")
     LocalDateTime findLatestSyncedAtBySaasType(SaasType saasType);
     void deleteByEmployeeId(UUID employeeId);

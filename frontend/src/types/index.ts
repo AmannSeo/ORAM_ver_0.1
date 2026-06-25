@@ -128,6 +128,7 @@ export interface SaasIdentity {
   employeeId?: string;
   employeeName?: string;
   employeeEmail?: string;
+  employeeStatus?: EmployeeStatus;
 }
 
 // Offboarding

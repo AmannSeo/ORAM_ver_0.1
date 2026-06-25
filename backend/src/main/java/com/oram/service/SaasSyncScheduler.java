@@ -21,10 +21,8 @@ public class SaasSyncScheduler {
     @Value("${oram.saas-sync.enabled:true}")
     private boolean enabled;
 
-    @Scheduled(
-            initialDelayString = "${oram.saas-sync.initial-delay-ms:30000}",
-            fixedDelayString = "${oram.saas-sync.fixed-delay-ms:60000}"
-    )
+    // 매일 0시, 12시에 자동 동기화 (cron: 초 분 시 일 월 요일)
+    @Scheduled(cron = "${oram.saas-sync.cron:0 0 0,12 * * *}")
     public void syncConnectedSaasAccounts() {
         if (!enabled) {
             return;

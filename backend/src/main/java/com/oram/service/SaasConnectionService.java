@@ -65,7 +65,7 @@ public class SaasConnectionService {
                             .isConnected(c.isConnected())
                             .connectedAt(c.getConnectedAt())
                             .connectedBy(c.getConnectedBy() != null ? c.getConnectedBy().getEmail() : null)
-                            .identityCount(saasIdentityRepository.countBySaasType(type))
+                            .identityCount(saasIdentityRepository.countBySaasTypeAndAccessRevokedFalse(type))
                             .lastSyncedAt(saasIdentityRepository.findLatestSyncedAtBySaasType(type))
                             .openAlertCount(saasSyncAlertRepository.countBySaasTypeAndStatus(type, SaasSyncAlertStatus.OPEN))
                             .build()
@@ -74,7 +74,7 @@ public class SaasConnectionService {
                             .accountScope(resolveAccountScope(type, null))
                             .enterpriseAccount(false)
                             .isConnected(false)
-                            .identityCount(saasIdentityRepository.countBySaasType(type))
+                            .identityCount(saasIdentityRepository.countBySaasTypeAndAccessRevokedFalse(type))
                             .lastSyncedAt(saasIdentityRepository.findLatestSyncedAtBySaasType(type))
                             .openAlertCount(saasSyncAlertRepository.countBySaasTypeAndStatus(type, SaasSyncAlertStatus.OPEN))
                             .build());
@@ -85,6 +85,8 @@ public class SaasConnectionService {
     @Transactional(readOnly = true)
     public List<SaasConnectionDto.IdentityResponse> getIdentities(SaasType saasType) {
         return saasIdentityRepository.findBySaasTypeOrderByUpdatedAtDesc(saasType).stream()
+                // 이미 권한 회수된 계정은 수집 목록에서 숨김 (동기화마다 쌓이지 않도록)
+                .filter(identity -> !identity.isAccessRevoked())
                 .map(identity -> SaasConnectionDto.IdentityResponse.builder()
                         .id(identity.getId())
                         .saasType(identity.getSaasType())
@@ -99,6 +101,8 @@ public class SaasConnectionService {
                         .employeeId(identity.getEmployee() != null ? identity.getEmployee().getId() : null)
                         .employeeName(identity.getEmployee() != null ? identity.getEmployee().getName() : null)
                         .employeeEmail(identity.getEmployee() != null ? identity.getEmployee().getEmail() : null)
+                        .employeeStatus(identity.getEmployee() != null && identity.getEmployee().getStatus() != null
+                                ? identity.getEmployee().getStatus().name() : null)
                         .build())
                 .toList();
     }

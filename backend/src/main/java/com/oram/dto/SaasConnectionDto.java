@@ -72,5 +72,6 @@ public class SaasConnectionDto {
         private UUID employeeId;
         private String employeeName;
         private String employeeEmail;
+        private String employeeStatus;
     }
 }

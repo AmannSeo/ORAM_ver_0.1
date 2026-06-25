@@ -17,6 +17,7 @@ import {
   PeopleAlt as PeopleIcon,
   NotificationsActive as AlertIcon,
   Schedule as ScheduleIcon,
+  Warning as WarnIcon,
 } from '@mui/icons-material';
 import { saasApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
@@ -39,6 +40,7 @@ export default function SaasConnections() {
   const [showGuide, setShowGuide] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [syncingSaas, setSyncingSaas] = useState<SaasType | null>(null);
+  const [syncToast, setSyncToast] = useState<{ saasType: SaasType; msg: string } | null>(null);
 
   // 해제 다이얼로그
   const [disconnectDialog, setDisconnectDialog] = useState<SaasType | null>(null);
@@ -109,16 +111,10 @@ export default function SaasConnections() {
     setSyncingSaas(saasType);
     setError(null);
     try {
-      const result = await saasApi.syncUsers(saasType);
-      const details = [
-        `확인 ${result.totalFound}명`,
-        `신규 ${result.syncedCount}명`,
-        result.inactiveCount ? `비활성 ${result.inactiveCount}명` : null,
-        result.missingCount ? `누락 ${result.missingCount}명` : null,
-        result.resolvedAlertCount ? `해제 알림 ${result.resolvedAlertCount}건` : null,
-      ].filter(Boolean).join(', ');
-      const warningText = result.warnings?.length ? `\n확인 필요: ${result.warnings.join(' / ')}` : '';
-      setSuccess(`${SAAS_INFO[saasType].label} 사용자 동기화 완료: ${details}${warningText}`);
+      await saasApi.syncUsers(saasType);
+      // 각 카드 위에 간결한 토스트로 표시 (3초 후 자동 닫힘)
+      setSyncToast({ saasType, msg: `${SAAS_INFO[saasType].label} 사용자 동기화 완료` });
+      setTimeout(() => setSyncToast((cur) => (cur?.saasType === saasType ? null : cur)), 3000);
       load();
     } catch (err: any) {
       const msg = err?.response?.data?.error || '사용자 동기화에 실패했습니다. 토큰 권한을 확인하세요.';
@@ -177,6 +173,11 @@ export default function SaasConnections() {
           const meta = SAAS_INFO[conn.saasType];
           return (
             <Grid item xs={12} sm={6} md={4} key={conn.saasType}>
+              {syncToast?.saasType === conn.saasType && (
+                <Alert severity="success" sx={{ mb: 1, py: 0.25 }} onClose={() => setSyncToast(null)}>
+                  {syncToast.msg}
+                </Alert>
+              )}
               <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column',
                 borderLeft: conn.isConnected ? `4px solid #2e7d32` : `4px solid #bdbdbd` }}>
                 <CardContent sx={{ flexGrow: 1 }}>
@@ -540,16 +541,21 @@ export default function SaasConnections() {
                     {identityRows.map(row => (
                       <TableRow key={row.id} hover>
                         <TableCell>
-                          <Typography variant="body2" fontWeight={700} noWrap>
-                            {row.displayName || row.externalUsername || row.externalUserId}
-                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            {row.employeeStatus === 'RESIGNED' && !row.accessRevoked && (
+                              <WarnIcon titleAccess="퇴사자인데 권한이 회수되지 않았습니다" sx={{ fontSize: 16, color: '#dc2626' }} />
+                            )}
+                            <Typography variant="body2" fontWeight={700} noWrap>
+                              {row.displayName || row.externalUsername || row.externalUserId}
+                            </Typography>
+                          </Stack>
                         </TableCell>
                         <TableCell><Typography variant="body2" noWrap>{row.externalEmail || '-'}</Typography></TableCell>
                         <TableCell align="center">
                           <Chip
                             size="small"
-                            color={row.accessRevoked ? 'default' : row.status === 'ACTIVE' ? 'success' : 'warning'}
-                            label={row.accessRevoked ? '회수됨' : row.status === 'ACTIVE' ? '활성' : '비활성'}
+                            color={row.accessRevoked ? 'default' : row.employeeStatus === 'RESIGNED' ? 'error' : row.status === 'ACTIVE' ? 'success' : 'warning'}
+                            label={row.accessRevoked ? '회수됨' : row.employeeStatus === 'RESIGNED' ? '미회수' : row.status === 'ACTIVE' ? '활성' : '비활성'}
                           />
                         </TableCell>
                         <TableCell>
