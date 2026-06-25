@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { employeeApi } from '../../api';
 import { formatDateTime } from '../../utils/format';
+import { analysisTriggerLabel } from '../../utils/riskLabels';
 import type { AuditLog } from '../../types';
 
 const ACTION_LABELS: Record<string, { label: string; color: 'default' | 'primary' | 'warning' | 'error' | 'success' | 'info' | 'secondary' }> = {
@@ -48,7 +49,9 @@ function summarizeDetail(log: AuditLog) {
   if (log.action === 'OFFBOARDING_TRIGGERED' || log.action === 'AUTO_RISK_ANALYZED') {
     const risk = detail.match(/Risk:\s*([^,\s]+)/i)?.[1];
     const reason = detail.match(/Reason:\s*([^,]+)/i)?.[1];
-    return `권한 회수 대상 위험도 분석${risk ? `: ${risk}` : ''}${reason ? ` · ${reason}` : ''}`;
+    const riskText = risk ? readableRisk(risk) : '';
+    const reasonText = reason ? analysisTriggerLabel(reason, true) : '';
+    return ['권한 회수 대상 위험도 분석 완료', riskText, reasonText].filter(Boolean).join(' · ');
   }
 
   if (log.action === 'REVOKE_ACCESS') {
@@ -62,6 +65,18 @@ function summarizeDetail(log: AuditLog) {
   }
 
   return detail || '-';
+}
+
+function readableRisk(value: string) {
+  const match = value.match(/^(\d+(?:\.\d+)?)\/([A-Z]+)/i);
+  if (!match) return value;
+  const levelLabel: Record<string, string> = {
+    LOW: '낮음',
+    MEDIUM: '보통',
+    HIGH: '높음',
+    CRITICAL: '긴급',
+  };
+  return `${levelLabel[match[2].toUpperCase()] || match[2]} 위험도 (${match[1]}점)`;
 }
 
 function targetDisplay(log: AuditLog) {
@@ -134,14 +149,14 @@ export default function EmployeeLogPanel({
 
   const downloadCsv = () => {
     const rows = [
-      ['일시', '작업자', '작업자 이메일', '작업', '대상', '대상 유형', '요약'],
+      ['일시', '작업자', '작업자 이메일', '작업', '대상 이메일', '대상 이름', '요약'],
       ...filteredLogs.map((log) => [
         formatDateTime(log.createdAt),
         log.actorName || '시스템',
         log.actorEmail || '',
         actionLabel(log.action).label,
-        targetDisplay(log),
-        log.targetType || '',
+        targetParts(log).primary,
+        targetParts(log).secondary,
         summarizeDetail(log),
       ]),
     ];
@@ -200,11 +215,11 @@ export default function EmployeeLogPanel({
         <Table size="small" sx={{ tableLayout: 'fixed', '& th, & td': { px: 1.25 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell sx={{ width: '15%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
-              <TableCell sx={{ width: '18%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
-              <TableCell sx={{ width: '13%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
-              <TableCell sx={{ width: '22%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>대상</TableCell>
-              <TableCell sx={{ width: '32%', fontWeight: 700, fontSize: 13 }}>요약</TableCell>
+              <TableCell sx={{ width: '14%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
+              <TableCell sx={{ width: '13%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
+              <TableCell sx={{ width: '11%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
+              <TableCell sx={{ width: '24%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>대상</TableCell>
+              <TableCell sx={{ width: '38%', fontWeight: 700, fontSize: 13 }}>요약</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -219,6 +234,7 @@ export default function EmployeeLogPanel({
             )}
             {filteredLogs.map((log) => {
               const meta = actionLabel(log.action);
+              const target = targetParts(log);
               return (
                 <TableRow key={log.id} hover>
                   <TableCell sx={{ fontSize: 13, whiteSpace: 'nowrap', color: '#475569' }}>
@@ -240,13 +256,11 @@ export default function EmployeeLogPanel({
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: '#334155' }}>
                     <Typography fontSize={13} fontWeight={600} noWrap>
-                      {targetDisplay(log)}
+                      {target.primary}
                     </Typography>
-                    {log.targetType && (
-                      <Typography fontSize={11} color="text.secondary" noWrap>
-                        {log.targetType}{isUuid(log.targetId) ? ` · ${log.targetId.slice(0, 8)}` : ''}
-                      </Typography>
-                    )}
+                    <Typography fontSize={11} color="text.secondary" noWrap>
+                      {target.secondary}
+                    </Typography>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: '#475569' }}>
                     <Typography fontSize={13} noWrap>{summarizeDetail(log)}</Typography>
@@ -284,6 +298,23 @@ export default function EmployeeLogPanel({
       </Box>
     </Paper>
   );
+}
+
+function targetParts(log: AuditLog) {
+  const raw = targetDisplay(log);
+  const [namePart, emailPart] = raw.split('/').map((part) => part.trim());
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (emailPart && emailRegex.test(emailPart)) {
+    return { primary: emailPart, secondary: namePart || '이름 없음' };
+  }
+  if (emailRegex.test(namePart)) {
+    return { primary: namePart, secondary: '이름 없음' };
+  }
+  if (raw === '삭제되었거나 확인할 수 없는 직원') {
+    return { primary: '확인 불가', secondary: raw };
+  }
+  return { primary: raw, secondary: log.targetType === 'OFFBOARDING_RESULT' ? '권한 회수 대상' : '직원' };
 }
 
 function getPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
