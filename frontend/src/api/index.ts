@@ -129,4 +129,10 @@ export const offboardingApi = {
 export const riskApi = {
   calculateScore: (data: RiskScoreRequest) =>
     api.post<RiskScoreResponse>('/risk-analysis/score', data).then((r) => r.data),
+  retrain: () =>
+    api.post<Record<string, unknown>>('/risk-analysis/retrain', {}).then((r) => r.data),
+  promote: () =>
+    api.post<Record<string, unknown>>('/risk-analysis/promote', {}).then((r) => r.data),
+  getModelStatus: () =>
+    api.get<Record<string, unknown>>('/risk-analysis/model-status').then((r) => r.data),
 };

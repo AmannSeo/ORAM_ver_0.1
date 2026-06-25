@@ -10,7 +10,7 @@
     "workspace_count"
   ],
   "feature_count": 6,
-  "trained_at": "2026-06-25T12:29:24.419486+00:00",
+  "trained_at": "2026-06-25T12:48:31.545098+00:00",
   "n_samples": 8000,
   "label_source": "interaction_noise_mock",
   "test_rmse": 4.992,

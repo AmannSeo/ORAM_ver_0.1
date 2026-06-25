@@ -13,12 +13,13 @@ TreeSHAP(pred_contribs) 기반의 진짜 기여도 설명을 반환합니다.
 """
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, List, Optional
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from models.xgboost_risk_engine import xgboost_risk_engine, ENGINE_NAME
+import retrainer
 
 
 class RiskRequest(BaseModel):
@@ -67,3 +68,43 @@ def predict(request: RiskRequest) -> RiskResponse:
         workspace_count=request.workspace_count,
     )
     return RiskResponse(**result)
+
+
+# ──────────────────────────────────────────────────────────
+# Champion–Challenger 재학습 (관리자 결정 기반)
+# ──────────────────────────────────────────────────────────
+class LabeledSample(BaseModel):
+    is_admin: bool = False
+    is_owner: bool = False
+    has_api_token: bool = False
+    recent_login: bool = False
+    repo_count: int = 0
+    workspace_count: int = 0
+    label: str = "REVOKED"            # "REVOKED" | "FALSE_POSITIVE"
+    target: Optional[float] = None    # 지정 시 라벨 대신 사용
+
+
+class RetrainRequest(BaseModel):
+    samples: List[LabeledSample] = Field(default_factory=list)
+
+
+@app.post("/retrain")
+def retrain(request: RetrainRequest) -> dict[str, Any]:
+    samples = [s.model_dump() for s in request.samples]
+    return retrainer.retrain(samples)
+
+
+@app.post("/promote")
+def promote() -> dict[str, Any]:
+    result = retrainer.promote()
+    if result.get("promoted"):
+        # 승격된 챔피언을 추론 엔진에 핫리로드
+        xgboost_risk_engine.load_model()
+    return result
+
+
+@app.get("/model-status")
+def model_status() -> dict[str, Any]:
+    status = retrainer.status()
+    status["engine_model_loaded"] = xgboost_risk_engine.model_loaded
+    return status

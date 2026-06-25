@@ -39,11 +39,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "xgboost_model.json")
 METADATA_PATH = os.path.join(BASE_DIR, "models", "xgboost_metadata.json")
 
-RNG = np.random.default_rng(42)
 
-
-def risk_label(is_admin, is_owner, has_api_token, recent_login, repo_count, workspace_count):
-    """상호작용이 포함된 위험 점수(0~100) 생성 함수."""
+def risk_label(is_admin, is_owner, has_api_token, recent_login,
+               repo_count, workspace_count, rng=None):
+    """상호작용이 포함된 위험 점수(0~100) 생성 함수(목업 정답 시뮬레이터)."""
+    if rng is None:
+        rng = np.random.default_rng()
     repo_norm = min(repo_count, REPO_COUNT_CAP) / REPO_COUNT_CAP        # 0~1
     ws_norm = min(workspace_count, WORKSPACE_COUNT_CAP) / WORKSPACE_COUNT_CAP  # 0~1
 
@@ -69,25 +70,27 @@ def risk_label(is_admin, is_owner, has_api_token, recent_login, repo_count, work
         score += 13.0
 
     # --- 노이즈 + 클리핑 ---
-    score += RNG.normal(0.0, 5.0)
+    score += rng.normal(0.0, 5.0)
     return float(np.clip(score, 0.0, 100.0))
 
 
-def generate_dataset(n_samples: int = 8000):
+def generate_dataset(n_samples: int = 8000, seed: int = 42):
+    """시드 고정 목업 데이터 생성(재학습기·검증셋에서 재현 가능하게 사용)."""
+    rng = np.random.default_rng(seed)
     X = np.zeros((n_samples, FEATURE_COUNT), dtype=np.float32)
     y = np.zeros(n_samples, dtype=np.float32)
 
     for i in range(n_samples):
-        is_admin = int(RNG.random() < 0.30)
-        is_owner = int(RNG.random() < 0.15)
-        has_api_token = int(RNG.random() < 0.40)
-        recent_login = int(RNG.random() < 0.60)
-        repo_count = int(RNG.integers(0, REPO_COUNT_CAP + 1))
-        workspace_count = int(RNG.integers(0, WORKSPACE_COUNT_CAP + 1))
+        is_admin = int(rng.random() < 0.30)
+        is_owner = int(rng.random() < 0.15)
+        has_api_token = int(rng.random() < 0.40)
+        recent_login = int(rng.random() < 0.60)
+        repo_count = int(rng.integers(0, REPO_COUNT_CAP + 1))
+        workspace_count = int(rng.integers(0, WORKSPACE_COUNT_CAP + 1))
 
         X[i] = [is_admin, is_owner, has_api_token, recent_login, repo_count, workspace_count]
         y[i] = risk_label(is_admin, is_owner, has_api_token, recent_login,
-                          repo_count, workspace_count)
+                          repo_count, workspace_count, rng=rng)
 
     return X, y
 

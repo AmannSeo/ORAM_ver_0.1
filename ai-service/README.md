@@ -67,3 +67,18 @@ curl -X POST http://127.0.0.1:8090/predict -H "Content-Type: application/json" \
 ```
 
 음수 기여도는 "위험을 낮추는 방향"으로 작용한 피처를 의미합니다(진짜 TreeSHAP).
+
+## Champion–Challenger 재학습
+
+관리자의 실제 결정(`revoked_all`/`false_positive`)을 라벨로 챌린저를 학습하고
+챔피언과 비교한 뒤, 더 나으면 승격합니다. 백엔드 `RetrainService`가 라벨을 모아 호출합니다.
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `POST /retrain` | `{samples:[{is_admin,...,label:"REVOKED"\|"FALSE_POSITIVE"}]}` → 챌린저 학습 + 비교 결과 |
+| `POST /promote` | 챌린저를 챔피언으로 교체(`xgboost_model.json`) + 엔진 핫리로드 |
+| `GET /model-status` | 챔피언/챌린저 메타데이터 |
+
+- 실데이터가 적으면 목업으로 백필하되 `real_sample_count`로 실제 사용 라벨 수를 표시(과장 없음).
+- 비교는 고정 시드 목업 검증셋 + 실데이터 부분집합 RMSE/MAE로 수행.
+- 챌린저 산출물(`xgboost_challenger*.json`)은 런타임 생성물이라 git에서 제외됩니다.

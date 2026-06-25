@@ -437,6 +437,148 @@ function RiskSimulator() {
   );
 }
 
+type Metric = { rmse: number; mae: number; n: number } | null;
+
+function MetricCell({ value }: { value?: Metric }) {
+  if (!value) return <Typography variant="body2" color="#94a3b8">-</Typography>;
+  return (
+    <Stack spacing={0.25}>
+      <Typography variant="body2" fontWeight={700}>RMSE {value.rmse}</Typography>
+      <Typography variant="caption" color="#64748b">MAE {value.mae} · n={value.n}</Typography>
+    </Stack>
+  );
+}
+
+function RetrainPanel() {
+  const [status, setStatus] = useState<any>(null);
+  const [comparison, setComparison] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [promoting, setPromoting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const loadStatus = () => riskApi.getModelStatus().then(setStatus).catch(() => setStatus(null));
+  useEffect(() => { loadStatus(); }, []);
+
+  const handleRetrain = async () => {
+    setLoading(true); setError(null); setMsg(null);
+    try {
+      const res: any = await riskApi.retrain();
+      if (res?.error) setError(String(res.message || '재학습에 실패했습니다.'));
+      else { setComparison(res); await loadStatus(); }
+    } catch {
+      setError('재학습 요청에 실패했습니다. AI 모델 서버 상태를 확인하세요.');
+    } finally { setLoading(false); }
+  };
+
+  const handlePromote = async () => {
+    setPromoting(true); setError(null);
+    try {
+      const res: any = await riskApi.promote();
+      if (res?.promoted) { setMsg(String(res.reason || '챌린저가 챔피언으로 승격되었습니다.')); setComparison(null); await loadStatus(); }
+      else setError(String(res?.reason || res?.message || '승격할 챌린저가 없습니다.'));
+    } catch {
+      setError('승격 요청에 실패했습니다.');
+    } finally { setPromoting(false); }
+  };
+
+  const champion = status?.champion;
+  const isPromote = comparison?.recommendation === 'PROMOTE_CHALLENGER';
+
+  return (
+    <Stack spacing={2.5}>
+      <Alert severity="info">
+        관리자가 실제로 <strong>권한 회수(REVOKED)</strong> 또는 <strong>오탐 처리(FALSE_POSITIVE)</strong>한 결정을 라벨로 모아
+        챌린저 모델을 학습하고, 현재 챔피언과 성능을 비교합니다. 실데이터가 부족하면 목업으로 백필하되 실제 사용된 라벨 수를 그대로 표시합니다.
+        더 나은 챌린저는 승격하여 운영 모델로 교체할 수 있습니다.
+      </Alert>
+
+      {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+      {msg && <Alert severity="success" onClose={() => setMsg(null)}>{msg}</Alert>}
+
+      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+            <Typography variant="h6" fontWeight={700}>현재 챔피언 모델</Typography>
+            <Button variant="outlined" size="small" onClick={loadStatus}>새로고침</Button>
+          </Stack>
+          <Divider sx={{ mb: 2 }} />
+          {champion ? (
+            <Grid container spacing={1.5}>
+              <Grid item xs={6} md={3}><Typography variant="caption" color="#64748b">버전</Typography><Typography fontWeight={700}>{champion.model_version || '-'}</Typography></Grid>
+              <Grid item xs={6} md={3}><Typography variant="caption" color="#64748b">학습 소스</Typography><Typography fontWeight={700}>{champion.label_source || champion.promoted_from || 'mock'}</Typography></Grid>
+              <Grid item xs={6} md={3}><Typography variant="caption" color="#64748b">사용된 실제 라벨</Typography><Typography fontWeight={700}>{champion.real_sample_count ?? 0}건</Typography></Grid>
+              <Grid item xs={6} md={3}><Typography variant="caption" color="#64748b">검증 RMSE</Typography><Typography fontWeight={700}>{champion.test_rmse ?? '-'}</Typography></Grid>
+            </Grid>
+          ) : (
+            <Typography variant="body2" color="#94a3b8">모델 상태를 불러올 수 없습니다. AI 모델 서버가 실행 중인지 확인하세요.</Typography>
+          )}
+          <Button
+            variant="contained"
+            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AIIcon />}
+            onClick={handleRetrain}
+            disabled={loading}
+            sx={{ mt: 2.5 }}
+          >
+            {loading ? '재학습 중...' : '재학습 실행 (챌린저 학습)'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {comparison && (
+        <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+              <Typography variant="h6" fontWeight={700}>챔피언 vs 챌린저 비교</Typography>
+              <Chip size="small" variant="outlined" label={`실제 라벨 ${comparison.real_sample_count}건`} />
+              <Chip size="small" variant="outlined" label={`목업 백필 ${comparison.mock_backfill_count}건`} />
+            </Stack>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                    <TableCell>구분</TableCell>
+                    <TableCell>챔피언 (현재 운영)</TableCell>
+                    <TableCell>챌린저 (신규)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell><Typography variant="body2" fontWeight={700}>검증셋(목업)</Typography></TableCell>
+                    <TableCell><MetricCell value={comparison.validation?.champion} /></TableCell>
+                    <TableCell><MetricCell value={comparison.validation?.challenger} /></TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><Typography variant="body2" fontWeight={700}>실데이터 라벨 적합도</Typography></TableCell>
+                    <TableCell><MetricCell value={comparison.validation_real?.champion} /></TableCell>
+                    <TableCell><MetricCell value={comparison.validation_real?.challenger} /></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Alert severity={isPromote ? 'success' : 'info'} sx={{ mt: 2 }}>
+              <strong>{isPromote ? '챌린저 승격 권장' : '챔피언 유지 권장'}</strong> — {comparison.reason}
+            </Alert>
+
+            <Button
+              variant={isPromote ? 'contained' : 'outlined'}
+              color={isPromote ? 'success' : 'primary'}
+              startIcon={promoting ? <CircularProgress size={16} color="inherit" /> : <CheckIcon />}
+              onClick={handlePromote}
+              disabled={promoting}
+              sx={{ mt: 2 }}
+            >
+              {promoting ? '승격 중...' : '챌린저를 챔피언으로 승격'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </Stack>
+  );
+}
+
 export default function RiskAnalysis() {
   const [tab, setTab] = useState(0);
   const [urgentCount, setUrgentCount] = useState(0);
@@ -466,10 +608,12 @@ export default function RiskAnalysis() {
           }
         />
         <Tab label="점수 시뮬레이터" />
+        <Tab label="모델 학습" />
       </Tabs>
 
       {tab === 0 && <RiskDecisionList />}
       {tab === 1 && <RiskSimulator />}
+      {tab === 2 && <RetrainPanel />}
     </Box>
   );
 }
