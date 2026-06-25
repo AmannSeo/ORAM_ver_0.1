@@ -98,11 +98,14 @@ export default function EmployeeLogPanel({
   description = '권한 점검 생성, AI 자동 감지, 권한 회수, 오탐 처리처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.',
   initialQuery = '',
   pageSize = DEFAULT_PAGE_SIZE,
+  employeeFilter,
 }: {
   title?: string;
   description?: string;
   initialQuery?: string;
   pageSize?: number;
+  // 지정 시 해당 직원(이메일)의 로그만 표시하고 검색/엑셀/페이지네이션을 숨김
+  employeeFilter?: string;
 }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,12 +113,24 @@ export default function EmployeeLogPanel({
   const [query, setQuery] = useState(initialQuery);
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+  // 직원 단위 보기일 땐 충분히 큰 페이지로 받아 그 직원 로그를 모두 포함
+  const effectivePageSize = employeeFilter ? 500 : pageSize;
+  const totalPages = Math.max(1, Math.ceil(totalElements / effectivePageSize));
   const currentPage = page + 1;
   const pageItems = getPageItems(currentPage, totalPages);
   const canGoPrev = page > 0;
   const canGoNext = currentPage < totalPages;
   const filteredLogs = useMemo(() => {
+    // 직원 단위 보기: 해당 직원(이메일/이름)이 대상인 로그만
+    if (employeeFilter) {
+      const key = employeeFilter.trim().toLowerCase();
+      if (!key) return logs;
+      return logs.filter((log) => [
+        log.targetLabel,
+        targetDisplay(log),
+        log.detail,
+      ].filter(Boolean).some((value) => String(value).toLowerCase().includes(key)));
+    }
     const keyword = query.trim().toLowerCase();
     if (!keyword) return logs;
     return logs.filter((log) => [
@@ -128,13 +143,13 @@ export default function EmployeeLogPanel({
       summarizeDetail(log),
       log.detail,
     ].filter(Boolean).some((value) => String(value).toLowerCase().includes(keyword)));
-  }, [logs, query]);
+  }, [logs, query, employeeFilter]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     employeeApi
-      .getAuditLogs({ page, size: pageSize })
+      .getAuditLogs({ page, size: effectivePageSize })
       .then((data) => {
         setLogs(data.content);
         setTotalElements(data.totalElements);
@@ -145,7 +160,7 @@ export default function EmployeeLogPanel({
         setError(err?.response?.data?.error || '감사 로그를 불러오지 못했습니다. 로그인 상태를 확인하세요.');
       })
       .finally(() => setLoading(false));
-  }, [page, pageSize]);
+  }, [page, effectivePageSize]);
 
   const downloadCsv = () => {
     const rows = [
@@ -182,6 +197,7 @@ export default function EmployeeLogPanel({
               {description}
             </Typography>
           </Box>
+          {!employeeFilter && (
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
             <TextField
               size="small"
@@ -207,6 +223,7 @@ export default function EmployeeLogPanel({
               엑셀 다운로드
             </Button>
           </Stack>
+          )}
         </Stack>
       </Box>
       {loading && <LinearProgress />}
@@ -271,6 +288,7 @@ export default function EmployeeLogPanel({
           </TableBody>
         </Table>
       </TableContainer>
+      {!employeeFilter && (
       <Box sx={{ px: 2, py: 1.5, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', bgcolor: '#ffffff' }}>
         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
           {totalPages > 1 && (
@@ -296,6 +314,7 @@ export default function EmployeeLogPanel({
           )}
         </Stack>
       </Box>
+      )}
     </Paper>
   );
 }

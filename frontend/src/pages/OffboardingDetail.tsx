@@ -516,9 +516,8 @@ export default function OffboardingDetailPage() {
 
             <EmployeeLogPanel
               title="대상 직원 감사 로그"
-              description="이 직원과 관련된 권한 점검, 회수, 오탐 처리 기록입니다. 이름 또는 이메일 기준으로 필터링됩니다."
-              initialQuery={detail.employee.email || detail.employee.name}
-              pageSize={100}
+              description="이 직원의 권한 점검, 회수, 오탐 처리 기록입니다."
+              employeeFilter={detail.employee.email || detail.employee.name}
             />
           </Stack>
         </Grid>
