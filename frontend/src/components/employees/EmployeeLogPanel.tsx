@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Box,
+  Button,
   Chip,
   LinearProgress,
   Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   Typography,
 } from '@mui/material';
+import {
+  FirstPage as FirstPageIcon,
+  KeyboardArrowLeft as PrevIcon,
+  KeyboardArrowRight as NextIcon,
+  LastPage as LastPageIcon,
+} from '@mui/icons-material';
 import { employeeApi } from '../../api';
 import { formatDateTime } from '../../utils/format';
 import type { AuditLog } from '../../types';
@@ -72,6 +80,11 @@ export default function EmployeeLogPanel() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+  const currentPage = page + 1;
+  const pageItems = getPageItems(currentPage, totalPages);
+  const canGoPrev = page > 0;
+  const canGoNext = currentPage < totalPages;
 
   useEffect(() => {
     setLoading(true);
@@ -155,15 +168,81 @@ export default function EmployeeLogPanel() {
           </TableBody>
         </Table>
       </TableContainer>
-      <TablePagination
-        component="div"
-        count={totalElements}
-        page={page}
-        rowsPerPage={PAGE_SIZE}
-        rowsPerPageOptions={[PAGE_SIZE]}
-        onPageChange={(_, newPage) => setPage(newPage)}
-        labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 전체 ${count}건`}
-      />
+      <Box sx={{ px: 2, py: 1.5, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', bgcolor: '#ffffff' }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+          {totalPages > 1 && (
+            <>
+              <PageButton disabled={!canGoPrev} onClick={() => setPage(0)} icon={<FirstPageIcon fontSize="small" />} />
+              <PageButton disabled={!canGoPrev} onClick={() => setPage(page - 1)} icon={<PrevIcon fontSize="small" />} />
+            </>
+          )}
+          {pageItems.map((item, index) => (
+            item === 'ellipsis' ? (
+              <Box key={`ellipsis-${index}`} sx={{ width: 28, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>...</Box>
+            ) : (
+              <PageButton key={item} active={item === currentPage} onClick={() => setPage(item - 1)}>
+                {item}
+              </PageButton>
+            )
+          ))}
+          {totalPages > 1 && (
+            <>
+              <PageButton disabled={!canGoNext} onClick={() => setPage(page + 1)} icon={<NextIcon fontSize="small" />} />
+              <PageButton disabled={!canGoNext} onClick={() => setPage(totalPages - 1)} icon={<LastPageIcon fontSize="small" />} />
+            </>
+          )}
+        </Stack>
+      </Box>
     </Paper>
+  );
+}
+
+function getPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  if (currentPage <= 4) return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  if (currentPage >= totalPages - 3) return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
+}
+
+function PageButton({
+  children,
+  icon,
+  active,
+  disabled,
+  onClick,
+}: {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant={active ? 'contained' : 'outlined'}
+      disabled={disabled}
+      onClick={onClick}
+      sx={{
+        minWidth: 34,
+        width: icon && !children ? 34 : 'auto',
+        height: 34,
+        px: children ? 1.25 : 0,
+        borderRadius: 1.5,
+        color: active ? 'white' : '#475569',
+        bgcolor: active ? '#334155' : '#f8fafc',
+        borderColor: active ? '#334155' : '#e2e8f0',
+        fontWeight: 700,
+        fontSize: 13,
+        boxShadow: active ? '0 6px 14px rgba(15, 23, 42, 0.12)' : 'none',
+        '&:hover': {
+          bgcolor: active ? '#334155' : '#eef2f7',
+          borderColor: active ? '#334155' : '#cbd5e1',
+          boxShadow: active ? '0 6px 14px rgba(15, 23, 42, 0.12)' : 'none',
+        },
+        '&.Mui-disabled': { bgcolor: '#f8fafc', borderColor: '#eef2f7', color: '#cbd5e1' },
+      }}
+    >
+      {icon || children}
+    </Button>
   );
 }

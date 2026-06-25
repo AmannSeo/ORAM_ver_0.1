@@ -336,12 +336,8 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
         >
           퇴직자 목록
         </Button>
-        {!isResignedPage && (
-          <>
-            <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
-            <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
-          </>
-        )}
+        <Button variant={tab === 'hr' ? 'contained' : 'outlined'} onClick={() => setTab('hr')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>HR 연동</Button>
+        <Button variant={tab === 'log' ? 'contained' : 'outlined'} onClick={() => setTab('log')} sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}>로그</Button>
       </Stack>
 
       {tab === 'employees' && (
