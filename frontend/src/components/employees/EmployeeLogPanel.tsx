@@ -36,7 +36,7 @@ const ACTION_LABELS: Record<string, { label: string; color: 'default' | 'primary
   MARK_FALSE_POSITIVE: { label: '오탐 처리', color: 'success' },
 };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 function actionLabel(action: string) {
   return ACTION_LABELS[action] ?? { label: action, color: 'default' as const };
@@ -48,7 +48,7 @@ function summarizeDetail(log: AuditLog) {
   if (log.action === 'OFFBOARDING_TRIGGERED' || log.action === 'AUTO_RISK_ANALYZED') {
     const risk = detail.match(/Risk:\s*([^,\s]+)/i)?.[1];
     const reason = detail.match(/Reason:\s*([^,]+)/i)?.[1];
-    return `위험도 점검 완료${risk ? ` (${risk})` : ''}${reason ? `, 근거: ${reason}` : ''}`;
+    return `권한 회수 대상 위험도 분석${risk ? `: ${risk}` : ''}${reason ? ` · ${reason}` : ''}`;
   }
 
   if (log.action === 'REVOKE_ACCESS') {
@@ -78,14 +78,24 @@ function isUuid(value?: string) {
   return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
 }
 
-export default function EmployeeLogPanel() {
+export default function EmployeeLogPanel({
+  title = '감사 로그',
+  description = '권한 점검 생성, AI 자동 감지, 권한 회수, 오탐 처리처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.',
+  initialQuery = '',
+  pageSize = DEFAULT_PAGE_SIZE,
+}: {
+  title?: string;
+  description?: string;
+  initialQuery?: string;
+  pageSize?: number;
+}) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
   const currentPage = page + 1;
   const pageItems = getPageItems(currentPage, totalPages);
   const canGoPrev = page > 0;
@@ -109,7 +119,7 @@ export default function EmployeeLogPanel() {
     setLoading(true);
     setError(null);
     employeeApi
-      .getAuditLogs({ page, size: PAGE_SIZE })
+      .getAuditLogs({ page, size: pageSize })
       .then((data) => {
         setLogs(data.content);
         setTotalElements(data.totalElements);
@@ -120,7 +130,7 @@ export default function EmployeeLogPanel() {
         setError(err?.response?.data?.error || '감사 로그를 불러오지 못했습니다. 로그인 상태를 확인하세요.');
       })
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, pageSize]);
 
   const downloadCsv = () => {
     const rows = [
@@ -152,9 +162,9 @@ export default function EmployeeLogPanel() {
       <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'flex-start' }} gap={1.5}>
           <Box>
-            <Typography variant="subtitle1" fontWeight={700} color="#0f172a">감사 로그</Typography>
+            <Typography variant="subtitle1" fontWeight={700} color="#0f172a">{title}</Typography>
             <Typography variant="body2" color="#64748b" mt={0.25}>
-              권한 점검 생성, AI 자동 감지, 권한 회수, 오탐 처리처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.
+              {description}
             </Typography>
           </Box>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
@@ -162,7 +172,7 @@ export default function EmployeeLogPanel() {
               size="small"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="이름, 이메일, 작업, 요약 검색"
+              placeholder="이름, 이메일, 부서, 작업, 요약 검색"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -190,11 +200,11 @@ export default function EmployeeLogPanel() {
         <Table size="small" sx={{ tableLayout: 'fixed', '& th, & td': { px: 1.25 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-              <TableCell sx={{ width: '17%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
-              <TableCell sx={{ width: '19%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
-              <TableCell sx={{ width: '15%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
+              <TableCell sx={{ width: '15%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>일시</TableCell>
+              <TableCell sx={{ width: '18%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업자</TableCell>
+              <TableCell sx={{ width: '13%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>작업</TableCell>
               <TableCell sx={{ width: '22%', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>대상</TableCell>
-              <TableCell sx={{ width: '27%', fontWeight: 700, fontSize: 13 }}>요약</TableCell>
+              <TableCell sx={{ width: '32%', fontWeight: 700, fontSize: 13 }}>요약</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

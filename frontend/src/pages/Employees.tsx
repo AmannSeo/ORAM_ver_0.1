@@ -33,7 +33,6 @@ import {
 import { employeeApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
 import EmployeeFilterPanel from '../components/employees/EmployeeFilterPanel';
-import EmployeeLogPanel from '../components/employees/EmployeeLogPanel';
 import EmployeeTable from '../components/employees/EmployeeTable';
 import { SAAS_BADGE } from '../constants/saas';
 import type { Employee, EmployeeStatus, SaasType } from '../types';
@@ -60,7 +59,7 @@ function displayDepartment(department?: string) {
 }
 
 type EmployeesPageMode = 'active' | 'resigned';
-type EmployeesTab = 'employees' | 'hr' | 'log';
+type EmployeesTab = 'employees' | 'hr';
 
 export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMode }) {
   const navigate = useNavigate();
@@ -286,7 +285,7 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
       <PageHeader
         title={isResignedPage ? '퇴직자 목록' : '직원 권한 관리'}
         description={isResignedPage ? '퇴사 처리된 직원과 남아 있는 SaaS 접근 권한 상태를 확인합니다.' : '재직자 기준으로 SaaS 계정, 접근 상태, 퇴사 처리를 관리합니다.'}
-        actions={!isResignedPage ? (
+        actions={!isResignedPage && tab === 'employees' ? (
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1}
@@ -346,13 +345,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
         >
           HR 연동
         </Button>
-        <Button
-          variant={!isResignedPage && tab === 'log' ? 'contained' : 'outlined'}
-          onClick={() => { setTab('log'); navigate('/employees', { state: { tab: 'log' } }); }}
-          sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
-        >
-          로그
-        </Button>
       </Stack>
 
       {tab === 'employees' && (
@@ -411,8 +403,6 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
           <Alert severity="success">현재 PoC에서 Webhook 엔드포인트가 활성화되어 있습니다.</Alert>
         </Paper>
       )}
-
-      {tab === 'log' && <EmployeeLogPanel />}
 
       <EmployeeDialogs
         addDialog={addDialog}

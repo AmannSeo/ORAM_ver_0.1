@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { offboardingApi } from '../api';
 import RiskBadge from '../components/common/RiskBadge';
+import EmployeeLogPanel from '../components/employees/EmployeeLogPanel';
 import { formatDateTime } from '../utils/format';
 import { analysisTriggerLabel } from '../utils/riskLabels';
 import type { OffboardingDetail, RevokePlanItem, RevokePlanResponse, SaasType } from '../types';
@@ -478,7 +479,7 @@ export default function OffboardingDetailPage() {
 
             <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
               <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Typography variant="h6" fontWeight={700}>권장 조치 및 기록</Typography>
+                <Typography variant="h6" fontWeight={700}>권장 조치</Typography>
                 <Divider sx={{ my: 2 }} />
                 {detail.recommendedActions.length === 0 ? (
                   <Typography color="#64748b">추가 권장 조치가 없습니다.</Typography>
@@ -499,6 +500,13 @@ export default function OffboardingDetailPage() {
                 </Alert>
               </CardContent>
             </Card>
+
+            <EmployeeLogPanel
+              title="대상 직원 감사 로그"
+              description="이 직원과 관련된 권한 점검, 회수, 오탐 처리 기록입니다. 이름 또는 이메일 기준으로 필터링됩니다."
+              initialQuery={detail.employee.email || detail.employee.name}
+              pageSize={100}
+            />
           </Stack>
         </Grid>
       </Grid>

@@ -11,6 +11,7 @@ import RiskAnalysis from './pages/RiskAnalysis';
 import Offboarding from './pages/Offboarding';
 import OffboardingDetail from './pages/OffboardingDetail';
 import HelpGuide from './pages/HelpGuide';
+import AuditLogs from './pages/AuditLogs';
 
 const theme = createTheme({
   palette: {
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="risk-analysis" element={<RiskAnalysis />} />
             <Route path="offboarding" element={<Offboarding />} />
             <Route path="offboarding/:resultId" element={<OffboardingDetail />} />
+            <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="help" element={<HelpGuide />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
