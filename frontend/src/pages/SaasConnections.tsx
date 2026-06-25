@@ -201,42 +201,30 @@ export default function SaasConnections() {
                     </Box>
                   </Box>
 
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: 13 }}>탐지 항목</Typography>
-                  {meta.detectItems.map(d => (
-                    <Typography key={d} variant="caption" display="block" color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.65 }}>• {d}</Typography>
-                  ))}
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mt={1} sx={{ fontSize: 13 }}>권한 해제</Typography>
-                  <Typography variant="caption" color={meta.revokeNote.startsWith('⚠️') ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 13, lineHeight: 1.65 }}>
-                    {meta.revokeNote}
-                  </Typography>
-
-                  <Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}>
-                    {meta.quickLinks.slice(0, 2).map(link => (
-                      <Button
-                        key={link.url}
-                        component="a"
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="small"
-                        variant="text"
-                        endIcon={<OpenIcon fontSize="small" />}
-                        sx={{ px: 0.5, minWidth: 'auto', fontSize: 13 }}
-                      >
-                        {link.label}
-                      </Button>
-                    ))}
-                  </Stack>
-
-                  {conn.isConnected && (
-                    <Box mt={1.5} p={1.25} bgcolor="success.50" borderRadius={1}>
-                      {/* 핵심 정보: 항상 노출 */}
-                      <Typography variant="body2" color="success.dark" sx={{ fontSize: 14 }}>
-                        <strong>{conn.workspaceName}</strong>
+                  {conn.isConnected ? (
+                    <Box mt={0.5} p={1.25} bgcolor="success.50" borderRadius={1}>
+                      {/* 항상 노출: 핵심 4개 (가져온 이름 / 수집 계정 / 마지막 동기화 / 미처리 감지) */}
+                      <Typography variant="body2" color="success.dark" fontWeight={700} sx={{ fontSize: 14 }}>
+                        {conn.workspaceName}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 12.5 }}>
-                        수집 계정: {conn.identityCount ?? 0}명
-                      </Typography>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
+                        <PeopleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
+                          수집 계정: {conn.identityCount ?? 0}명
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
+                        <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
+                          마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
+                        <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
+                        <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5 }}>
+                          미처리 감지: {conn.openAlertCount ?? 0}건
+                        </Typography>
+                      </Stack>
 
                       {/* 상세 토글 버튼 */}
                       <Box display="flex" justifyContent="flex-end" mt={0.25}>
@@ -252,8 +240,36 @@ export default function SaasConnections() {
                         </Button>
                       </Box>
 
-                      {/* 상세 정보: 클릭 시 확장 */}
+                      {/* 상세: 탐지 항목 / 권한 해제 / 링크 / 연결 정보 */}
                       <Collapse in={Boolean(expandedDetails[conn.saasType])}>
+                        <Divider sx={{ my: 1 }} />
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: 12.5 }}>탐지 항목</Typography>
+                        {meta.detectItems.map(d => (
+                          <Typography key={d} variant="caption" display="block" color="text.secondary" sx={{ fontSize: 12.5, lineHeight: 1.65 }}>• {d}</Typography>
+                        ))}
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mt={1} sx={{ fontSize: 12.5 }}>권한 해제</Typography>
+                        <Typography variant="caption" display="block" color={meta.revokeNote.startsWith('⚠️') ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5, lineHeight: 1.65 }}>
+                          {meta.revokeNote}
+                        </Typography>
+
+                        <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
+                          {meta.quickLinks.slice(0, 2).map(link => (
+                            <Button
+                              key={link.url}
+                              component="a"
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              size="small"
+                              variant="text"
+                              endIcon={<OpenIcon fontSize="small" />}
+                              sx={{ px: 0.5, minWidth: 'auto', fontSize: 12.5 }}
+                            >
+                              {link.label}
+                            </Button>
+                          ))}
+                        </Stack>
+
                         <Divider sx={{ my: 1 }} />
                         <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: 12.5, mb: 0.5 }}>
                           연결 정보
@@ -263,18 +279,6 @@ export default function SaasConnections() {
                             계정 범위: {accountScopeLabel(conn.saasType, conn.accountScope, conn.enterpriseAccount)}
                           </Typography>
                         )}
-                        <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
-                          <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12.5 }}>
-                            마지막 동기화: {formatDateTime(conn.lastSyncedAt)}
-                          </Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={0.75} alignItems="center" mt={0.25}>
-                          <AlertIcon sx={{ fontSize: 14, color: (conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary' }} />
-                          <Typography variant="caption" color={(conn.openAlertCount ?? 0) > 0 ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 12.5 }}>
-                            미처리 감지: {conn.openAlertCount ?? 0}건
-                          </Typography>
-                        </Stack>
                         <Typography variant="caption" color="text.secondary" display="block" mt={0.5} sx={{ fontSize: 12.5, lineHeight: 1.6 }}>
                           퇴사자 활성 계정, 비활성 계정, 이전 동기화 대비 누락 계정을 권한 회수 검토 대상으로 표시합니다.
                         </Typography>
@@ -285,6 +289,35 @@ export default function SaasConnections() {
                         )}
                       </Collapse>
                     </Box>
+                  ) : (
+                    <>
+                      {/* 미연결: 연결 전 안내 (탐지 항목 / 권한 해제 / 링크) */}
+                      <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: 13 }}>탐지 항목</Typography>
+                      {meta.detectItems.map(d => (
+                        <Typography key={d} variant="caption" display="block" color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.65 }}>• {d}</Typography>
+                      ))}
+                      <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mt={1} sx={{ fontSize: 13 }}>권한 해제</Typography>
+                      <Typography variant="caption" display="block" color={meta.revokeNote.startsWith('⚠️') ? 'warning.main' : 'text.secondary'} sx={{ fontSize: 13, lineHeight: 1.65 }}>
+                        {meta.revokeNote}
+                      </Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}>
+                        {meta.quickLinks.slice(0, 2).map(link => (
+                          <Button
+                            key={link.url}
+                            component="a"
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="small"
+                            variant="text"
+                            endIcon={<OpenIcon fontSize="small" />}
+                            sx={{ px: 0.5, minWidth: 'auto', fontSize: 13 }}
+                          >
+                            {link.label}
+                          </Button>
+                        ))}
+                      </Stack>
+                    </>
                   )}
                 </CardContent>
 
