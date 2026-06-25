@@ -16,4 +16,8 @@ public interface OffboardingResultRepository extends JpaRepository<OffboardingRe
     Optional<OffboardingResult> findTopByEmployee_IdOrderByCreatedAtDesc(UUID employeeId);
     long countByStatus(OffboardingStatus status);
     long countByRiskLevel(RiskLevel riskLevel);
+
+    // 재학습용 실제 라벨: 관리자가 회수한 건(REVOKED) / 오탐 처리한 건(FALSE_POSITIVE)
+    List<OffboardingResult> findByRevokedAllTrue();
+    List<OffboardingResult> findByFalsePositiveTrue();
 }

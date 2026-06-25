@@ -1,40 +1,27 @@
 {
-  "role_map": {
-    "CEO": 1,
-    "CIO": 2,
-    "CTO": 3,
-    "Designer": 4,
-    "Developer": 5,
-    "Director": 6,
-    "Employee": 7,
-    "Manager": 8,
-    "Security_Engineer": 9,
-    "<UNKNOWN>": 0
+  "model_version": "oram-6f-shap-v1",
+  "objective": "reg:squarederror",
+  "feature_names": [
+    "is_admin",
+    "is_owner",
+    "has_api_token",
+    "recent_login",
+    "repo_count",
+    "workspace_count"
+  ],
+  "feature_count": 6,
+  "trained_at": "2026-06-25T12:48:31.545098+00:00",
+  "n_samples": 8000,
+  "label_source": "interaction_noise_mock",
+  "test_rmse": 4.992,
+  "test_mae": 3.993,
+  "feature_importance_gain": {
+    "is_admin": 28535.72,
+    "is_owner": 16054.35,
+    "has_api_token": 11151.63,
+    "recent_login": 2138.73,
+    "repo_count": 770.68,
+    "workspace_count": 1099.92
   },
-  "dept_map": {
-    "Development": 1,
-    "Finance": 2,
-    "HR": 3,
-    "Legal": 4,
-    "Sales": 5,
-    "<UNKNOWN>": 0
-  },
-  "app_map": {
-    "AWS": 1,
-    "Dropbox Business": 2,
-    "Figma": 3,
-    "Flex HR": 4,
-    "GitHub": 5,
-    "Google Workspace": 6,
-    "Notion": 7,
-    "Okta": 8,
-    "Slack": 9,
-    "<UNKNOWN>": 0
-  },
-  "scope_map": {
-    "admin": 1,
-    "read": 2,
-    "write": 3,
-    "<UNKNOWN>": 0
-  }
+  "note": "상호작용+노이즈 목업으로 부트스트랩. revoked_all/false_positive 실데이터 누적 시 재학습."
 }
