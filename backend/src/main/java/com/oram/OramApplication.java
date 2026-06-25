@@ -10,12 +10,27 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import jakarta.annotation.PostConstruct;
+import java.util.TimeZone;
+
 @Slf4j
 @EnableScheduling
 @SpringBootApplication
 public class OramApplication {
 
+    /**
+     * 서버 기본 타임존을 KST로 고정.
+     * LocalDateTime.now()가 UTC 서버에서도 한국 시각으로 기록/표시되도록 보장합니다.
+     */
+    @PostConstruct
+    void initTimeZone() {
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
+        log.info("Default timezone set to Asia/Seoul (KST)");
+    }
+
     public static void main(String[] args) {
+        // SpringApplication.run 이전에도 타임존을 고정해 시작 단계 로그/타임스탬프까지 KST로 통일
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
         SpringApplication.run(OramApplication.class, args);
     }
 
