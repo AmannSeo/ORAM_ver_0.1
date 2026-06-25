@@ -1,5 +1,11 @@
 import type { SaasConnection, SaasType } from '../types';
 
+export const SAAS_BADGE: Record<SaasType, { short: string; label: string; color: string; bg: string; border: string }> = {
+  SLACK: { short: 'SL', label: 'Slack', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+  GITHUB: { short: 'GI', label: 'GitHub', color: '#334155', bg: '#f1f5f9', border: '#cbd5e1' },
+  NOTION: { short: 'NO', label: 'Notion', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+};
+
 export const SAAS_INFO: Record<SaasType, {
   label: string; color: string; emoji: string;
   tokenLabel: string; tokenPlaceholder: string; tokenPrefix: string;
