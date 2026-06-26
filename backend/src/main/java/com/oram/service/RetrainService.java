@@ -29,6 +29,9 @@ public class RetrainService {
     private final OffboardingResultRepository resultRepository;
     private final WebClient webClient;
 
+    @Value("${oram.ai.model-server-enabled:true}")
+    private boolean modelServerEnabled;
+
     @Value("${oram.ai.model-url:http://127.0.0.1:8090}")
     private String modelUrl;
 
@@ -43,6 +46,9 @@ public class RetrainService {
     /** 실제 라벨을 수집해 챌린저 학습을 트리거하고 비교 결과를 반환. */
     @Transactional(readOnly = true)
     public Map<String, Object> collectAndRetrain() {
+        if (!modelServerEnabled) {
+            return disabledMap();
+        }
         List<Map<String, Object>> samples = new ArrayList<>();
         for (OffboardingResult r : resultRepository.findByRevokedAllTrue()) {
             samples.add(toSample(RiskFeatures.aggregate(r.getPermissions()), "REVOKED"));
@@ -59,12 +65,18 @@ public class RetrainService {
 
     /** 챌린저를 챔피언으로 승격. */
     public Map<String, Object> promote() {
+        if (!modelServerEnabled) {
+            return disabledMap();
+        }
         return postJson("/promote", new HashMap<>(), Math.max(requestTimeoutMs, 15000));
     }
 
     /** 현재 챔피언/챌린저 메타데이터 조회. */
     @SuppressWarnings("unchecked")
     public Map<String, Object> modelStatus() {
+        if (!modelServerEnabled) {
+            return disabledMap();
+        }
         try {
             return webClient.get()
                     .uri(url("/model-status"))
@@ -100,6 +112,16 @@ public class RetrainService {
         } catch (Exception e) {
             return errorMap(e);
         }
+    }
+
+    private Map<String, Object> disabledMap() {
+        log.info("AI model server is disabled (oram.ai.model-server-enabled=false). Skipping outbound call.");
+        Map<String, Object> result = new HashMap<>();
+        result.put("error", false);
+        result.put("disabled", true);
+        result.put("message", "AI 모델 서버가 비활성화되어 있습니다 (AI_MODEL_SERVER_ENABLED=false). "
+                + "재학습/승격은 ai-service를 실행하고 AI_MODEL_SERVER_ENABLED=true, AI_MODEL_URL을 설정하면 동작합니다.");
+        return result;
     }
 
     private Map<String, Object> errorMap(Exception e) {
