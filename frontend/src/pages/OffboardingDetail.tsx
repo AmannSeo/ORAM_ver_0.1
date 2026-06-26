@@ -384,7 +384,8 @@ export default function OffboardingDetailPage() {
                   <InfoRow label="감지 근거" value={analysisTriggerLabel(detail.analysisTrigger, true)} />
                   <InfoRow label="생성 경로" value={automatic ? '시스템 감지' : '관리자 실행'} />
                   <InfoRow label="분석 엔진" value={detail.analysisEngine || 'ORAM Risk Fusion'} />
-                  <InfoRow label="분석 시각" value={formatDateTime(detail.startedAt)} />
+                  <InfoRow label="생성 시각" value={formatDateTime(detail.startedAt)} />
+                  {detail.completedAt && <InfoRow label="권한 회수 시각" value={formatDateTime(detail.completedAt)} />}
                 </Stack>
               </CardContent>
             </Card>
@@ -394,7 +395,7 @@ export default function OffboardingDetailPage() {
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6" fontWeight={700}>대상 직원</Typography>
                   {detail.startedAt && (
-                    <Typography variant="caption" color="#64748b">퇴직 시간: {formatDateTime(detail.startedAt)}</Typography>
+                    <Typography variant="caption" color="#64748b">퇴직 시각: {formatDateTime(detail.startedAt)}</Typography>
                   )}
                 </Stack>
                 <Divider sx={{ my: 2 }} />

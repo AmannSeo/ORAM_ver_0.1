@@ -231,7 +231,7 @@ export default function EmployeeLogPanel({
       </Box>
       {loading && <LinearProgress />}
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
-      <TableContainer sx={{ maxHeight: maxTableHeight, overflowY: maxTableHeight ? 'auto' : undefined }}>
+      <TableContainer sx={{ maxHeight: maxTableHeight, overflowY: maxTableHeight ? 'auto' : undefined, px: 2, boxSizing: 'border-box' }}>
         <Table size="small" sx={{ tableLayout: 'fixed', '& th, & td': { px: 1.25 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>

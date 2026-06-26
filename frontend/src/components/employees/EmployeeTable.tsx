@@ -103,7 +103,7 @@ export default function EmployeeTable(props: {
             <HeaderCell width="12%">부서</HeaderCell>
             <HeaderCell width="12%">연동 SaaS</HeaderCell>
             <HeaderCell width="8%" align="center">상태</HeaderCell>
-            <HeaderCell width="10%" align="center">퇴직 시간</HeaderCell>
+            <HeaderCell width="10%" align="center">퇴직 시각</HeaderCell>
             <HeaderCell width="19%" align="center">조치</HeaderCell>
           </TableRow>
         </TableHead>

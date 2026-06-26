@@ -176,7 +176,7 @@ function RiskDecisionList() {
                 <RiskCriteriaHelp />
               </Stack>
               <Typography variant="body2" color="#64748b" mt={0.25}>
-                점수, 감지 근거, 권장 판단을 기준으로 권한 회수 승인 여부를 결정합니다.
+                위험도와 감지 근거를 기준으로 권한 회수 승인 여부를 결정합니다.
               </Typography>
             </Box>
             <Chip icon={<AutoIcon />} label="시스템 감지 항목 포함" color="primary" variant="outlined" />
@@ -192,7 +192,7 @@ function RiskDecisionList() {
                   <TableCell width="8%">부서</TableCell>
                   <TableCell width="11%">위험도</TableCell>
                   <TableCell width="27%">판단 근거</TableCell>
-                  <TableCell width="10%">분석 시각</TableCell>
+                  <TableCell width="10%">생성 시각</TableCell>
                   <TableCell width="12%" align="center">다음 단계</TableCell>
                 </TableRow>
               </TableHead>
@@ -220,24 +220,11 @@ function RiskDecisionList() {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Stack spacing={0.5}>
+                      <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
                         <Typography variant="body2" fontWeight={700} noWrap>
                           {analysisTriggerLabel(item.analysisTrigger)}
                         </Typography>
-                        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="nowrap">
-                          <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
-                            <Chip
-                              icon={item.analysisSource === 'AUTOMATIC' ? <AutoIcon /> : <AIIcon />}
-                              label={analysisSourceLabel(item.analysisSource)}
-                              size="small"
-                              variant="outlined"
-                            />
-                          </Tooltip>
-                          <Typography variant="caption" color="#64748b" noWrap>
-                            · {item.riskLevel ? RISK_ACTION_LABEL[item.riskLevel] : '관리자 검토'}
-                          </Typography>
-                        </Stack>
-                      </Stack>
+                      </Tooltip>
                     </TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
                     <TableCell align="center">

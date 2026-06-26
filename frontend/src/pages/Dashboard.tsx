@@ -201,7 +201,7 @@ function RevocationTargets({ items }: { items: OffboardingSummary[] }) {
                   <TableCell width="15%">위험도</TableCell>
                   <TableCell width="12%" align="center">분석</TableCell>
                   <TableCell width="13%" align="center">상태</TableCell>
-                  <TableCell width="15%" align="center">퇴직 시간</TableCell>
+                  <TableCell width="15%" align="center">퇴직 시각</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
