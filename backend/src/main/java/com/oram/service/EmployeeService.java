@@ -387,10 +387,10 @@ public class EmployeeService {
                 .department(e.getDepartment())
                 .status(e.getStatus())
                 .createdAt(e.getCreatedAt())
-                // 퇴직 시간: 별도 필드 없이 '권한 점검 생성'(오프보딩 최초 생성) 시각을 사용
+                // 퇴직 시간: 권한 점검 생성 시각을 우선 사용하고, 없으면 상태 변경 시각으로 대체한다.
                 .resignedAt(e.getStatus() == EmployeeStatus.RESIGNED
                         ? offboardingResultRepository.findTopByEmployee_IdOrderByCreatedAtAsc(e.getId())
-                                .map(r -> r.getCreatedAt()).orElse(null)
+                                .map(r -> r.getCreatedAt()).orElse(e.getUpdatedAt())
                         : null)
                 .connectedSaas(connectedSaas)
                 .build();
