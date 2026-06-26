@@ -462,6 +462,7 @@ public class OffboardingService {
                 .falsePositive(r.isFalsePositive())
                 .falsePositiveReason(r.getFalsePositiveReason())
                 .falsePositiveAt(r.getFalsePositiveAt())
+                .completedAt(r.getCompletedAt())
                 .build();
     }
 

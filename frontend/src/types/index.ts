@@ -153,6 +153,7 @@ export interface OffboardingSummary {
   falsePositive: boolean;
   falsePositiveReason?: string;
   falsePositiveAt?: string;
+  completedAt?: string;
 }
 
 export interface PermissionInfo {

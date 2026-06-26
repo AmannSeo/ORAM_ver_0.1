@@ -40,8 +40,10 @@ import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
 import RiskCriteriaHelp from '../components/common/RiskCriteriaHelp';
 import { formatDateTime } from '../utils/format';
-import { analysisSourceHelp, analysisSourceLabel, analysisTriggerLabel, RISK_ACTION_LABEL } from '../utils/riskLabels';
+import { analysisTriggerLabel, RISK_ACTION_LABEL } from '../utils/riskLabels';
 import type { OffboardingSummary, RiskScoreResponse } from '../types';
+
+const DETECTION_HELP = '권한 회수 대상이 생성된 원인입니다. 퇴사자 계정 감지는 퇴사자로 등록된 직원의 SaaS 계정이 아직 활성 상태로 확인된 경우이고, 관리자 점검 실행은 관리자가 퇴사 처리 또는 재분석을 직접 실행한 경우입니다. 비활성 계정과 계정 누락도 SaaS 동기화 결과를 기준으로 탐지됩니다.';
 
 const SAMPLE_SCENARIOS = [
   { label: 'GitHub Owner + Slack 관리자 + PAT', config: { isAdmin: true, isOwner: true, hasApiToken: true, recentLogin: true, repoCount: 42, workspaceCount: 1 } },
@@ -214,8 +216,8 @@ function RiskDecisionList() {
                   <TableCell width="22%">
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <Box component="span">탐지 방법</Box>
-                      <Tooltip title="권한 회수 대상이 생성된 원인입니다. 예: 퇴사자 활성 계정, 비활성 계정, 계정 누락, 관리자 점검 실행." arrow>
-                        <HelpIcon sx={{ fontSize: 15, color: '#94a3b8' }} />
+                      <Tooltip title={<Typography fontSize={13}>{DETECTION_HELP}</Typography>} arrow>
+                        <HelpIcon sx={{ fontSize: 17, color: '#94a3b8' }} />
                       </Tooltip>
                     </Stack>
                   </TableCell>
@@ -267,11 +269,9 @@ function RiskDecisionList() {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Tooltip title={analysisSourceHelp(item.analysisSource)} arrow placement="top">
-                        <Typography variant="body2" fontWeight={700} noWrap>
-                          {analysisTriggerLabel(item.analysisTrigger)}
-                        </Typography>
-                      </Tooltip>
+                      <Typography variant="body2" fontWeight={700} noWrap>
+                        {analysisTriggerLabel(item.analysisTrigger)}
+                      </Typography>
                     </TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.employee.resignedAt || item.startedAt)}</Typography></TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>

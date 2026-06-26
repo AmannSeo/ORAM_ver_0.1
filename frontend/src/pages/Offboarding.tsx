@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   LinearProgress,
   Stack,
   Table,
@@ -25,19 +24,16 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  AutoAwesome as AutoIcon,
   Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
   HelpOutline as InfoIcon,
-  PersonSearch as ManualIcon,
-  Visibility as ViewIcon,
+  RemoveCircleOutline as PendingIcon,
 } from '@mui/icons-material';
 import { offboardingApi } from '../api';
 import PageHeader from '../components/common/PageHeader';
 import RiskBadge from '../components/common/RiskBadge';
 import { formatDateTime } from '../utils/format';
 import {
-  analysisSourceLabel,
   analysisTriggerLabel,
   offboardingActionGuide,
   OFFBOARDING_STATUS_COLOR,
@@ -45,6 +41,8 @@ import {
   RISK_ORDER,
 } from '../utils/riskLabels';
 import type { OffboardingSummary } from '../types';
+
+const DETECTION_HELP = '권한 회수 대상이 생성된 원인입니다. 퇴사자 계정 감지는 퇴사자로 등록된 직원의 SaaS 계정이 아직 활성 상태로 확인된 경우이고, 관리자 점검 실행은 관리자가 퇴사 처리 또는 재분석을 직접 실행한 경우입니다. 비활성 계정과 계정 누락도 SaaS 동기화 결과를 기준으로 탐지됩니다.';
 
 export default function Offboarding() {
   const navigate = useNavigate();
@@ -138,23 +136,22 @@ export default function Offboarding() {
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
               <TableCell width="4%">No.</TableCell>
               <TableCell width="7%">이름</TableCell>
-              <TableCell width="13%">이메일</TableCell>
+              <TableCell width="14%">이메일</TableCell>
               <TableCell width="5%">부서</TableCell>
               <TableCell width="8%">위험도</TableCell>
-              <TableCell width="7%">생성 경로</TableCell>
-              <TableCell width="12%">
+              <TableCell width="15%">
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                   <Box component="span">탐지 방법</Box>
-                  <Tooltip title="권한 회수 대상이 생성된 원인입니다. 예: 퇴사자 활성 계정, 비활성 계정, 계정 누락, 관리자 점검 실행." arrow>
-                    <InfoIcon sx={{ fontSize: 15, color: '#94a3b8' }} />
+                  <Tooltip title={<Typography fontSize={13}>{DETECTION_HELP}</Typography>} arrow>
+                    <InfoIcon sx={{ fontSize: 17, color: '#94a3b8' }} />
                   </Tooltip>
                 </Stack>
               </TableCell>
-              <TableCell width="7%">회수 여부</TableCell>
+              <TableCell width="7%" align="center">회수 상태</TableCell>
               <TableCell width="7%">처리 상태</TableCell>
               <TableCell width="7%">권장 조치</TableCell>
               <TableCell width="9%">퇴직 시각</TableCell>
-              <TableCell width="9%">분석 시간</TableCell>
+              <TableCell width="9%">회수 시간</TableCell>
               <TableCell width="9%" align="center">처리</TableCell>
             </TableRow>
           </TableHead>
@@ -168,9 +165,13 @@ export default function Offboarding() {
             )}
             {results.map((result, index) => {
               const revoking = revokeLoadingId === result.id;
-              const automatic = result.analysisSource === 'AUTOMATIC';
               return (
-                <TableRow key={result.id} hover sx={{ '& td': { borderColor: '#f1f5f9' } }}>
+                <TableRow
+                  key={result.id}
+                  hover
+                  onClick={() => navigate(`/offboarding/${result.id}`)}
+                  sx={{ '& td': { borderColor: '#f1f5f9' }, cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Typography variant="body2" fontWeight={700} color="#64748b">{index + 1}</Typography>
                   </TableCell>
@@ -183,23 +184,16 @@ export default function Offboarding() {
                     <RiskBadge level={result.riskLevel} score={result.riskScore} />
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      icon={automatic ? <AutoIcon /> : <ManualIcon />}
-                      label={analysisSourceLabel(result.analysisSource)}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2" noWrap>{analysisTriggerLabel(result.analysisTrigger)}</Typography>
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={result.falsePositive ? '오탐 제외' : result.revokedAll ? '회수 완료' : '미회수'}
-                      color={result.falsePositive ? 'default' : result.revokedAll ? 'success' : 'warning'}
-                      size="small"
-                      variant="outlined"
-                    />
+                  <TableCell align="center">
+                    <Tooltip title={result.revokedAll ? '권한 회수 완료' : '권한 회수 미완료'}>
+                      {result.revokedAll ? (
+                        <CheckIcon color="success" fontSize="small" />
+                      ) : (
+                        <PendingIcon color="disabled" fontSize="small" />
+                      )}
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -212,7 +206,7 @@ export default function Offboarding() {
                     <Typography variant="body2" fontWeight={600} noWrap>{offboardingActionGuide(result)}</Typography>
                   </TableCell>
                   <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.employee.resignedAt || result.startedAt)}</Typography></TableCell>
-                  <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.startedAt)}</Typography></TableCell>
+                  <TableCell><Typography variant="body2" noWrap>{result.revokedAll ? formatDateTime(result.completedAt) : '-'}</Typography></TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="nowrap">
                       <Tooltip title={result.revokedAll ? '이미 권한 회수가 완료되었습니다.' : '연결된 SaaS 권한 회수를 실행합니다.'}>
@@ -222,7 +216,7 @@ export default function Offboarding() {
                             variant="contained"
                             color="error"
                             disabled={result.revokedAll || result.falsePositive || revoking}
-                            onClick={() => handleRevoke(result)}
+                            onClick={(event) => { event.stopPropagation(); handleRevoke(result); }}
                             sx={{ minWidth: 42, px: 0.8, whiteSpace: 'nowrap' }}
                           >
                             {revoking ? <CircularProgress size={14} color="inherit" /> : '회수'}
@@ -236,7 +230,8 @@ export default function Offboarding() {
                             variant="outlined"
                             color="inherit"
                             disabled={result.revokedAll || result.falsePositive || revoking}
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               setFalsePositiveTarget(result);
                               setFalsePositiveReason('');
                             }}
@@ -245,11 +240,6 @@ export default function Offboarding() {
                             오탐
                           </Button>
                         </span>
-                      </Tooltip>
-                      <Tooltip title="상세 판단 화면">
-                        <IconButton size="small" color="primary" onClick={() => navigate(`/offboarding/${result.id}`)}>
-                          <ViewIcon />
-                        </IconButton>
                       </Tooltip>
                     </Stack>
                   </TableCell>

@@ -33,6 +33,7 @@ public class OffboardingDto {
         private boolean falsePositive;
         private String falsePositiveReason;
         private LocalDateTime falsePositiveAt;
+        private LocalDateTime completedAt;
     }
 
     @Data
