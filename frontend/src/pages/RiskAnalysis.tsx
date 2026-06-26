@@ -101,6 +101,8 @@ function RiskDecisionList() {
   const [results, setResults] = useState<OffboardingSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [revokeLoadingId, setRevokeLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     offboardingApi.getAll()
@@ -121,16 +123,34 @@ function RiskDecisionList() {
     review: results.filter((item) => item.riskLevel === 'MEDIUM' || item.riskLevel === 'LOW').length,
   }), [results]);
 
+  const goDetail = (id: string) => navigate(`/offboarding/${id}`);
+
+  const handleRevoke = async (item: OffboardingSummary) => {
+    setRevokeLoadingId(item.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      await offboardingApi.revokeAll(item.id);
+      setResults((current) => current.filter((result) => result.id !== item.id));
+      setSuccess(`${item.employee.name} 권한 회수를 실행했고 AI 리스크 분석 목록에서 제거했습니다.`);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || `${item.employee.name} 권한 회수에 실패했습니다. 상세 화면에서 회수 계획을 확인하세요.`);
+    } finally {
+      setRevokeLoadingId(null);
+    }
+  };
+
   if (loading) return <LinearProgress />;
 
   return (
     <Stack spacing={2.5}>
       <Alert severity="info">
         이 화면은 직원 전체 목록이 아닙니다. 퇴사 처리 또는 SaaS 동기화로 감지된 권한 회수 대상 중,
-        AI가 잔여 접근 위험도를 산정한 항목만 보여줍니다. 실제 회수 실행은 상세 판단 화면에서 승인 후 진행합니다.
+        AI가 잔여 접근 위험도를 산정한 항목만 보여줍니다. 행을 클릭하면 상세 근거를 확인하고, 회수 버튼은 즉시 권한 회수를 실행합니다.
       </Alert>
 
       {error && <Alert severity="error">{error}</Alert>}
+      {success && <Alert severity="success" onClose={() => setSuccess(null)}>{success}</Alert>}
 
       <Grid container spacing={1.5}>
         <Grid item xs={6} md={3}>
@@ -205,14 +225,33 @@ function RiskDecisionList() {
                   </TableRow>
                 )}
                 {results.map((item, index) => (
-                  <TableRow key={item.id} hover sx={{ '& td': { borderColor: '#f1f5f9' } }}>
+                  <TableRow
+                    key={item.id}
+                    hover
+                    onClick={() => goDetail(item.id)}
+                    sx={{ '& td': { borderColor: '#f1f5f9' }, cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Typography variant="body2" fontWeight={700} color="#64748b">{index + 1}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography fontWeight={700} noWrap>{item.employee.name}</Typography>
+                      <Button
+                        variant="text"
+                        onClick={(event) => { event.stopPropagation(); goDetail(item.id); }}
+                        sx={{ minWidth: 0, p: 0, color: '#0f172a', textTransform: 'none', justifyContent: 'flex-start' }}
+                      >
+                        <Typography fontWeight={700} noWrap>{item.employee.name}</Typography>
+                      </Button>
                     </TableCell>
-                    <TableCell><Typography variant="body2" color="#64748b" noWrap>{item.employee.email}</Typography></TableCell>
+                    <TableCell>
+                      <Button
+                        variant="text"
+                        onClick={(event) => { event.stopPropagation(); goDetail(item.id); }}
+                        sx={{ minWidth: 0, p: 0, color: '#64748b', textTransform: 'none', justifyContent: 'flex-start' }}
+                      >
+                        <Typography variant="body2" noWrap>{item.employee.email}</Typography>
+                      </Button>
+                    </TableCell>
                     <TableCell><Typography variant="body2" color="#64748b" noWrap>-</Typography></TableCell>
                     <TableCell>
                       <Stack spacing={0.75} alignItems="flex-start">
@@ -228,24 +267,20 @@ function RiskDecisionList() {
                     </TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
                     <TableCell align="center">
-                      <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="nowrap">
+                      <Tooltip title="해당 직원의 연결된 SaaS 권한 회수를 실행합니다.">
+                        <span>
                         <Button
                           size="small"
                           variant="contained"
-                          onClick={() => navigate(`/offboarding/${item.id}`)}
+                          color="error"
+                          onClick={(event) => { event.stopPropagation(); handleRevoke(item); }}
+                          disabled={revokeLoadingId === item.id}
                           sx={{ minWidth: 46, px: 0.8, whiteSpace: 'nowrap' }}
                         >
-                          상세
+                          {revokeLoadingId === item.id ? <CircularProgress size={14} color="inherit" /> : '회수'}
                         </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => navigate('/offboarding')}
-                          sx={{ minWidth: 46, px: 0.8, whiteSpace: 'nowrap' }}
-                        >
-                          회수
-                        </Button>
-                      </Stack>
+                        </span>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
