@@ -15,6 +15,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import {
@@ -282,7 +283,22 @@ export default function EmployeeLogPanel({
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: '#475569' }}>
-                    <Typography fontSize={13} noWrap>{summarizeDetail(log)}</Typography>
+                    <Tooltip title={summarizeDetail(log)} arrow placement="top">
+                      <Typography
+                        fontSize={13}
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          whiteSpace: 'normal',
+                          lineHeight: 1.45,
+                          cursor: 'help',
+                        }}
+                      >
+                        {summarizeDetail(log)}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
