@@ -48,28 +48,38 @@ public class OffboardingService {
 
     @Transactional
     public UUID triggerOffboarding(Employee employee) {
-        return createAndAnalyzeOffboarding(employee, "MANUAL_TRIGGER", true);
+        return triggerOffboarding(employee, null);
+    }
+
+    @Transactional
+    public UUID triggerOffboarding(Employee employee, User actor) {
+        return createAndAnalyzeOffboarding(employee, "MANUAL_TRIGGER", true, actor);
     }
 
     @Transactional
     public UUID analyzeEmployee(Employee employee) {
+        return analyzeEmployee(employee, null);
+    }
+
+    @Transactional
+    public UUID analyzeEmployee(Employee employee, User actor) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
         if (latest.isPresent() && !latest.get().isRevokedAll() && !latest.get().isFalsePositive()) {
-            return analyzeExistingResult(latest.get(), "MANUAL_ANALYSIS_REQUEST", true);
+            return analyzeExistingResult(latest.get(), "MANUAL_ANALYSIS_REQUEST", true, actor);
         }
-        return createAndAnalyzeOffboarding(employee, "MANUAL_ANALYSIS_REQUEST", true);
+        return createAndAnalyzeOffboarding(employee, "MANUAL_ANALYSIS_REQUEST", true, actor);
     }
 
     @Transactional
     public UUID autoAnalyzeOffboarding(Employee employee, String triggerReason) {
         Optional<OffboardingResult> latest = resultRepository.findTopByEmployee_IdOrderByCreatedAtDesc(employee.getId());
         if (latest.isPresent() && !latest.get().isRevokedAll() && !latest.get().isFalsePositive()) {
-            return analyzeExistingResult(latest.get(), triggerReason, false);
+            return analyzeExistingResult(latest.get(), triggerReason, false, null);
         }
-        return createAndAnalyzeOffboarding(employee, triggerReason, false);
+        return createAndAnalyzeOffboarding(employee, triggerReason, false, null);
     }
 
-    private UUID createAndAnalyzeOffboarding(Employee employee, String triggerReason, boolean manualTrigger) {
+    private UUID createAndAnalyzeOffboarding(Employee employee, String triggerReason, boolean manualTrigger, User actor) {
         log.info("Triggering {} offboarding analysis for employee: {}, reason={}",
                 manualTrigger ? "manual" : "automatic", employee.getEmail(), triggerReason);
 
@@ -80,10 +90,10 @@ public class OffboardingService {
                 .build();
         result = resultRepository.save(result);
 
-        return analyzeAndSaveResult(result, triggerReason, manualTrigger);
+        return analyzeAndSaveResult(result, triggerReason, manualTrigger, actor);
     }
 
-    private UUID analyzeExistingResult(OffboardingResult result, String triggerReason, boolean manualTrigger) {
+    private UUID analyzeExistingResult(OffboardingResult result, String triggerReason, boolean manualTrigger, User actor) {
         result.setStatus(OffboardingStatus.IN_PROGRESS);
         if (result.getStartedAt() == null) {
             result.setStartedAt(LocalDateTime.now());
@@ -92,10 +102,10 @@ public class OffboardingService {
         result.getPermissions().clear();
         result = resultRepository.save(result);
 
-        return analyzeAndSaveResult(result, triggerReason, manualTrigger);
+        return analyzeAndSaveResult(result, triggerReason, manualTrigger, actor);
     }
 
-    private UUID analyzeAndSaveResult(OffboardingResult result, String triggerReason, boolean manualTrigger) {
+    private UUID analyzeAndSaveResult(OffboardingResult result, String triggerReason, boolean manualTrigger, User actor) {
         Employee employee = result.getEmployee();
         try {
             List<PermissionRecord> permissions = discoverPermissions(employee, result);
@@ -117,7 +127,7 @@ public class OffboardingService {
 
             resultRepository.save(result);
 
-            auditService.log(null, manualTrigger ? "OFFBOARDING_TRIGGERED" : "AUTO_RISK_ANALYZED",
+            auditService.log(actor, manualTrigger ? "OFFBOARDING_TRIGGERED" : "AUTO_RISK_ANALYZED",
                     "EMPLOYEE", employee.getId().toString(),
                     "Offboarding analysis completed. Reason: " + triggerReason
                             + ", Risk: " + scoreResponse.getScore() + "/" + scoreResponse.getLevel()

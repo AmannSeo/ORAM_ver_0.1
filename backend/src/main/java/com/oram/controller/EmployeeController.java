@@ -76,8 +76,12 @@ public class EmployeeController {
 
     @PutMapping("/{id}/resign")
     @PreAuthorize("hasAnyRole('ADMIN','SECURITY_MANAGER')")
-    public ResponseEntity<Map<String, Object>> resignEmployee(@PathVariable UUID id) {
-        UUID offboardingResultId = employeeService.resignEmployee(id);
+    public ResponseEntity<Map<String, Object>> resignEmployee(
+            @PathVariable UUID id,
+            Authentication authentication,
+            HttpServletRequest request) {
+        var actor = resolveActor(authentication, request);
+        UUID offboardingResultId = employeeService.resignEmployee(id, actor);
         return ResponseEntity.ok(Map.of(
                 "message", "Employee resigned. Offboarding workflow triggered.",
                 "offboardingResultId", offboardingResultId.toString()
@@ -101,7 +105,7 @@ public class EmployeeController {
             ));
         }
 
-        UUID offboardingResultId = employeeService.analyzeEmployee(id);
+        UUID offboardingResultId = employeeService.analyzeEmployee(id, user);
         return ResponseEntity.ok(Map.of(
                 "message", "Employee risk analysis completed.",
                 "offboardingResultId", offboardingResultId.toString()
@@ -127,6 +131,11 @@ public class EmployeeController {
         }
 
         return null;
+    }
+
+    private com.oram.entity.User resolveActor(Authentication authentication, HttpServletRequest request) {
+        String email = resolveAuthenticatedEmail(authentication, request);
+        return email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
     }
 
     @GetMapping("/audit-logs")
@@ -197,8 +206,11 @@ public class EmployeeController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteEmployee(@PathVariable UUID id) {
-        employeeService.deleteEmployee(id);
+    public ResponseEntity<Void> deleteEmployee(
+            @PathVariable UUID id,
+            Authentication authentication,
+            HttpServletRequest request) {
+        employeeService.deleteEmployee(id, resolveActor(authentication, request));
         return ResponseEntity.noContent().build();
     }
 
@@ -218,7 +230,7 @@ public class EmployeeController {
             ));
         }
 
-        long deletedCount = employeeService.deleteAllEmployees();
+        long deletedCount = employeeService.deleteAllEmployees(user);
         return ResponseEntity.ok(Map.of(
                 "message", "All employees deleted.",
                 "deletedCount", deletedCount

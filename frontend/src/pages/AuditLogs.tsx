@@ -7,7 +7,7 @@ export default function AuditLogs() {
     <Box sx={{ width: '100%' }}>
       <PageHeader
         title="감사 로그"
-        description="직원 권한 점검, AI 감지, 권한 회수, 오탐 처리 이력을 확인하고 감사용 파일로 내려받습니다."
+        description="퇴사 처리, AI 감지, 권한 회수, 오탐 처리, 직원 삭제 이력을 확인하고 감사용 파일로 내려받습니다."
       />
       <EmployeeLogPanel />
     </Box>

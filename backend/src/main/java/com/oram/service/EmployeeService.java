@@ -3,6 +3,7 @@ package com.oram.service;
 import com.oram.dto.EmployeeDto;
 import com.oram.entity.Employee;
 import com.oram.entity.SaasIdentity;
+import com.oram.entity.User;
 import com.oram.enums.EmployeeStatus;
 import com.oram.enums.SaasType;
 import com.oram.repository.EmployeeRepository;
@@ -44,6 +45,7 @@ public class EmployeeService {
     private final PermissionRecordRepository permissionRecordRepository;
     private final SaasIdentityRepository saasIdentityRepository;
     private final OffboardingService offboardingService;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public EmployeeDto.PageResponse getEmployees(EmployeeStatus status, String department, SaasType saasType, String query, int page, int size) {
@@ -96,6 +98,11 @@ public class EmployeeService {
 
     @Transactional
     public UUID resignEmployee(UUID id) {
+        return resignEmployee(id, null);
+    }
+
+    @Transactional
+    public UUID resignEmployee(UUID id, User actor) {
         Employee employee = findById(id);
         if (employee.getStatus() == EmployeeStatus.RESIGNED) {
             throw new IllegalStateException("Employee is already resigned.");
@@ -103,20 +110,33 @@ public class EmployeeService {
         employee.setStatus(EmployeeStatus.RESIGNED);
         employeeRepository.save(employee);
 
-        return offboardingService.triggerOffboarding(employee);
+        return offboardingService.triggerOffboarding(employee, actor);
     }
 
     @Transactional
     public UUID analyzeEmployee(UUID id) {
+        return analyzeEmployee(id, null);
+    }
+
+    @Transactional
+    public UUID analyzeEmployee(UUID id, User actor) {
         Employee employee = findById(id);
-        return offboardingService.analyzeEmployee(employee);
+        return offboardingService.analyzeEmployee(employee, actor);
     }
 
     @Transactional
     public void deleteEmployee(UUID id) {
+        deleteEmployee(id, null);
+    }
+
+    @Transactional
+    public void deleteEmployee(UUID id, User actor) {
         Employee employee = findById(id);
+        String targetLabel = employee.getName() + " / " + employee.getEmail();
         saasIdentityRepository.deleteByEmployeeId(employee.getId());
         employeeRepository.delete(employee);
+        auditService.log(actor, "DELETE_EMPLOYEE", "EMPLOYEE", id.toString(),
+                "Deleted employee: " + targetLabel, targetLabel);
     }
 
     private String normalizeFilter(String value) {
@@ -167,11 +187,18 @@ public class EmployeeService {
 
     @Transactional
     public long deleteAllEmployees() {
+        return deleteAllEmployees(null);
+    }
+
+    @Transactional
+    public long deleteAllEmployees(User actor) {
         long count = employeeRepository.count();
         permissionRecordRepository.deleteAllInBatch();
         offboardingResultRepository.deleteAllInBatch();
         saasIdentityRepository.deleteAllInBatch();
         employeeRepository.deleteAllInBatch();
+        auditService.log(actor, "DELETE_ALL_EMPLOYEES", "EMPLOYEE", null,
+                "Deleted all employees. Count: " + count, "전체 직원 " + count + "명");
         return count;
     }
 

@@ -32,10 +32,12 @@ import { analysisTriggerLabel } from '../../utils/riskLabels';
 import type { AuditLog } from '../../types';
 
 const ACTION_LABELS: Record<string, { label: string; color: 'default' | 'primary' | 'warning' | 'error' | 'success' | 'info' | 'secondary' }> = {
-  OFFBOARDING_TRIGGERED: { label: '권한 점검 생성', color: 'warning' },
+  OFFBOARDING_TRIGGERED: { label: '퇴사 처리', color: 'warning' },
   AUTO_RISK_ANALYZED: { label: '시스템 감지', color: 'info' },
   REVOKE_ACCESS: { label: '권한 회수', color: 'error' },
   MARK_FALSE_POSITIVE: { label: '오탐 처리', color: 'success' },
+  DELETE_EMPLOYEE: { label: '직원 삭제', color: 'error' },
+  DELETE_ALL_EMPLOYEES: { label: '직원 전체 삭제', color: 'error' },
 };
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -96,7 +98,7 @@ function isUuid(value?: string) {
 
 export default function EmployeeLogPanel({
   title = '감사 로그',
-  description = '권한 점검 생성, AI 자동 감지, 권한 회수, 오탐 처리처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.',
+  description = '퇴사 처리, AI 자동 감지, 권한 회수, 오탐 처리, 직원 삭제처럼 직원 권한 관리에서 발생한 주요 처리 이력을 기록합니다.',
   initialQuery = '',
   pageSize = DEFAULT_PAGE_SIZE,
   employeeFilter,
