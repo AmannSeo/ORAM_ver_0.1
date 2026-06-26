@@ -46,7 +46,7 @@ public class DashboardController {
             Authentication authentication,
             HttpServletRequest request) {
         String email = resolveAuthenticatedEmail(authentication, request);
-        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+        var user = email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
         Set<UserRole> allowedRoles = Set.of(UserRole.ADMIN, UserRole.SECURITY_MANAGER, UserRole.AUDITOR);
 
         if (user == null || !allowedRoles.contains(user.getRole())) {

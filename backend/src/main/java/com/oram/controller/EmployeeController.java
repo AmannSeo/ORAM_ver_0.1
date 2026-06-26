@@ -90,11 +90,12 @@ public class EmployeeController {
             Authentication authentication,
             HttpServletRequest request) {
         String email = resolveAuthenticatedEmail(authentication, request);
-        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+        var user = email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
 
         if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "error", "Only ADMIN or SECURITY_MANAGER can run employee risk analysis.",
+                    "error", "관리자 또는 보안 관리자만 직원 위험도 분석을 실행할 수 있습니다.",
+                    "reason", user == null ? "TOKEN_USER_NOT_FOUND" : "ROLE_NOT_ALLOWED",
                     "email", email != null ? email : "anonymous",
                     "role", user != null ? user.getRole().name() : "unknown"
             ));
@@ -135,7 +136,7 @@ public class EmployeeController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         String email = resolveAuthenticatedEmail(authentication, request);
-        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+        var user = email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
@@ -206,11 +207,12 @@ public class EmployeeController {
             Authentication authentication,
             HttpServletRequest request) {
         String email = resolveAuthenticatedEmail(authentication, request);
-        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+        var user = email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
 
         if (user == null || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.SECURITY_MANAGER)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "error", "Only ADMIN or SECURITY_MANAGER can delete all employees.",
+                    "error", "전체 삭제는 관리자 또는 보안 관리자만 실행할 수 있습니다.",
+                    "reason", user == null ? "TOKEN_USER_NOT_FOUND" : "ROLE_NOT_ALLOWED",
                     "email", email != null ? email : "anonymous",
                     "role", user != null ? user.getRole().name() : "unknown"
             ));

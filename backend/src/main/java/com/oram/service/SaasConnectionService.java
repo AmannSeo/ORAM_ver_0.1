@@ -284,7 +284,7 @@ public class SaasConnectionService {
     private Optional<User> getCurrentUser() {
         try {
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
-            return userRepository.findByEmail(email);
+            return userRepository.findByEmailIgnoreCase(email);
         } catch (Exception e) {
             return Optional.empty();
         }

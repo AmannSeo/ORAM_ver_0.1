@@ -27,7 +27,7 @@ public class AuthService {
         );
 
         String token = tokenProvider.generateToken(authentication);
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return AuthDto.LoginResponse.builder()

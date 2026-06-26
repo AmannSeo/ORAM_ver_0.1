@@ -157,7 +157,7 @@ public class SaasConnectionController {
             HttpServletRequest request,
             Set<UserRole> allowedRoles) {
         String email = resolveAuthenticatedEmail(authentication, request);
-        var user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
+        var user = email != null ? userRepository.findByEmailIgnoreCase(email).orElse(null) : null;
 
         if (user == null || !allowedRoles.contains(user.getRole())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(

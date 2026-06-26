@@ -106,7 +106,7 @@ public class RetrainService {
         log.warn("AI model server call failed: {}", e.getMessage());
         Map<String, Object> err = new HashMap<>();
         err.put("error", true);
-        err.put("message", "AI 모델 서버에 연결할 수 없습니다: " + e.getMessage());
+        err.put("message", "AI 모델 서버에 연결할 수 없습니다. ai-service를 실행하거나 AI_MODEL_SERVER_ENABLED=false로 설정하세요. 원인: " + e.getMessage());
         return err;
     }
 
