@@ -30,4 +30,5 @@ public interface SaasSyncAlertRepository extends JpaRepository<SaasSyncAlert, UU
 
     long countByStatus(SaasSyncAlertStatus status);
     long countBySaasTypeAndStatus(SaasType saasType, SaasSyncAlertStatus status);
+    void deleteByEmployeeId(UUID employeeId);
 }

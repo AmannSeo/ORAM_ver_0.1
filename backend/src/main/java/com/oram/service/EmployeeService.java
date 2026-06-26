@@ -10,6 +10,7 @@ import com.oram.repository.EmployeeRepository;
 import com.oram.repository.OffboardingResultRepository;
 import com.oram.repository.PermissionRecordRepository;
 import com.oram.repository.SaasIdentityRepository;
+import com.oram.repository.SaasSyncAlertRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,7 @@ public class EmployeeService {
     private final OffboardingResultRepository offboardingResultRepository;
     private final PermissionRecordRepository permissionRecordRepository;
     private final SaasIdentityRepository saasIdentityRepository;
+    private final SaasSyncAlertRepository saasSyncAlertRepository;
     private final OffboardingService offboardingService;
     private final AuditService auditService;
 
@@ -133,6 +135,7 @@ public class EmployeeService {
     public void deleteEmployee(UUID id, User actor) {
         Employee employee = findById(id);
         String targetLabel = employee.getName() + " / " + employee.getEmail();
+        saasSyncAlertRepository.deleteByEmployeeId(employee.getId());
         saasIdentityRepository.deleteByEmployeeId(employee.getId());
         employeeRepository.delete(employee);
         auditService.log(actor, "DELETE_EMPLOYEE", "EMPLOYEE", id.toString(),
@@ -196,6 +199,7 @@ public class EmployeeService {
         permissionRecordRepository.deleteAllInBatch();
         offboardingResultRepository.deleteAllInBatch();
         saasIdentityRepository.deleteAllInBatch();
+        saasSyncAlertRepository.deleteAllInBatch();
         employeeRepository.deleteAllInBatch();
         auditService.log(actor, "DELETE_ALL_EMPLOYEES", "EMPLOYEE", null,
                 "Deleted all employees. Count: " + count, "전체 직원 " + count + "명");
