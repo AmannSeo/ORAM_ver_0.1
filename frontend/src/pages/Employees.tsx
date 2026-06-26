@@ -26,7 +26,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  DeleteSweep as DeleteAllIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
 } from '@mui/icons-material';
@@ -309,16 +308,7 @@ export default function Employees({ mode = 'active' }: { mode?: EmployeesPageMod
           >
             CSV 가져오기
           </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteAllIcon />}
-            onClick={() => setDeleteAllDialog(true)}
-            disabled={totalElements === 0}
-            sx={{ borderRadius: 2, bgcolor: 'white', whiteSpace: 'nowrap' }}
-          >
-            전체 삭제
-          </Button>
+          {/* 전체 삭제 버튼은 운영 안전을 위해 비노출 처리 */}
         </Stack>
         ) : undefined}
       />

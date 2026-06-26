@@ -636,7 +636,7 @@ export default function RiskAnalysis() {
             </Badge>
           }
         />
-        <Tab label="모델 학습" />
+        {/* 모델 학습 탭은 ai-service 미배포로 비노출 처리 */}
       </Tabs>
 
       {tab === 0 && <RiskDecisionList />}
