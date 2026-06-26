@@ -518,6 +518,7 @@ export default function OffboardingDetailPage() {
               title="대상 직원 감사 로그"
               description="이 직원의 권한 점검, 회수, 오탐 처리 기록입니다."
               employeeFilter={detail.employee.email || detail.employee.name}
+              maxTableHeight={360}
             />
           </Stack>
         </Grid>

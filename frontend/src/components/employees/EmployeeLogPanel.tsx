@@ -99,6 +99,7 @@ export default function EmployeeLogPanel({
   initialQuery = '',
   pageSize = DEFAULT_PAGE_SIZE,
   employeeFilter,
+  maxTableHeight,
 }: {
   title?: string;
   description?: string;
@@ -106,6 +107,7 @@ export default function EmployeeLogPanel({
   pageSize?: number;
   // 지정 시 해당 직원(이메일)의 로그만 표시하고 검색/엑셀/페이지네이션을 숨김
   employeeFilter?: string;
+  maxTableHeight?: number | string;
 }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,7 +230,7 @@ export default function EmployeeLogPanel({
       </Box>
       {loading && <LinearProgress />}
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
-      <TableContainer>
+      <TableContainer sx={{ maxHeight: maxTableHeight, overflowY: maxTableHeight ? 'auto' : undefined }}>
         <Table size="small" sx={{ tableLayout: 'fixed', '& th, & td': { px: 1.25 }, '& td': { overflow: 'hidden', textOverflow: 'ellipsis' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
