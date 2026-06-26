@@ -196,7 +196,7 @@ function RiskDecisionList() {
                 <RiskCriteriaHelp />
               </Stack>
               <Typography variant="body2" color="#64748b" mt={0.25}>
-                위험도와 감지 근거를 기준으로 권한 회수 승인 여부를 결정합니다.
+                위험도와 탐지 방법을 기준으로 권한 회수 승인 여부를 결정합니다.
               </Typography>
             </Box>
             <Chip icon={<AutoIcon />} label="시스템 감지 항목 포함" color="primary" variant="outlined" />
@@ -208,18 +208,26 @@ function RiskDecisionList() {
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
                   <TableCell width="5%">No.</TableCell>
                   <TableCell width="10%">이름</TableCell>
-                  <TableCell width="17%">이메일</TableCell>
-                  <TableCell width="8%">부서</TableCell>
+                  <TableCell width="16%">이메일</TableCell>
+                  <TableCell width="7%">부서</TableCell>
                   <TableCell width="11%">위험도</TableCell>
-                  <TableCell width="27%">판단 근거</TableCell>
-                  <TableCell width="10%">생성 시각</TableCell>
-                  <TableCell width="12%" align="center">다음 단계</TableCell>
+                  <TableCell width="22%">
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <Box component="span">탐지 방법</Box>
+                      <Tooltip title="권한 회수 대상이 생성된 원인입니다. 예: 퇴사자 활성 계정, 비활성 계정, 계정 누락, 관리자 점검 실행." arrow>
+                        <HelpIcon sx={{ fontSize: 15, color: '#94a3b8' }} />
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                  <TableCell width="11%">퇴직 시각</TableCell>
+                  <TableCell width="11%">분석 시간</TableCell>
+                  <TableCell width="7%" align="center">조치</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {results.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#64748b' }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 6, color: '#64748b' }}>
                       현재 AI 분석 후 조치가 필요한 권한 회수 대상이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -265,6 +273,7 @@ function RiskDecisionList() {
                         </Typography>
                       </Tooltip>
                     </TableCell>
+                    <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.employee.resignedAt || item.startedAt)}</Typography></TableCell>
                     <TableCell><Typography variant="body2" noWrap>{formatDateTime(item.startedAt)}</Typography></TableCell>
                     <TableCell align="center">
                       <Tooltip title="해당 직원의 연결된 SaaS 권한 회수를 실행합니다.">

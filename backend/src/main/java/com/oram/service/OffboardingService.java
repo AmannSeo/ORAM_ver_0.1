@@ -527,6 +527,7 @@ public class OffboardingService {
                 .name(e.getName())
                 .email(e.getEmail())
                 .department(e.getDepartment())
+                .resignedAt(e.getUpdatedAt())
                 .build();
     }
 

@@ -140,6 +140,7 @@ export interface OffboardingSummary {
     name: string;
     email: string;
     department: string;
+    resignedAt?: string;
   };
   status: OffboardingStatus;
   riskScore?: number;

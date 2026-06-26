@@ -28,6 +28,7 @@ import {
   AutoAwesome as AutoIcon,
   Block as FalsePositiveIcon,
   CheckCircle as CheckIcon,
+  HelpOutline as InfoIcon,
   PersonSearch as ManualIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
@@ -137,22 +138,30 @@ export default function Offboarding() {
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
               <TableCell width="4%">No.</TableCell>
               <TableCell width="7%">이름</TableCell>
-              <TableCell width="14%">이메일</TableCell>
+              <TableCell width="13%">이메일</TableCell>
               <TableCell width="5%">부서</TableCell>
               <TableCell width="8%">위험도</TableCell>
-              <TableCell width="8%">생성 경로</TableCell>
-              <TableCell width="13%">감지 근거</TableCell>
+              <TableCell width="7%">생성 경로</TableCell>
+              <TableCell width="12%">
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Box component="span">탐지 방법</Box>
+                  <Tooltip title="권한 회수 대상이 생성된 원인입니다. 예: 퇴사자 활성 계정, 비활성 계정, 계정 누락, 관리자 점검 실행." arrow>
+                    <InfoIcon sx={{ fontSize: 15, color: '#94a3b8' }} />
+                  </Tooltip>
+                </Stack>
+              </TableCell>
               <TableCell width="7%">회수 여부</TableCell>
               <TableCell width="7%">처리 상태</TableCell>
-              <TableCell width="8%">권장 조치</TableCell>
-              <TableCell width="10%">생성 시각</TableCell>
+              <TableCell width="7%">권장 조치</TableCell>
+              <TableCell width="9%">퇴직 시각</TableCell>
+              <TableCell width="9%">분석 시간</TableCell>
               <TableCell width="9%" align="center">처리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 6, color: '#64748b' }}>
+                <TableCell colSpan={13} align="center" sx={{ py: 6, color: '#64748b' }}>
                   아직 권한 회수 대상이 없습니다. 퇴사 처리 또는 SaaS 동기화에서 비활성/누락 계정이 감지되면 이곳에 표시됩니다.
                 </TableCell>
               </TableRow>
@@ -202,6 +211,7 @@ export default function Offboarding() {
                   <TableCell>
                     <Typography variant="body2" fontWeight={600} noWrap>{offboardingActionGuide(result)}</Typography>
                   </TableCell>
+                  <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.employee.resignedAt || result.startedAt)}</Typography></TableCell>
                   <TableCell><Typography variant="body2" noWrap>{formatDateTime(result.startedAt)}</Typography></TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="nowrap">

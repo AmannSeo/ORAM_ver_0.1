@@ -70,6 +70,7 @@ public class OffboardingDto {
         private String name;
         private String email;
         private String department;
+        private LocalDateTime resignedAt;
     }
 
     @Data
